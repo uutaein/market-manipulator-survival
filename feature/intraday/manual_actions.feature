@@ -26,6 +26,11 @@ Feature: Manual intraday actions
     And average entry price increases
     And budget decreases by more than the buy bot fee
 
+  Scenario: Rising well above average entry shows positive total profit
+    Given intraday operation is active
+    When the player marks the asset up from the high 9000s to 14000
+    Then the intraday total profit is positive
+
   Scenario: Liquidity supply has a visible low budget cost
     Given intraday operation is active
     When the player uses liquidity supply

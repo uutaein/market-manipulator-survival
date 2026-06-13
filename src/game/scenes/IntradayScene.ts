@@ -6,7 +6,11 @@ import {
   getAssetNewsSensitivity
 } from "../../domain/assets/assetMarketProfiles";
 import { autoCardRewardElapsedSeconds, autoCardValues } from "../../domain/balancing/autoCardValues";
-import { documentEventRules, documentEventValues } from "../../domain/balancing/documentEventValues";
+import {
+  documentEventRules,
+  documentEventValues,
+  type DocumentEventChoiceValue
+} from "../../domain/balancing/documentEventValues";
 import { runDefaults } from "../../domain/balancing/runDefaults";
 import { getAutoCardPeriodSec } from "../../domain/intraday/autoCards";
 import type { IntradayState } from "../../domain/intraday/intradayState";
@@ -822,7 +826,7 @@ export class IntradayScene extends BaseDocumentScene {
         shell,
         index,
         `${getChoiceTone(choice.type)}: ${choice.label}`,
-        getChoiceToneDescription(choice.type),
+        getDocumentChoiceSecondaryLabel(choice),
         () => {
           const message = gameSession.chooseDocumentEventChoice(index);
           this.actionStatusText?.setText(`문서 이벤트: ${message}`);
@@ -1397,6 +1401,13 @@ function getChoiceToneDescription(choiceType: string): string {
   }
 
   return "즉시 비용은 낮지만 후속 리스크가 남을 수 있습니다.";
+}
+
+function getDocumentChoiceSecondaryLabel(choice: DocumentEventChoiceValue): string {
+  const budgetText =
+    choice.effect.budgetDelta === 0 ? null : `예산 ${formatSignedBudget(choice.effect.budgetDelta)}`;
+
+  return [getChoiceToneDescription(choice.type), budgetText].filter(Boolean).join(" · ");
 }
 
 function getManualActionFeedbackColor(actionId: ManualActionId): string {

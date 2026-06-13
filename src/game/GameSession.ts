@@ -908,7 +908,7 @@ function getNormalizedPositionMarketValue(state: IntradayState): number {
     return 0;
   }
 
-  return round1(state.holdingRatio * (state.currentPrice / state.averageEntryPrice));
+  return round1(getNormalizedPositionCostBasis(state) * (state.currentPrice / state.averageEntryPrice));
 }
 
 function getNormalizedPositionCostBasis(state: IntradayState): number {
@@ -916,7 +916,7 @@ function getNormalizedPositionCostBasis(state: IntradayState): number {
     return 0;
   }
 
-  return round1(state.holdingRatio);
+  return round1(state.holdingRatio * Math.max(1, state.assetInfluenceResistance));
 }
 
 function getIntradayElapsedSec(state: IntradayState): number {

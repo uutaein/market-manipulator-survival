@@ -3,9 +3,12 @@ import assert from "node:assert/strict";
 import type { MmsWorld } from "../support/world";
 import { excludedManualActions, manualActions } from "../support/world";
 import { autoCardIds } from "../../src/domain/balancing/runDefaults";
+import { documentEventValues } from "../../src/domain/balancing/documentEventValues";
 import { isMvpAutoCardId } from "../../src/domain/intraday/autoCards";
+import { openDocumentEvent } from "../../src/domain/intraday/documentEvents";
 import { clampIntradayState } from "../../src/domain/intraday/intradayState";
 import { areManualActionsAvailable, cancelManualAction, tickManualActionCooldowns } from "../../src/domain/intraday/manualActions";
+import { gameSession } from "../../src/game/GameSession";
 
 const normalizeLabel = (label: string) => label.normalize("NFC").trim();
 
@@ -204,6 +207,36 @@ Then("average entry price increases", function (this: MmsWorld) {
 Then("budget decreases by more than the buy bot fee", function (this: MmsWorld) {
   assert.ok(this.intradayState);
   assert.ok(this.intradayState.budget < this.budgetBeforeManualAction - 4);
+});
+
+When("the player marks the asset up from the high 9000s to 14000", function () {
+  gameSession.startNewRun();
+  gameSession.beginDay();
+  gameSession.selectPreOpenCard("선취매", {
+    earlyPositioningBudgetPercent: 50
+  });
+
+  const state = gameSession.startIntraday();
+  const openingPrice = 9800;
+  const currentPrice = 14000;
+  const priceChangePercent = ((currentPrice / openingPrice) - 1) * 100;
+
+  gameSession.intradayState = clampIntradayState({
+    ...state,
+    openingPrice,
+    averageEntryPrice: 10200,
+    priceChangePercent
+  });
+});
+
+Then("the intraday total profit is positive", function () {
+  const ledger = gameSession.getIntradayMoneyLedger();
+
+  assert.ok(ledger);
+  assert.ok(
+    ledger.estimatedNetProfitLoss > 0,
+    `expected positive total profit, got ${ledger.estimatedNetProfitLoss} with current ${ledger.currentPrice} and average ${ledger.averageEntryPrice}`
+  );
 });
 
 When("the player uses liquidity supply", function (this: MmsWorld) {
@@ -413,6 +446,37 @@ Then("the selected effect is applied to abstract game stats", function (this: Mm
 Then("the document event closes", function (this: MmsWorld) {
   assert.equal(this.documentEventOpen, false);
   assert.equal(this.intradayState?.activeDocumentEventId, null);
+});
+
+Given("the liquidity dryness document event popup is shown", function (this: MmsWorld) {
+  if (!this.intradayState) {
+    this.openIntraday();
+  }
+
+  this.budgetBeforeManualAction = this.intradayState!.budget;
+  this.lastDocumentEventOpenResult = openDocumentEvent(this.intradayState!, "liquidity_dryness_report");
+  this.intradayState = this.lastDocumentEventOpenResult.state;
+  this.documentEventOpen = true;
+  this.intradayPaused = this.intradayState.isPaused;
+});
+
+Then("the aggressive liquidity document choice costs 2 budget", function () {
+  const choice = documentEventValues.liquidity_dryness_report.choices.find(
+    (candidate) => candidate.type === "aggressive"
+  );
+
+  assert.ok(choice);
+  assert.equal(choice.label, "유동성 긴급 공급");
+  assert.equal(choice.effect.budgetDelta, -2);
+});
+
+When("the player selects the aggressive document choice", function (this: MmsWorld) {
+  this.chooseDocumentEventOption("aggressive");
+});
+
+Then("the document event budget change is {int}", function (this: MmsWorld, budgetDelta: number) {
+  assert.ok(this.intradayState);
+  assert.equal(this.intradayState.budget - this.budgetBeforeManualAction, budgetDelta);
 });
 
 Given("document events have already occurred during the Day", function (this: MmsWorld) {

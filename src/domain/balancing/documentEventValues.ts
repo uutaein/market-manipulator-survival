@@ -128,9 +128,9 @@ export const documentEventValues = {
       budgetDelta: 6,
       marketPressureDelta: -10
     }),
-    choice("aggressive", "유동성 공급", {
+    choice("aggressive", "유동성 긴급 공급", {
       ...noEffect,
-      budgetDelta: -6,
+      budgetDelta: -2,
       marketLiquidityDelta: 18,
       surveillanceDelta: 4
     }),

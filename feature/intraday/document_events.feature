@@ -21,6 +21,12 @@ Feature: Document events
     And the document event closes
     And intraday operation resumes
 
+  Scenario: Liquidity dryness response uses the low liquidity budget cost
+    Given the liquidity dryness document event popup is shown
+    Then the aggressive liquidity document choice costs 2 budget
+    When the player selects the aggressive document choice
+    Then the document event budget change is -2
+
   Scenario: Limit document event frequency
     Given document events have already occurred during the Day
     When the event system checks for another document event

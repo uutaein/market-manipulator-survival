@@ -275,7 +275,15 @@ function getNormalizedPositionMarketValue(state: IntradayState): number {
     return 0;
   }
 
-  return state.holdingRatio * (state.currentPrice / state.averageEntryPrice);
+  return getNormalizedPositionCostBasis(state) * (state.currentPrice / state.averageEntryPrice);
+}
+
+function getNormalizedPositionCostBasis(state: IntradayState): number {
+  if (state.holdingRatio <= 0) {
+    return 0;
+  }
+
+  return state.holdingRatio * Math.max(1, state.assetInfluenceResistance);
 }
 
 function updatePositionAccountingForActionProgress(
