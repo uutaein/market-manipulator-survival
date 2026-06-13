@@ -1,141 +1,94 @@
 # Market Manipulator Survival
 
-가상의 주식/코인 시장을 배경으로 한 2D 오토 서바이벌 / 자원 관리 전략 시뮬레이션 / 블랙코미디 풍자 게임입니다.
+`Market Manipulator Survival` is a documentation-first game design workspace for a fictional, satirical market-pressure management browser game.
 
-플레이어는 실제 투자자나 거래자가 아니라, 허구 시장의 "운용 데스크" 역할을 맡습니다. 목표는 실제 금융 범죄를 재현하거나 설명하는 것이 아니라, 차트, 뉴스, 군중 심리, 감시 리스크, 예산 고갈의 압박을 추상화된 게임 시스템으로 표현하는 것입니다.
+The project combines:
 
-## 핵심 콘셉트
+- Vampire Survivors-like pressure, waves, automatic cards, and limited real-time actions
+- Papers, Please-like morning documents, stamps, warnings, and bureaucratic decision pressure
+- A fictional market board fantasy with abstract game stats
 
-한 판은 10분짜리 단일 세션입니다.
+The game must not use real companies, real tickers, real exchanges, real market data, real news, or real financial-crime procedures.
 
-플레이어는 개장 전 뉴스와 시장 브리핑을 읽고, 개장 전 카드를 선택한 뒤, 장중에는 가격과 예산, 개인 참여도, 감시도, 변동성을 동시에 관리해야 합니다. 단순히 가격을 올리는 게임이 아니라, 목표 가격 밴드에 안착하면서 예산을 보전하고 감시 리스크를 피하는 게임입니다.
+---
+
+## Current MVP Shape
+
+The MVP is a 5-Day Run.
+
+Each Day follows:
+
+1. Morning News
+2. Market Briefing
+3. Pre-open Card selection
+4. Opening Approval / stamp action
+5. Intraday operation
+6. Day Settlement
+
+After Day 5, Final Settlement occurs.
+
+MVP defaults:
+
+- Intraday duration: 6 minutes per Day
+- Morning News templates: 5
+- Pre-open Cards: 4
+- Manual Actions: 4
+- Auto Cards: 8
+- Document Events: 8
+- Sectors: 8 fictional sectors
+- Assets: 24 fictional assets
+- Market Board: 8 displayed assets
+- Storage: local only
+
+---
+
+## Documentation Layout
+
+All product and design documents live under `docs/`.
 
 ```text
-섹터/종목 선택 또는 배정
-→ Asset Profile 로드
-→ Today Condition 적용
-→ 아침 뉴스와 시장 브리핑 확인
-→ 개장 전 카드 최대 1장 선택
-→ 개장 승인
-→ 장중 가격·군집·시장 보드 진행
-→ 자동 카드와 수동 액션 대응
-→ 문서 이벤트 처리
-→ 마감 정산
+docs/
+  adr/   Architecture Decision Records
+  prd/   Product requirements and MVP freeze documents
+  srs/   Software requirements documents
+  sdd/   Software design documents
 ```
 
-## 레퍼런스 방향
+Key current documents:
 
-- Vampire Survivors식 자동 성장, 웨이브 압박, 제한된 수동 대응
-- Papers, Please식 문서, 도장, 감시 보고서, 제한 시간 선택, 관료제 UI 감성
-- 일반적인 필드 맵 대신 차트, 뉴스 티커, 감시 문서, 시장 보드, 카드 패널이 전장 역할
+- [PRD v0.1.5](docs/prd/market-manipulator-survival-prd-v0.1.5.md)
+- [MVP Freeze Candidate](docs/prd/market-manipulator-survival-mvp-freeze-candidate.md)
+- [SRS v0.1.0 — Core Game State](docs/srs/market-manipulator-survival-srs-v0.1.0-core-game-state.md)
+- [SRS v0.1.1 — Tick Price Formula](docs/srs/market-manipulator-survival-srs-v0.1.1-tick-price-formula.md)
+- [SRS v0.1.2 — Run Flow and Screens](docs/srs/market-manipulator-survival-srs-v0.1.2-run-flow-and-screens.md)
+- [SRS v0.1.3 — Content and Interactions](docs/srs/market-manipulator-survival-srs-v0.1.3-content-and-interactions.md)
+- [SRS v0.1.4 — Settlement, Carryover, and Persistence](docs/srs/market-manipulator-survival-srs-v0.1.4-settlement-carryover-persistence.md)
+- [SDD v0.1.0 — Simulation Modularity](docs/sdd/market-manipulator-survival-sdd-v0.1.0-simulation-modularity.md)
 
-원작의 캐릭터, 세계관, UI 요소를 복제하지 않고, 차트 작전실과 허구 시장이라는 독자적인 정체성을 지향합니다.
+---
 
-## 핵심 지표
+## Safety Rules
 
-| 지표 | 의미 |
+This project is not an investment tool and not a real-world market manipulation simulator.
+
+Use fictional, abstract terminology:
+
+| Avoid | Use Instead |
 | --- | --- |
-| 예산 | 카드 사용, 방어, 추진, 정산에 필요한 핵심 생존 자원 |
-| 가격 | 목표 밴드에 안착시켜야 하는 대상 종목 지표 |
-| 보유 비중 | 운용 데스크의 대상 종목 영향력 |
-| 개인 참여도 | 군중 심리와 Retail Swarm의 강도 |
-| 시장 유동성 | 가격 반응성과 거래 흐름의 활발함 |
-| 감시도 | 감시국/거래소 리스크. 100 도달 시 실패 |
-| 변동성 | 가격이 통제 불가능하게 흔들리는 정도 |
+| 자전거래 | 유동성 공급 / 유동성 순환 |
+| 주가조작 | 시장 압력 관리 |
+| 세력 | 운용 데스크 |
+| 개미 | 개인 참여자 / 개인 참여도 |
+| 주가 끌어올리기 | 가격 추진 |
+| 주가 내려오기 | 과열 해소 / 가격 안정화 |
+| 물량 털기 | 포지션 정리 |
+| 허수 주문 | 신호 주문 / 관심 신호 |
 
-## P0 범위
+---
 
-1차 플레이 가능 버전의 목표 범위입니다.
+## Current Status
 
-- TypeScript + Phaser 3 + Vite 프로젝트 구성
-- 데스크톱 브라우저 우선 실행
-- 10분 단일 세션
-- 허구 섹터 8개
-- 섹터당 허구 종목 3개, 총 24개 종목
-- 종목별 고정 Asset Profile
-- 라운드별 Today Condition
-- 아침 뉴스 10개 이상
-- 개장 전 뉴스 화면
-- 개장 전 카드 4개
-- 개장 승인 연출
-- 대상 종목 상세 가격 계산
-- 비플레이어 종목 간략 등락률 계산
-- 시장 보드
-- 예산 시스템
-- 목표 가격 밴드
-- 장중 수동 액션 3~5개
-- 자동 카드 8개
-- Retail Swarm 아이콘/토큰 시각화
-- 문서 이벤트 8개
-- 완전 성공 / 부분 성공 / 실패 정산
-- localStorage 기반 최고 기록 저장
-- 허구 풍자물 고지와 안전 표현 적용
+The repository is still documentation-first.
 
-## 성공과 실패
-
-### 완전 성공
-
-- 10분 동안 실패 조건에 도달하지 않음
-- 종료 시점에 가격이 목표 가격 밴드 안에 있거나, 일정 시간 이상 목표 밴드를 유지
-- 시작 예산의 25% 이상 보전
-- 감시도 100 미만
-
-### 부분 성공
-
-- 10분 생존
-- 목표 밴드 도달 또는 유지
-- 예산 보전 기준 미달
-
-### 실패
-
-- 감시도 100 도달
-- 예산이 최소 유지선 미만으로 하락
-- 가격이 붕괴선 이탈
-- 세션 종료 시 목표 밴드 미달
-
-## 안전 표현 원칙
-
-이 프로젝트는 실제 투자 도구나 실제 시장 조작 시뮬레이터가 아닙니다.
-
-- 실제 종목, 실제 거래소, 실제 가격 데이터, 실제 투자 API를 사용하지 않습니다.
-- 실제 금융 범죄 절차, 주문 방식, 회피 방식, 거래 패턴을 설명하지 않습니다.
-- 모든 종목, 섹터, 뉴스, 기관명, 이벤트는 허구로 구성합니다.
-- 사용자-facing 문구에서는 직접적인 불법 행위 표현을 피합니다.
-- 효과 설명은 게임 수치와 추상 표현 중심으로 작성합니다.
-
-권장 표현 예시:
-
-| 피하는 표현 | 사용하는 표현 |
-| --- | --- |
-| 시세조종 | 시장 압력 |
-| 자전거래 | 순환 유동성 |
-| 허수 주문 | 관심 신호 |
-| 덤핑/펌핑 | 가격 추진 / 과열 해소 |
-| 처분 | 포지션 정리 |
-
-## 기술 방향
-
-| 항목 | 방향 |
-| --- | --- |
-| 언어 | TypeScript |
-| 게임 엔진 | Phaser 3 |
-| 번들러 | Vite |
-| 렌더링 | Phaser 단일 렌더링 우선 |
-| 실행 환경 | Desktop Web |
-| 저장 | P0 localStorage |
-| 후속 검토 | Electron 패키징 |
-
-## 주요 문서
-
-- `market-manipulator-survival-prd-v0.1.3.md`: 최신 PRD 기준 문서
-- `ADR-0001-market-manipulator-survival-p0-decisions.md`: P0 기술 스택, 렌더링, 저장, 세션 범위, 승패 조건
-- `ADR-0002-budget-system-and-safe-market-pressure-abstraction.md`: 예산 시스템과 안전한 시장 압력 추상화
-- `ADR-0003-market-opening-events-and-fictional-sector-taxonomy.md`: 개장 이벤트와 허구 섹터 체계
-- `ADR-0004-asset-profile-and-today-condition.md`: 종목 프로필과 Today Condition
-- `ADR-0005-pre-open-news-and-market-board.md`: 개장 전 뉴스, 카드, 시장 보드
-- `ADR-0006-retail-swarm-and-intraday-interactions.md`: Retail Swarm과 장중 인터랙션
-
-## 현재 상태
-
-현재 저장소는 PRD와 ADR 중심의 기획 단계입니다. 다음 단계에서는 P0 구현을 위해 SRS/SDD를 작성하거나, 바로 TypeScript + Phaser 3 + Vite 기반 프로토타입을 구성할 수 있습니다.
-
+Implementation has not started.  
+The current work is PRD/SRS/SDD refinement for a small MVP.
