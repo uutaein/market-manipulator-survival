@@ -88,6 +88,7 @@ export class IntradayScene extends BaseDocumentScene {
         const result = gameSession.useManualAction(action.id);
         this.actionStatusText?.setText(`Manual action: ${action.displayName} / ${result.reason}`);
         this.refreshIntradayUi();
+        this.routeIfRunFailed();
       });
     });
 
@@ -100,6 +101,10 @@ export class IntradayScene extends BaseDocumentScene {
       callback: () => {
         const nextState = gameSession.runIntradaySecond();
         this.refreshIntradayUi();
+
+        if (this.routeIfRunFailed()) {
+          return;
+        }
 
         if (nextState.timeRemainingSec <= 0) {
           this.scene.start(SceneKeys.DaySettlement);
@@ -291,11 +296,21 @@ export class IntradayScene extends BaseDocumentScene {
           const message = gameSession.chooseDocumentEventChoice(index);
           this.actionStatusText?.setText(`Document event: ${message}`);
           this.refreshIntradayUi();
+          this.routeIfRunFailed();
         }
       ).setDepth(31);
 
       this.documentEventObjects.push(button);
     });
+  }
+
+  private routeIfRunFailed(): boolean {
+    if (gameSession.ensureRun().runStatus !== "failed") {
+      return false;
+    }
+
+    this.scene.start(SceneKeys.FinalSettlement);
+    return true;
   }
 }
 

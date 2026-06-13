@@ -58,6 +58,7 @@ Current implementation status:
 
 - Project scaffold: present
 - MVP scene shell: present
+- Immediate failure scene routing: partial
 - Core Run State domain module: present
 - Day Setup / Morning News domain module: present
 - Pre-open Card domain module: present

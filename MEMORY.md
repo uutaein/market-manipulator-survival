@@ -32,14 +32,15 @@ Current baseline:
 18. Safety Contract domain module exists for player-facing content checks, approved safe terms, forbidden procedure/entity terms, and fictional calculation validation.
 19. Phaser Run/Day flow scene wiring now exists for Main Menu, Run Setup, Morning Briefing, Pre-open Card selection, Opening Approval, and initial Intraday state display.
 20. Phaser Market Board now refreshes player price and simplified non-player movement during Intraday.
-21. Phaser Intraday scene now advances one-second price/timer ticks and exposes the 4 manual action buttons with cooldown feedback.
-22. Phaser Intraday scene now displays owned Auto Cards, opens paused reward choices, and applies periodic Auto Card effects.
-23. Phaser Intraday scene now opens Document Event modals, pauses time, applies one of 3 choices, and resumes.
-24. Phaser Intraday scene now renders Retail Swarm abstract tokens and applies one-shot overheat/panic transition risk effects.
-25. Phaser Day Settlement scene now displays Day result, surveillance grade, holding band, social cost, risk metrics, learning hint, and next-Day/Final routing.
-26. Phaser Final Settlement scene now displays Final grade, cumulative profit, surveillance summary, holding band, social cost, and restart choices.
-27. Browser localStorage wiring now saves active Run state, exposes Main Menu continue, saves recent Final results, and tracks best record updates.
-28. Polished UI interaction and browser visual QA are not complete yet.
+21. Phaser Intraday scene now routes budget exhaustion, surveillance 100, and critical price collapse to Final Settlement forced failure.
+22. Phaser Intraday scene now advances one-second price/timer ticks and exposes the 4 manual action buttons with cooldown feedback.
+23. Phaser Intraday scene now displays owned Auto Cards, opens paused reward choices, and applies periodic Auto Card effects.
+24. Phaser Intraday scene now opens Document Event modals, pauses time, applies one of 3 choices, and resumes.
+25. Phaser Intraday scene now renders Retail Swarm abstract tokens and applies one-shot overheat/panic transition risk effects.
+26. Phaser Day Settlement scene now displays Day result, surveillance grade, holding band, social cost, risk metrics, learning hint, and next-Day/Final routing.
+27. Phaser Final Settlement scene now displays Final grade, cumulative profit, surveillance summary, holding band, social cost, and restart choices.
+28. Browser localStorage wiring now saves active Run state, exposes Main Menu continue, saves recent Final results, and tracks best record updates.
+29. Polished UI interaction and browser visual QA are not complete yet.
 
 ---
 
@@ -165,6 +166,7 @@ MVP shape:
 32. Added Retail Swarm scene wiring for abstract token rendering, participation-synced density/speed, and one-shot overheat/panic transition risk effects.
 33. Added browser localStorage wiring for active Run save/load, Main Menu continue, Final Settlement record save, best-record update flag, and current Run cleanup after Final.
 34. Added Market Board live scene wiring for simplified non-player movement advancement and live player price display.
+35. Added immediate failure scene routing for budget exhaustion, surveillance 100, critical price collapse, and forced Final Settlement.
 
 ---
 
@@ -237,4 +239,5 @@ Current branch baseline includes:
 24. Retail Swarm scene wiring,
 25. Local persistence browser wiring,
 26. Market Board live scene wiring,
-27. README, docs index, feature index, traceability, and MEMORY updates.
+27. Immediate failure scene routing,
+28. README, docs index, feature index, traceability, and MEMORY updates.
