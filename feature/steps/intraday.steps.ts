@@ -252,53 +252,69 @@ Then("document events respect the minimum gap between events", function (this: M
 });
 
 When("personal participation increases", function (this: MmsWorld) {
-  this.visibleOptions.add("participation increased");
+  this.increasePersonalParticipationForSwarm();
 });
 
 Then("the Retail Swarm becomes denser or faster", function (this: MmsWorld) {
-  assert.ok(this.visibleOptions.has("participation increased"));
+  assert.ok(this.retailSwarmModelBefore);
+  assert.ok(this.latestRetailSwarmModel);
+  assert.ok(
+    this.latestRetailSwarmModel.tokenCount > this.retailSwarmModelBefore.tokenCount ||
+      this.latestRetailSwarmModel.speed > this.retailSwarmModelBefore.speed
+  );
 });
 
 Then("the participation number increases", function (this: MmsWorld) {
-  assert.ok(this.visibleOptions.has("participation increased"));
+  assert.ok(this.intradayState);
+  assert.ok(this.intradayState.personalParticipation > this.participationBeforeSwarm);
 });
 
 Given("personal participation is high", function (this: MmsWorld) {
-  this.visibleOptions.add("high participation");
+  this.setHighParticipationForSwarm();
 });
 
 When("the system evaluates Retail Swarm state", function (this: MmsWorld) {
-  this.visibleOptions.add("swarm evaluated");
+  this.evaluateRetailSwarmState();
 });
 
 Then("the swarm can enter the overheated state", function (this: MmsWorld) {
-  assert.ok(this.visibleOptions.has("swarm evaluated"));
+  assert.equal(this.latestRetailSwarmModel?.state, "overheated");
 });
 
 Then("warning visuals are shown", function (this: MmsWorld) {
-  assert.ok(this.visibleOptions.has("swarm evaluated"));
+  assert.equal(this.latestRetailSwarmModel?.warningVisual, true);
 });
 
 Then("surveillance or volatility risk can increase", function (this: MmsWorld) {
-  assert.ok(this.visibleOptions.has("swarm evaluated"));
+  assert.ok(this.latestRetailSwarmModel);
+  assert.ok(
+    this.latestRetailSwarmModel.riskEffect.surveillanceDelta > 0 ||
+      this.latestRetailSwarmModel.riskEffect.volatilityDelta > 0
+  );
 });
 
 Given("personal participation reaches panic-risk conditions", function (this: MmsWorld) {
-  this.visibleOptions.add("panic risk");
+  this.setPanicRiskForSwarm();
 });
 
 When("panic is triggered", function (this: MmsWorld) {
-  this.visibleOptions.add("panic");
+  this.triggerRetailSwarmPanic();
 });
 
 Then("the swarm shows a panic state", function (this: MmsWorld) {
-  assert.ok(this.visibleOptions.has("panic"));
+  assert.equal(this.latestRetailSwarmModel?.state, "panic");
+  assert.equal(this.latestRetailSwarmModel.panicVisual, true);
 });
 
 Then("downward pressure or volatility risk increases", function (this: MmsWorld) {
-  assert.ok(this.visibleOptions.has("panic"));
+  assert.ok(this.lastRetailSwarmEffectResult?.applied);
+  assert.ok(
+    this.lastRetailSwarmEffectResult.model.riskEffect.marketPressureDelta < 0 ||
+      this.lastRetailSwarmEffectResult.model.riskEffect.volatilityDelta > 0
+  );
 });
 
 Then("panic is represented with abstract tokens rather than realistic people", function (this: MmsWorld) {
-  assert.ok(this.visibleOptions.has("panic"));
+  assert.equal(this.latestRetailSwarmModel?.usesAbstractTokens, true);
+  assert.equal(this.latestRetailSwarmModel?.tokenKind, "abstract_token");
 });
