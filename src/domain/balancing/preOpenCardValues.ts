@@ -89,7 +89,7 @@ export const preOpenCardValues = {
   wait_and_see: {
     id: "wait_and_see",
     displayName: "관망",
-    role: "Opens without spending budget or applying a pre-open stat effect.",
+    role: "예산을 쓰지 않고 관망한다. 개장 전 효과는 적용되지 않는다.",
     budgetDelta: 0,
     holdingRatioDelta: 0,
     marketPressureDelta: 0,

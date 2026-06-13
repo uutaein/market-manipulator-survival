@@ -1,11 +1,11 @@
 import { Given, Then, When } from "@cucumber/cucumber";
 import assert from "node:assert/strict";
 import type { MmsWorld } from "../support/world";
-import { preOpenCards } from "../support/world";
 import { getAssetsBySector } from "../../src/domain/assets/assetCatalog";
+import { createDayState } from "../../src/domain/day/daySetup";
 import { isMorningNewsTemplateId, morningNewsTemplates } from "../../src/domain/day/morningNews";
 import { getActiveNewsPricePressure } from "../../src/domain/intraday/newsPressure";
-import { canStartIntraday, hasStatEffect } from "../../src/domain/preopen/preOpenCards";
+import { canStartIntraday, getAvailablePreOpenCards, hasStatEffect } from "../../src/domain/preopen/preOpenCards";
 
 Given("a new Day begins", function (this: MmsWorld) {
   this.beginDay();
@@ -15,6 +15,18 @@ Given("a new Day begins before Morning News is revealed", function (this: MmsWor
   this.beginDay();
   this.visibleScreens.delete("Morning News");
   this.visibleScreens.delete("Market Briefing");
+});
+
+Given("the Run has no carried position", function (this: MmsWorld) {
+  if (!this.runState) {
+    this.startNewRun();
+  }
+
+  this.runState = {
+    ...this.runState!,
+    holdingRatio: 0
+  };
+  this.dayState = createDayState(this.runState);
 });
 
 When("Morning News is generated", function (this: MmsWorld) {
@@ -119,18 +131,28 @@ Given("the player has reviewed Morning News and the Market Briefing", function (
 });
 
 When("the Pre-open Card screen is shown", function (this: MmsWorld) {
-  for (const card of preOpenCards) {
-    if (card === "뉴스 배정") {
+  this.visibleOptions.clear();
+
+  for (const card of getAvailablePreOpenCards(this.runState)) {
+    if (card.id === "news_assignment") {
       this.visibleOptions.add("뉴스 배정: 호재");
       this.visibleOptions.add("뉴스 배정: 악재");
     } else {
-      this.visibleOptions.add(card);
+      this.visibleOptions.add(card.displayName);
     }
   }
 });
 
 Then("the player can choose {string}", function (this: MmsWorld, cardName: string) {
   assert.ok(this.visibleOptions.has(cardName));
+});
+
+Then("the player cannot choose {string}", function (this: MmsWorld, cardName: string) {
+  assert.equal(this.visibleOptions.has(cardName), false);
+});
+
+Then("the Pre-open Card selection is rejected", function (this: MmsWorld) {
+  assert.ok(this.preOpenSelectionError);
 });
 
 Then("no more than one Pre-open Card can be selected for the Day", function (this: MmsWorld) {

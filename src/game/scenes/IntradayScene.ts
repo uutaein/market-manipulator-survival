@@ -156,10 +156,10 @@ export class IntradayScene extends BaseDocumentScene {
       this.manualActionButtons[action.id] = button;
     });
 
-    this.addDocumentButton(1040, 638, "Day 정산", () => {
+    this.addDocumentButton(1040, 618, "Day 정산", () => {
       this.scene.start(SceneKeys.DaySettlement);
     });
-    this.repositionButton = this.addDocumentButton(760, 638, "운용 데스크 재배치", () => {
+    this.repositionButton = this.addDocumentButton(760, 618, "운용 데스크 재배치", () => {
       this.scene.start(SceneKeys.IntradayReposition);
     });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.destroyDomOverlays());

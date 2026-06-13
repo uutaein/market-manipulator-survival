@@ -180,6 +180,8 @@ The Market Dashboard should update through a stable DOM row pool or equivalent r
 | SRS-BASE-PREOPEN-004 | `관망` must be a valid explicit choice. |
 | SRS-BASE-PREOPEN-005 | `뉴스 배정` is counted as one MVP card even though it exposes `호재` and `악재` direction buttons. |
 | SRS-BASE-PREOPEN-006 | `사전 포지션 확보` must not use a fixed budget cost. |
+| SRS-BASE-PREOPEN-007 | If no carried position context exists at Pre-open, only `사전 포지션 확보` may be selected. |
+| SRS-BASE-PREOPEN-008 | The Pre-open Card screen may show budget spend, remaining budget, and integer budget spend rate, but must not preview non-budget stat deltas. |
 
 ---
 

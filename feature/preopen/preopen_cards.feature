@@ -12,6 +12,18 @@ Feature: Pre-open Card selection and Opening Approval
     And the player can choose "관망"
     And no more than one Pre-open Card can be selected for the Day
 
+  Scenario: Require early positioning when no carried position exists
+    Given a new Day begins before Morning News is revealed
+    And the Run has no carried position
+    When the Pre-open Card screen is shown
+    Then the player can choose "사전 포지션 확보"
+    And the player cannot choose "뉴스 배정: 호재"
+    And the player cannot choose "뉴스 배정: 악재"
+    And the player cannot choose "종목 분석"
+    And the player cannot choose "관망"
+    When the player chooses "관망"
+    Then the Pre-open Card selection is rejected
+
   Scenario: Reveal Morning News after the pre-open choice
     Given a new Day begins before Morning News is revealed
     When the player chooses "뉴스 배정: 호재"

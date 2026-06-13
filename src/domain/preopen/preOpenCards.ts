@@ -36,6 +36,16 @@ export function getPreOpenCardDisplayNames(): readonly string[] {
   return preOpenCards.map((card) => card.displayName);
 }
 
+export function getAvailablePreOpenCards(
+  runState?: Pick<RunState, "holdingRatio" | "selectedAssetId"> | null
+): readonly PreOpenCardValue[] {
+  if (!hasPreOpenPositionContext(runState)) {
+    return preOpenCards.filter((card) => card.id === "early_positioning");
+  }
+
+  return preOpenCards;
+}
+
 export function isPreOpenCardId(value: string): value is PreOpenCardId {
   return preOpenCardIds.includes(value as PreOpenCardId);
 }
@@ -63,7 +73,7 @@ export function resolvePreOpenCardId(cardIdOrDisplayName: string): PreOpenCardId
 export function selectPreOpenCard(
   dayState: DayState,
   cardIdOrDisplayName: string,
-  runState?: Pick<RunState, "selectedSectorId" | "selectedAssetId">,
+  runState?: Pick<RunState, "selectedSectorId" | "selectedAssetId" | "holdingRatio">,
   options: PreOpenCardSelectionOptions = {}
 ): DayState {
   if (dayState.preOpenCardId) {
@@ -72,6 +82,11 @@ export function selectPreOpenCard(
 
   const selection = parsePreOpenCardSelection(cardIdOrDisplayName);
   const card = getPreOpenCard(selection?.cardId ?? resolvePreOpenCardId(cardIdOrDisplayName));
+
+  if (!getAvailablePreOpenCards(runState).some((candidate) => candidate.id === card.id)) {
+    throw new Error("Pre-open choice requires 사전 포지션 확보 when no carried position is available");
+  }
+
   const newsAssignmentDirection = selection?.newsAssignmentDirection ?? null;
   const earlyPositioningBudgetPercent =
     selection?.earlyPositioningBudgetPercent ?? options.earlyPositioningBudgetPercent ?? null;
@@ -84,6 +99,12 @@ export function selectPreOpenCard(
     preOpenCardId: card.id,
     preOpenCardEffect: createPreOpenCardEffect(dayState, card, newsAssignmentDirection, earlyPositioningBudgetPercent)
   };
+}
+
+function hasPreOpenPositionContext(
+  runState?: Pick<RunState, "holdingRatio" | "selectedAssetId"> | null
+): boolean {
+  return Boolean(runState?.selectedAssetId && runState.holdingRatio > 0);
 }
 
 export function approveOpening(dayState: DayState): DayState {
