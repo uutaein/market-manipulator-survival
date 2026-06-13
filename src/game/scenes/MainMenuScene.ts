@@ -1,5 +1,6 @@
 import { BaseDocumentScene } from "./BaseDocumentScene";
 import { SceneKeys } from "./SceneKeys";
+import { gameSession } from "../GameSession";
 
 export class MainMenuScene extends BaseDocumentScene {
   constructor() {
@@ -10,13 +11,26 @@ export class MainMenuScene extends BaseDocumentScene {
     this.drawDocumentShell(
       "Market Manipulator Survival",
       [
-        "Fictional exchange surveillance desk.",
-        "MVP first playable scaffold.",
+        "FICTIONAL EXCHANGE SURVEILLANCE DESK",
         "",
-        "No real companies, tickers, exchanges, market data, or real procedures.",
-        "Next implementation work should follow SPEC, Gherkin, and traceability."
+        "5-Day Run",
+        "Morning documents",
+        "Pre-open approval",
+        "Intraday pressure management",
+        "",
+        "No real companies, tickers, exchanges, market data, or real procedures."
       ],
-      { label: "새 Run 시작", target: SceneKeys.RunSetup }
+      {
+        label: "새 Run 시작",
+        target: SceneKeys.RunSetup,
+        onClick: () => {
+          gameSession.runState = null;
+          gameSession.dayState = null;
+          gameSession.marketBriefing = null;
+          gameSession.intradayState = null;
+          gameSession.marketBoardState = null;
+        }
+      }
     );
   }
 }
