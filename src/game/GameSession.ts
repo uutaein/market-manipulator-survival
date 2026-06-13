@@ -238,6 +238,10 @@ export class GameSession {
     const runState = this.ensureRun();
     const currentState = this.intradayState ?? this.startIntraday();
 
+    if (runState.runStatus === "failed") {
+      return currentState;
+    }
+
     if (isIntradayComplete(currentState)) {
       return currentState;
     }
@@ -255,6 +259,11 @@ export class GameSession {
     const autoCardState = this.applyDueAutoCardEffects(advancedState);
     this.intradayState = this.applyRetailSwarmTransitionRisk(autoCardState);
     this.advanceMarketBoard();
+
+    if (this.checkImmediateRunFailure(this.intradayState)) {
+      return this.intradayState;
+    }
+
     this.openDueAutoCardReward();
 
     if (!this.intradayState.isPaused) {
@@ -268,6 +277,7 @@ export class GameSession {
     const currentState = this.intradayState ?? this.startIntraday();
     this.lastManualActionResult = useManualAction(currentState, actionIdOrDisplayName);
     this.intradayState = this.lastManualActionResult.state;
+    this.checkImmediateRunFailure(this.intradayState);
     return this.lastManualActionResult;
   }
 
@@ -309,6 +319,7 @@ export class GameSession {
     this.intradayState = result.state;
     this.lastDocumentEventChoiceResult = result;
     this.lastDocumentEventMessage = `${result.event.displayName}: ${choice?.label ?? result.choiceType}`;
+    this.checkImmediateRunFailure(this.intradayState);
     return this.lastDocumentEventMessage;
   }
 
@@ -441,6 +452,29 @@ export class GameSession {
     );
   }
 
+  private checkImmediateRunFailure(state: IntradayState): boolean {
+    const reason = getImmediateFailureReason(state);
+
+    if (!reason) {
+      return false;
+    }
+
+    const runState = this.ensureRun();
+    this.runState = {
+      ...runState,
+      runStatus: "failed",
+      phase: "final_settlement",
+      budget: state.budget,
+      holdingRatio: state.holdingRatio,
+      surveillance: state.surveillance,
+      socialCost: runState.socialCost + state.pendingSocialCostDelta,
+      failedReason: reason
+    };
+    this.finalSettlementResult = null;
+    this.saveFinalSettlementRecord();
+    return true;
+  }
+
   private applyRetailSwarmTransitionRisk(state: IntradayState): IntradayState {
     if (state.retailSwarmState === this.lastRetailSwarmState) {
       return state;
@@ -536,4 +570,20 @@ function round1(value: number): number {
 
 function getIntradayElapsedSec(state: IntradayState): number {
   return runDefaults.intradayDurationSec - state.timeRemainingSec;
+}
+
+function getImmediateFailureReason(state: IntradayState): string | null {
+  if (state.budget <= runDefaults.minimumBudgetFailureThreshold) {
+    return "budget exhaustion";
+  }
+
+  if (state.surveillance >= 100) {
+    return "surveillance reached 100";
+  }
+
+  if (state.priceChangePercent <= runDefaults.crashLine) {
+    return "critical price collapse";
+  }
+
+  return null;
 }
