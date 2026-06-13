@@ -191,58 +191,56 @@ Then("rare or legendary card types are not available", function (this: MmsWorld)
 });
 
 When("a document event trigger condition is met", function (this: MmsWorld) {
-  this.visibleOptions.add("document event qualifies");
+  this.forceDocumentEventTriggerCondition();
 });
 
 When("the global event limit allows another event", function (this: MmsWorld) {
-  this.documentEventsToday = 1;
+  this.allowDocumentEventByGlobalRules();
 });
 
 Then("one document event popup is shown", function (this: MmsWorld) {
-  this.documentEventOpen = true;
+  this.evaluateAndOpenDocumentEvent();
+  assert.equal(this.lastDocumentEventOpenResult?.opened, true);
   assert.equal(this.documentEventOpen, true);
 });
 
 Then("intraday operation pauses", function (this: MmsWorld) {
-  this.intradayPaused = true;
-  assert.equal(this.intradayPaused, true);
+  assert.equal(this.intradayState?.isPaused, true);
 });
 
 Given("a document event popup is shown", function (this: MmsWorld) {
-  this.documentEventOpen = true;
-  this.intradayPaused = true;
+  this.openDefaultDocumentEvent();
 });
 
 Then("the player sees three choices", function (this: MmsWorld) {
-  this.visibleOptions.add("stable");
-  this.visibleOptions.add("aggressive");
-  this.visibleOptions.add("avoid");
-  assert.equal(this.visibleOptions.has("stable"), true);
+  assert.equal(this.intradayState?.documentEventChoices.length, 3);
 });
 
 Then("the choices represent stable, aggressive, and avoid or watch directions", function (this: MmsWorld) {
-  assert.ok(this.visibleOptions.has("stable") || this.documentEventOpen);
+  assert.deepEqual(this.intradayState?.documentEventChoices, ["stable", "aggressive", "avoid"]);
 });
 
 When("the player selects a choice", function (this: MmsWorld) {
-  this.visibleOptions.add("document choice selected");
+  this.chooseDocumentEventOption("stable");
 });
 
 Then("the selected effect is applied to abstract game stats", function (this: MmsWorld) {
-  assert.ok(this.visibleOptions.has("document choice selected"));
+  assert.equal(this.lastDocumentEventChoiceResult?.applied, true);
+  assert.ok(this.intradayState);
+  assert.ok(this.intradayState.surveillance < 65 || this.intradayState.budget < 100);
 });
 
 Then("the document event closes", function (this: MmsWorld) {
-  this.closeModal();
   assert.equal(this.documentEventOpen, false);
+  assert.equal(this.intradayState?.activeDocumentEventId, null);
 });
 
 Given("document events have already occurred during the Day", function (this: MmsWorld) {
-  this.documentEventsToday = 2;
+  this.setDocumentEventGapBlockedState();
 });
 
 When("the event system checks for another document event", function (this: MmsWorld) {
-  this.visibleOptions.add("event limit checked");
+  this.checkDocumentEventLimits();
 });
 
 Then("no more than 2 document events occur in one Day", function (this: MmsWorld) {
@@ -250,7 +248,7 @@ Then("no more than 2 document events occur in one Day", function (this: MmsWorld
 });
 
 Then("document events respect the minimum gap between events", function (this: MmsWorld) {
-  assert.ok(this.visibleOptions.has("event limit checked"));
+  assert.equal(this.documentEventLimitAllowsAnother, false);
 });
 
 When("personal participation increases", function (this: MmsWorld) {
