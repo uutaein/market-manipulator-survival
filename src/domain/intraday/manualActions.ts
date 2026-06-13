@@ -120,7 +120,7 @@ export function useManualAction(state: IntradayState, actionIdOrDisplayName: str
   };
 }
 
-export function tickManualActionCooldowns(state: IntradayState, seconds = runDefaults.intradayDurationSec): IntradayState {
+export function tickManualActionCooldowns(state: IntradayState, seconds: number = runDefaults.intradayDurationSec): IntradayState {
   const cooldowns = Object.fromEntries(
     manualActionIds.map((actionId) => [actionId, Math.max(0, state.manualActionCooldowns[actionId] - seconds)])
   ) as Record<ManualActionId, number>;
