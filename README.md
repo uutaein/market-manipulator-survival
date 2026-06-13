@@ -72,6 +72,7 @@ Current implementation status:
 - Local Persistence domain module: present
 - Safety Contract domain module: present
 - Run/Day scene wiring: partial
+- Market Board scene wiring: partial
 - Intraday tick/action scene wiring: partial
 - Auto Card scene wiring: partial
 - Document Event scene wiring: partial

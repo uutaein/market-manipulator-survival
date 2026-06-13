@@ -86,6 +86,37 @@ export function buildMarketBoard(runState: RunState, dayState: DayState): Market
   };
 }
 
+export function advanceMarketBoard(
+  state: MarketBoardState,
+  runState: RunState,
+  dayState: DayState,
+  tickIndex: number
+): MarketBoardState {
+  const entries = state.entries.map((entry, index) => {
+    if (!isNonPlayerEntry(entry)) {
+      return entry;
+    }
+
+    const asset = getAssetById(entry.assetId);
+    const delta = calculateSimplifiedPriceDelta(asset, runState, dayState, index, tickIndex);
+    const priceChangePercent = round2(clamp(entry.priceChangePercent + delta, -30, 30));
+
+    return {
+      ...entry,
+      priceChangePercent,
+      trend: getTrend(priceChangePercent),
+      status: getStatus(priceChangePercent)
+    };
+  });
+
+  return {
+    entries,
+    displayedAssetIds: entries.map((entry) => entry.assetId),
+    playerAssetId: state.playerAssetId,
+    nonPlayerAssetSummaries: entries.filter(isNonPlayerEntry)
+  };
+}
+
 export function isNonPlayerEntry(entry: MarketBoardEntry): entry is NonPlayerMarketBoardEntry {
   return entry.calculationMode === "simplified";
 }
@@ -213,6 +244,26 @@ function calculateSimplifiedPriceChange(
   const random = createSeededRandom(`${runState.runSeed}:day:${dayState.dayIndex}:market-board:${asset.id}:${slotIndex}`);
   const sectorNewsPressure = getSectorNewsPressure(asset, dayState);
   const marketNewsPressure = getMarketNewsPressure(dayState);
+  const trendBias = random.next() * 0.02 - 0.01;
+  const simplifiedVolatility = 35 + dayState.todayCondition.volatilityShiftPercent;
+  const randomNoise = (random.next() * 2 - 1) * (0.02 + simplifiedVolatility * 0.0008);
+  const rawDelta = sectorNewsPressure + marketNewsPressure + trendBias + randomNoise;
+
+  return round2(clamp(rawDelta, -0.25, 0.25));
+}
+
+function calculateSimplifiedPriceDelta(
+  asset: AssetDefinition,
+  runState: RunState,
+  dayState: DayState,
+  slotIndex: number,
+  tickIndex: number
+): number {
+  const random = createSeededRandom(
+    `${runState.runSeed}:day:${dayState.dayIndex}:market-board:${asset.id}:${slotIndex}:tick:${tickIndex}`
+  );
+  const sectorNewsPressure = getSectorNewsPressure(asset, dayState) * 0.3;
+  const marketNewsPressure = getMarketNewsPressure(dayState) * 0.3;
   const trendBias = random.next() * 0.02 - 0.01;
   const simplifiedVolatility = 35 + dayState.todayCondition.volatilityShiftPercent;
   const randomNoise = (random.next() * 2 - 1) * (0.02 + simplifiedVolatility * 0.0008);

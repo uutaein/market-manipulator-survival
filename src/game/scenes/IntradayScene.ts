@@ -11,6 +11,7 @@ import { gameSession } from "../GameSession";
 
 export class IntradayScene extends BaseDocumentScene {
   private statsText: Phaser.GameObjects.Text | null = null;
+  private marketBoardText: Phaser.GameObjects.Text | null = null;
   private actionStatusText: Phaser.GameObjects.Text | null = null;
   private autoCardText: Phaser.GameObjects.Text | null = null;
   private autoChoiceButtons: Phaser.GameObjects.Text[] = [];
@@ -53,7 +54,7 @@ export class IntradayScene extends BaseDocumentScene {
       })
       .setOrigin(0, 0);
 
-    this.add
+    this.marketBoardText = this.add
       .text(610, 166, formatMarketBoard(marketBoardState), {
         color: "#c9c1ad",
         fontFamily: this.fontFamily,
@@ -109,6 +110,7 @@ export class IntradayScene extends BaseDocumentScene {
 
   private refreshIntradayUi(): void {
     this.refreshIntradayText();
+    this.refreshMarketBoardText();
     this.renderRetailSwarm();
     this.refreshAutoCardText();
     this.renderAutoCardChoices();
@@ -143,6 +145,11 @@ export class IntradayScene extends BaseDocumentScene {
           .join(" / ")
       ].join("\n")
     );
+  }
+
+  private refreshMarketBoardText(): void {
+    const playerPriceChangePercent = gameSession.intradayState?.priceChangePercent ?? 0;
+    this.marketBoardText?.setText(formatMarketBoard(gameSession.marketBoardState, playerPriceChangePercent));
   }
 
   private refreshAutoCardText(): void {
@@ -292,7 +299,7 @@ export class IntradayScene extends BaseDocumentScene {
   }
 }
 
-function formatMarketBoard(marketBoardState: MarketBoardState | null): string {
+function formatMarketBoard(marketBoardState: MarketBoardState | null, playerPriceChangePercent = 0): string {
   if (!marketBoardState) {
     return "No board data";
   }
@@ -300,7 +307,9 @@ function formatMarketBoard(marketBoardState: MarketBoardState | null): string {
   return marketBoardState.entries
     .map((entry, index) => {
       if (entry.calculationMode === "detailed") {
-        return `${index + 1}. ${entry.displayName} / DETAIL / ${entry.newsBadge ?? "-"}`;
+        return `${index + 1}. ${entry.displayName} / DETAIL ${formatPercent(playerPriceChangePercent)} / ${
+          entry.newsBadge ?? "-"
+        }`;
       }
 
       return `${index + 1}. ${entry.displayName} / ${entry.trend} ${formatPercent(entry.priceChangePercent)} / ${
