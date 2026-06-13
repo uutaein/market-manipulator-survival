@@ -25,3 +25,4 @@ The scaffold exists so the next implementation work can attach SPEC/Gherkin-driv
 | `FinalSettlementScene` | Final Settlement summary and failure variant shell |
 
 Document Event is wired as an intraday modal and is not a standalone scene in the MVP SPEC.
+Browser localStorage wiring exists for current Run continuation and Final Settlement records.
