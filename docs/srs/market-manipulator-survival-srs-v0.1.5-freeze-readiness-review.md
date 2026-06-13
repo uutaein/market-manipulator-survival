@@ -6,8 +6,9 @@
 | Product | Market Manipulator Survival |
 | Scope | MVP SRS freeze readiness |
 | Version | v0.1.5 |
-| Status | Draft Review |
+| Status | Historical Review / Superseded by SRS v0.1.6 and first-playable implementation |
 | Date | 2026-06-13 |
+| Current As Of | 2026-06-14 |
 | Baseline PRD | ../prd/market-manipulator-survival-prd-v0.1.5.md |
 | Baseline SRS | ./market-manipulator-survival-srs-v0.1.0-core-game-state.md through ./market-manipulator-survival-srs-v0.1.4-settlement-carryover-persistence.md |
 
@@ -18,6 +19,10 @@ This document reviews the current MVP SRS set and separates remaining work into:
 3. items that should stay outside MVP.
 
 This document does not add new MVP features.
+
+Current note:
+
+> This review captured readiness gaps before SRS v0.1.6 and before the first playable implementation. Treat the blocker list below as historical context. The current actionable baseline is SRS v0.1.6, the MVP SPEC, and `docs/traceability.md`.
 
 ---
 

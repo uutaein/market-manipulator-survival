@@ -6,8 +6,9 @@
 | Product | Market Manipulator Survival |
 | Scope | MVP baseline values, triggers, and balancing groups |
 | Version | v0.1.6 |
-| Status | Draft |
+| Status | First Playable Baseline / Playtest Tunable |
 | Date | 2026-06-13 |
+| Current As Of | 2026-06-14 |
 | Baseline PRD | ../prd/market-manipulator-survival-prd-v0.1.5.md |
 | Baseline SRS | ./market-manipulator-survival-srs-v0.1.0-core-game-state.md through ./market-manipulator-survival-srs-v0.1.5-freeze-readiness-review.md |
 
@@ -237,6 +238,7 @@ Manual actions are unavailable while a document event or auto card reward choice
 | SRS-BASE-ACTION-010 | `포지션 정리` must reduce held units and recover budget based on current fictional price context, with stronger market impact than `매도봇`. |
 | SRS-BASE-ACTION-011 | Active manual actions must show a fill gauge and may be interrupted mid-gauge. Already-applied partial effects remain; only the remaining action progress is cancelled. |
 | SRS-BASE-ACTION-012 | Acquisition budget and effective holding-ratio gain must respect asset influence resistance so top trade-value assets require materially more budget to move than entry/theme assets. |
+| SRS-BASE-ACTION-013 | Normalized position cost basis must account for asset influence resistance. The first-playable account display uses `holdingRatio * max(1, assetInfluenceResistance)` as normalized position cost basis and multiplies it by `currentPrice / averageEntryPrice` for position market value. |
 
 ### 6.1 Intraday Money Flow Display
 
@@ -255,6 +257,8 @@ The Intraday screen must expose simple fictional budget-flow feedback:
 | 평가손익 | Unrealized fictional position gain/loss from current price versus average entry |
 
 This is a game-budget display, not real accounting.
+
+The money-flow readout must remain internally consistent with influence acquisition. If the player moved a position from a high-9000 fictional price area to around 14000 while holding above average entry, total P&L should not remain negative only because the display ignored asset influence resistance.
 
 ---
 
@@ -362,7 +366,7 @@ Each event has 3 choices: stable, aggressive, avoid/watch.
 | --- | --- | --- | --- |
 | 이상 흐름 질의서 | `budget -6`, `surveillance -12`, `marketPressure -8` | `marketPressure +10`, `surveillance +8`, `volatility +4` | `surveillance +10`, add high-surveillance aftereffect |
 | 시장 과열 경보 | `personalParticipation -14`, `volatility -10`, `marketPressure -8` | `marketPressure +12`, `surveillance +7`, `socialCost +5` | `volatility +8`, panic risk +1 |
-| 유동성 경색 보고 | `budget +6`, `marketPressure -10` | `budget -6`, `marketLiquidity +18`, `surveillance +4` | `volatility +8`, `marketLiquidity -5` |
+| 유동성 경색 보고 | `budget +6`, `marketPressure -10` | `유동성 긴급 공급`: `budget -2`, `marketLiquidity +18`, `surveillance +4` | `volatility +8`, `marketLiquidity -5` |
 | 커뮤니티 폭주 알림 | `personalParticipation -16`, `volatility -8` | `marketPressure +14`, `surveillance +8`, `socialCost +6` | 50% chance panic pressure, `socialCost +4` |
 | 경쟁 데스크 개입 보고 | `budget -5`, `competitionPressure -16` | `marketPressure +10`, `surveillance +6`, `competitionPressure -8` | `competitionPressure +10` |
 | 급락 위험 통지 | `budget -8`, `marketPressure +20`, `volatility -8` | `holdingRatio +8`, `marketPressure +15`, `surveillance +8` | `volatility +10`, collapse aftereffect risk |
@@ -372,8 +376,10 @@ Each event has 3 choices: stable, aggressive, avoid/watch.
 | ID | Requirement |
 | --- | --- |
 | SRS-BASE-DOC-001 | Document event triggers must be condition-based and capped by the global event rules. |
-| SRS-BASE-DOC-002 | Document event effects must use safe fictional terminology and abstract stats only. |
-| SRS-BASE-DOC-003 | Day 1 must avoid high-risk event chains before the player has seen the basic loop. |
+| SRS-BASE-DOC-002 | Document Event choices that change budget must show the budget delta in the popup choice description before the player commits. |
+| SRS-BASE-DOC-003 | Document Event choice labels should avoid reusing a manual action label when the cost/effect differs materially from the manual action. |
+| SRS-BASE-DOC-004 | Document event effects must use safe fictional terminology and abstract stats only. |
+| SRS-BASE-DOC-005 | Day 1 must avoid high-risk event chains before the player has seen the basic loop. |
 
 ---
 

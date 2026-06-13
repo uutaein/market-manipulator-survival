@@ -8,7 +8,7 @@ This file is a compact working log. It is not a PRD, SRS, ADR, or implementation
 
 ## Current Mode
 
-The project is still documentation-first.
+The project remains documentation-led, and implementation has started.
 
 Current baseline:
 
@@ -25,7 +25,7 @@ Current baseline:
 11. Manual Action domain module exists for 4 action values, modal availability, budget/cooldown checks, locked gradual effects, cooldown entry, and lightweight position accounting for price push / position settlement.
 12. Auto Card domain module exists for 8 card values, reward choices, Lv.1~Lv.3 handling, and simple periodic state effects.
 13. Document Event domain module exists for 8 event values, trigger priority, cap/gap rules, pause behavior, 3 choices, choice effects, and event history.
-14. Retail Swarm domain module exists for participation-synced state, abstract token model, warning/panic flags, and overheat/panic risk effects.
+14. Retail Swarm domain module exists for participation-synced state, participant mood modeling, warning/panic flags, and overheat/panic risk effects.
 15. Settlement domain module exists for Day result matrix, surveillance grade, holding bands, social cost deltas, Final grade baselines, and forced failure handling.
 16. Day Carryover domain module exists for persistent Run state carryover, partial risk carryover, reset baselines, weak aftereffects, and Pre-open Card non-carryover.
 17. Local Persistence domain module exists for versioned save envelopes, current Run save/load, recent Final save, best record update, forbidden keys, and incompatible save discard.
@@ -37,11 +37,11 @@ Current baseline:
 23. Phaser Intraday scene now advances one-second price/timer ticks and exposes the 4 manual action buttons with locked blinking execution feedback.
 24. Phaser Intraday scene now displays owned Auto Cards, opens paused reward choices, and applies periodic Auto Card effects.
 25. Phaser Intraday scene now opens Document Event modals, pauses time, applies one of 3 choices, and resumes.
-26. Phaser Intraday scene now renders Retail Swarm abstract tokens and applies one-shot overheat/panic transition risk effects.
+26. Phaser Intraday scene now renders a Retail Swarm participant mood panel and applies one-shot overheat/panic transition risk effects.
 27. Phaser Day Settlement scene now displays Day result, surveillance grade, holding band, social cost, risk metrics, learning hint, and next-Day/Final routing.
 28. Phaser Final Settlement scene now displays Final grade, cumulative profit, surveillance summary, holding band, social cost, and restart choices.
 29. Browser localStorage wiring now saves active Run state, exposes Main Menu continue, saves recent Final results, and tracks best record updates.
-30. Polished UI interaction and browser visual QA are not complete yet.
+30. First playable UI interaction exists, with playtest polish and browser visual QA still ongoing.
 
 ---
 
@@ -92,7 +92,7 @@ MVP shape:
 | Intraday duration | 180 seconds per Day |
 | Sectors | 8 fictional sectors |
 | Assets | 24 fictional assets |
-| Morning News | 5 templates, 1 per Day |
+| Morning News | 5 templates, 3 per Day: 1 sector item + 2 fictional asset items |
 | Pre-open Cards | 4 cards |
 | Manual Actions | 4 actions |
 | Auto Cards | 8 cards, Lv.1~Lv.3 |
@@ -153,7 +153,7 @@ MVP shape:
 17. Added Manual Action domain module for four MVP manual actions, immediate budget commit, locked gradual effects, and cooldown entry.
 18. Added Auto Card domain module for eight MVP auto cards, reward choices, level caps, and simple periodic state effects.
 19. Added Document Event domain module for eight MVP document events, trigger/cap/gap rules, popup pause, choices, effects, and history.
-20. Added Retail Swarm domain module for participation-synced token modeling, overheat warnings, panic state, and risk effects.
+20. Added Retail Swarm domain module for participation-synced participant mood modeling, overheat warnings, panic state, and risk effects.
 21. Added Market Board domain module for player detail, same-sector peers, other-sector averages, and simplified non-player movement.
 22. Added Settlement domain module for Day/Final result classification, holding risk bands, social cost deltas, and forced failure handling.
 23. Added Day Carryover domain module for persistent state carryover, partial risk carryover, reset baselines, weak aftereffects, and Pre-open Card non-carryover.
@@ -165,20 +165,20 @@ MVP shape:
 29. Added Final Settlement scene wiring for Day 5 cumulative carryover, Final grade display, surveillance summary, and same-seed/new-Run restart choices.
 30. Added Auto Card scene wiring for periodic effects, 45/90/135-second paused reward choices, owned card display, and reward choice buttons.
 31. Added Document Event scene wiring for condition-based modal opening, Day 1 fallback event, paused choice display, choice effects, and resume behavior.
-32. Added Retail Swarm scene wiring for abstract token rendering, participation-synced density/speed, and one-shot overheat/panic transition risk effects.
+32. Added Retail Swarm scene wiring for a participant mood panel, participation-synced heat/readability, and one-shot overheat/panic transition risk effects.
 33. Added browser localStorage wiring for active Run save/load, Main Menu continue, Final Settlement record save, best-record update flag, and current Run cleanup after Final.
 34. Added Market Board live scene wiring for simplified non-player movement advancement and live player price display.
 35. Added immediate failure scene routing for budget exhaustion, surveillance 100, critical price collapse, and forced Final Settlement.
 36. Added Intraday fictional candle/volume chart with target band, crash line, current price marker, liquidity volume spike, action-specific candle responses, and money-flow readout.
 37. Added intraday desk-reposition flow after full position settlement and 24-asset fictional trade-value dashboard.
+38. Corrected normalized intraday P&L display so position value uses asset influence resistance consistently with acquisition cost.
+39. Clarified Document Event budget costs in popup choices and split `유동성 긴급 공급` from the manual `유동성 공급` button.
 
 ---
 
-## Known Remaining Work Before Gameplay Implementation
+## Known Remaining Work Before Next Gameplay Polish
 
-The SRS is close to implementation-planning ready, but implementation still needs to connect gameplay modules to the accepted behavior.
-
-Remaining non-code work:
+Remaining coordination work:
 
 1. Review root `feature/` Gherkin files for scenario coverage after the first implementation pass.
 2. Review fictional asset names for tone.
@@ -209,10 +209,10 @@ The game is a fictional resource-management and pressure-management game.
 
 ## Recent Commit Memory
 
-Latest committed baseline before Core Run State branch:
+Latest merged main baseline:
 
 ```text
-f7c4b8a test(bdd): add Cucumber step definitions
+0360c53 fix(game): correct intraday pnl and event costs
 ```
 
 Current branch baseline includes:
@@ -245,4 +245,5 @@ Current branch baseline includes:
 26. Market Board live scene wiring,
 27. Immediate failure scene routing,
 28. Intraday candle/volume chart wiring,
-29. README, docs index, feature index, traceability, and MEMORY updates.
+29. README, docs index, feature index, traceability, and MEMORY updates,
+30. First-playable spec alignment updates pending commit.

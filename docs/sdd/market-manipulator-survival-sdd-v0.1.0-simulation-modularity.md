@@ -6,8 +6,9 @@
 | 제품명 | Market Manipulator Survival |
 | 문서 범위 | Simulation Modularity |
 | 버전 | v0.1.0 |
-| 상태 | Draft |
+| 상태 | Draft / 첫 플레이어블 구현 기준 반영 |
 | 작성일 | 2026-06-13 |
+| 현행화일 | 2026-06-14 |
 | 기준 PRD | ../prd/market-manipulator-survival-prd-v0.1.5.md |
 | 기준 SRS | ../srs/market-manipulator-survival-srs-v0.1.0-core-game-state.md, ../srs/market-manipulator-survival-srs-v0.1.1-tick-price-formula.md |
 
@@ -37,8 +38,11 @@
 | `RunState` | 5-Day Run 전체 상태 보관 | 이월 항목 |
 | `DaySetup` | Morning News, Today Condition, 목표 밴드 생성 | Day 시작 조건 |
 | `PriceTick` | 대상 종목 가격 Tick 계산 | 가격 컴포넌트 계수 |
-| `MarketBoardTick` | 비플레이어 7개 종목 간략 계산 | 간략 등락 공식 |
+| `OrderBookDepth` | 대상 종목 fictional 호가창/매물대 깊이 생성 | 깊이 배수와 표시 모델 |
+| `MarketBoardTick` | 같은 섹터 경쟁 종목, 타 섹터 평균, 24개 종목 거래대금 대시보드 간략 계산 | 간략 등락/거래대금 공식 |
+| `ChartMotionAdapter` | seeded fake OHLCV와 차트 모션 보정 | 평균회귀, 저항, 되돌림, 볼륨 임펄스 |
 | `ActionEffect` | 수동 액션 효과 생성 | 비용, 쿨다운, 효과량 |
+| `AccountValuation` | 장중 총평가/총손익 표시 계산 | 예산, 보유 비중, 평균단가, 종목 영향력 저항 |
 | `AutoCardEffect` | 자동 카드 주기 발동 효과 생성 | 발동 주기, 레벨 성장 |
 | `NewsEffect` | Morning News 효과 생성 | 뉴스별 압력/위험 수치 |
 | `DocumentEventEffect` | 문서 이벤트 선택 효과 생성 | 선택지 효과 |
@@ -60,7 +64,10 @@ MVP에서 자주 바뀔 수치는 코드 로직이 아니라 밸런싱 데이터
 | --- | --- |
 | Price Coefficients | 압력, 참여도, 보유 비중, 유동성, 경쟁 압박, 변동성 노이즈 계수 |
 | Clamp Values | Tick당 최대 상승/하락, 상태 최소/최대 |
+| Asset Market Profiles | 종목별 baseline trade value, 시장 역할, influence resistance |
+| Order Book / Depth Values | fictional 호가창 깊이, 매물대 반응 배수 |
 | Manual Action Values | 비용, 쿨다운, 상태 변화량, 지속 시간 |
+| Account Valuation Values | 포지션 평가 정규화, 회수율, 표시 반올림 |
 | Auto Card Values | 발동 주기, Lv.1~Lv.3 효과, 성장 방식 |
 | News Values | 뉴스 템플릿별 가격 압력, 감시/변동성/참여도 보정 |
 | Aftereffect Values | 과열, 패닉, 고감시, 높은 수익, 과도한 보유 비중의 잔류 효과 |
@@ -79,6 +86,7 @@ The first MVP baseline for these data groups is defined in:
 | SDD-MOD-DATA-002 | 수치 변경만으로 플레이 감각을 조정할 수 있어야 한다. |
 | SDD-MOD-DATA-003 | 새 수치를 적용하기 위해 상태 구조 전체를 바꾸지 않아야 한다. |
 | SDD-MOD-DATA-004 | MVP에서는 데이터 편집 UI를 만들지 않는다. |
+| SDD-MOD-DATA-005 | 장중 총평가/총손익 계산은 가격 Tick 공식과 분리하고, 포지션 획득 비용에 쓰는 asset influence resistance와 같은 기준을 사용해야 한다. |
 
 ### 3.2 MVP Balancing Modules
 
@@ -138,8 +146,11 @@ These names are conceptual module names, not required file names. Implementation
 7. `activeNewsPricePressure`
 8. `marketAftereffectPressure`
 9. `volatility`
-10. Seeded random source
-11. Price coefficient data
+10. `assetInfluenceResistance`
+11. fictional `orderBookMultiplier`
+12. seeded chart motion / fake OHLCV adjustment
+13. Seeded random source
+14. Price coefficient data
 
 ### 5.2 Outputs
 
@@ -177,7 +188,7 @@ MVP에서는 복잡한 버프 시스템을 만들 필요는 없다.
 
 | 출처 | 예 |
 | --- | --- |
-| Manual Action | 가격 추진, 유동성 공급 |
+| Manual Action | 매수봇, 유동성 공급 |
 | Auto Card | 관심 신호, 가격 지지 |
 | Morning News | 섹터 호재, 시장 침체 |
 | Document Event | 시장 과열 경보 선택 결과 |
@@ -284,14 +295,14 @@ MVP에서는 외부 금융 도메인 검토를 전제로 하지 않는다.
 
 ## 12. MVP Implementation Bias
 
-나중에 구현할 때는 다음 순서로 작게 시작한다.
+첫 플레이어블 구현은 다음 의존성 방향을 따라 작게 시작했다.
 
 1. Core Game State
 2. PriceTick 단독 계산
 3. 수동 액션 4개 효과
 4. 자동 카드 8개 타이머
 5. 문서 이벤트 일시정지와 선택 효과
-6. 시장 보드 간략 Tick
+6. 시장 보드 간략 Tick과 retained DOM/차트 오버레이
 7. Day Settlement
 8. Carryover
 9. Final Settlement

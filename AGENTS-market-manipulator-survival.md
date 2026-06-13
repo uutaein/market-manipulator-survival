@@ -1,8 +1,8 @@
 # AGENTS.md — Market Manipulator Survival Workspace Contract
 
-This repository is a documentation-first game design workspace for **Market Manipulator Survival**.
+This repository is a documentation-led game design and implementation workspace for **Market Manipulator Survival**.
 
-The agent operating in this workspace should behave like a careful product designer, principal engineer, skeptical reviewer, and MVP scope guardian. The default posture is not “write code quickly.” The default posture is: understand the product, preserve the design intent, reduce ambiguity, protect the MVP, and only move toward SRS or implementation after the PRD and ADRs make that move justified.
+The agent operating in this workspace should behave like a careful product designer, principal engineer, skeptical reviewer, and MVP scope guardian. The default posture is: understand the product, preserve the design intent, reduce ambiguity, protect the MVP, and keep documents/specs aligned with implementation.
 
 The preferred style is direct, evidence-first, anti-overengineered, and safety-aware. When the user’s intent is still evolving, keep working at the product/PRD level. When the user explicitly asks for implementation, switch to a plan-first engineering workflow before writing code.
 
@@ -31,8 +31,8 @@ Your job is to keep the game:
 
 ## 2. Highest-Level Operating Rules
 
-1. **PRD before SRS. SRS before SDD. Plan before code.**
-   Do not rush into specifications, architecture, or implementation while MVP product decisions are still open.
+1. **PRD before SRS. SRS before SDD. SPEC before feature work.**
+   Do not add new product scope without updating the right document layer first.
 
 2. **Preserve decisions through ADRs.**
    When a decision materially changes scope, mechanics, terminology, risk posture, or MVP boundaries, propose or create an ADR.
@@ -189,15 +189,11 @@ Use this mode only when the user asks for implementation, fixes, refactors, proj
 
 Before writing or modifying code:
 
-1. Give a short understanding report.
-2. Ask for explicit approval.
-3. After approval, write or refresh a plan under `plan/`.
-4. Keep the plan in English.
-5. Implement only what the approved plan covers.
-6. Verify with the smallest concrete checks.
-7. Review for simplicity, scope drift, and broken product intent.
-
-Do not treat urgency or “just do it” as permission to skip the plan-first gate.
+1. Give a short understanding report when the change is non-trivial.
+2. Use a lightweight plan for broad or risky changes.
+3. Implement only the requested behavior and nearby required fixes.
+4. Verify with the smallest concrete checks.
+5. Review for simplicity, scope drift, and broken product intent.
 
 ---
 
@@ -222,15 +218,16 @@ A lightweight 2D browser game with:
 
 ### 5.3 Target Technology
 
-Later implementation target:
+Current implementation target:
 
 - TypeScript
 - Phaser 3
 - Vite
+- browser DOM overlays for chart/table/dashboard rendering where useful
 - Browser-first
 - Electron packaging only as a later possibility
 
-Do not begin implementation until explicitly requested and approved.
+Implementation has started; keep PRD/SRS/SDD/SPEC/Traceability aligned with behavior.
 
 ### 5.4 MVP Run Structure
 
@@ -238,9 +235,9 @@ MVP is a **5-Day Run**.
 
 Each Day follows:
 
-1. Morning News
-2. Market Briefing
-3. Pre-open Card selection
+1. Pre-open Card selection
+2. Morning News
+3. Market Briefing
 4. Opening Approval / stamp action
 5. Intraday operation
 6. Day Settlement
@@ -319,7 +316,10 @@ Do not reveal hidden stable/standard/high-risk tendencies directly before play. 
 
 MVP uses **5 Morning News templates**, not 24 bespoke news items.
 
-Each Day shows 1 Morning News item.
+Each Day shows 3 Morning News items:
+
+1. 1 sector news item
+2. 2 fictional asset news items
 
 The five templates are:
 
@@ -346,8 +346,8 @@ Do not overload MVP with too many pre-open choices.
 MVP manual actions are fixed to 4:
 
 1. 유동성 공급
-2. 가격 추진
-3. 과열 해소
+2. 매수봇
+3. 매도봇
 4. 포지션 정리
 
 These are the main player-facing real-time buttons during the intraday phase.
@@ -396,13 +396,13 @@ The market should feel alive without requiring full simulation complexity.
 Personal Participation is both:
 
 - a numeric stat
-- a visual swarm
+- a visual participant mood/swarm signal
 
 Retail Swarm is a Vampire Survivors-inspired visual pressure system.
 
 MVP Retail Swarm should be:
 
-- icon/token-based
+- icon/token-based or mood-panel-based
 - abstract
 - lightweight
 - tied to Personal Participation
@@ -415,7 +415,7 @@ Retail Swarm states should include at least:
 - 과열
 - 패닉
 
-Higher Personal Participation increases swarm density/speed.
+Higher Personal Participation increases mood intensity, heat, density, or equivalent visual pressure.
 
 Overheated participation creates warning visuals.
 
@@ -467,42 +467,17 @@ Low surveillance with low profit is quiet failure.
 
 ---
 
-## 6. Current PRD Refinement Priorities
+## 6. Current Refinement Priorities
 
-Before moving to SRS, close these MVP-level decisions:
+The MVP has PRD/SRS/SDD/SPEC coverage and a first playable implementation.
 
-1. Final MVP content counts
-   - Morning News templates: currently 5
-   - Manual Actions: currently 4
-   - Pre-open Cards: still likely 4, confirm
-   - Auto Cards: likely 8, confirm
-   - Document Events: likely 8–10, confirm
-   - Retail Swarm states: likely 3, confirm
+When asked what to do next, prefer:
 
-2. Day Settlement taxonomy
-   - Name the result categories.
-   - Decide which factors are visible.
-   - Keep exact formulas for SRS.
-
-3. Final Settlement taxonomy
-   - Confirm S/A/B/C/D/F or adjust.
-   - Decide whether final outcome is a score, grade, ending label, or all three.
-
-4. Market Board scope
-   - Decide how many non-player assets are visible.
-   - Decide whether non-visible assets are simulated or only sampled for display.
-
-5. Pre-open Card list
-   - Confirm the 4 MVP pre-open cards.
-   - Confirm that card effects are visible before opening.
-
-6. Auto Card list
-   - Confirm MVP automatic card categories and names.
-   - Do not tune exact values yet.
-
-7. Document Event scope
-   - Confirm number and categories.
-   - Keep content lightweight.
+1. keep PRD/SRS/SDD/SPEC/Traceability synchronized with implemented behavior,
+2. tighten TC/manual QA coverage after Gherkin,
+3. polish first-playable UX based on playtest findings,
+4. adjust SRS v0.1.6 balancing values without expanding MVP scope,
+5. record new scope ideas as P1/P2 unless they are essential to the first playable loop.
 
 ---
 
@@ -564,7 +539,7 @@ ADR status should usually be `Accepted` when the user clearly approved the decis
 
 ## 9. SRS Boundary
 
-Do not produce SRS until the user explicitly asks.
+Do not produce new SRS documents until the user explicitly asks or current behavior needs requirement coverage.
 
 The following belong in SRS later, not PRD now:
 
@@ -586,9 +561,9 @@ PRD may contain ranges, concepts, examples, and placeholders.
 
 ## 10. Implementation Boundary
 
-Do not implement until explicitly asked and approved.
+Implementation has started.
 
-When implementation starts later:
+When implementing:
 
 - Use TypeScript + Phaser 3 + Vite unless superseded.
 - Keep the first prototype small.
@@ -662,7 +637,7 @@ When there are several plausible directions, prefer:
 - 4 clear buttons over 8 confusing buttons
 - one detailed player asset over full-market simulation
 - icon/token swarm over animated realistic crowds
-- a 6-minute Day over a 10-minute Day if playtesting is the goal
+- a 3-minute Day over longer sessions if playtesting is the goal
 - explicit Day/Run language over vague “round”
 - grade-based settlement over hidden score-only results
 - fixed asset profiles plus Today Condition over full randomization
@@ -671,19 +646,15 @@ When there are several plausible directions, prefer:
 
 ---
 
-## 14. Current Recommended Next Decisions
+## 14. Current Recommended Next Work
 
-If the user asks what to decide next, recommend closing these in order:
+If the user asks what to do next, recommend:
 
-1. Pre-open Card list and roles.
-2. Auto Card list and roles.
-3. Document Event count and categories.
-4. Day Settlement result taxonomy.
-5. Market Board visible asset count.
-6. Final PRD MVP freeze.
-7. Then begin SRS.
-
-Do not jump to SRS until the user explicitly agrees that MVP is frozen enough.
+1. run/playtest the current first playable,
+2. file concrete UI/gameplay issues,
+3. update SRS values and traceability for accepted changes,
+4. create TC/manual QA documents after Gherkin review,
+5. keep new feature ideas in P1/P2 unless they repair the MVP loop.
 
 ---
 

@@ -6,8 +6,9 @@
 | 제품명 | Market Manipulator Survival |
 | 문서 범위 | Core Game State |
 | 버전 | v0.1.0 |
-| 상태 | Draft |
+| 상태 | First Playable Baseline / Playtest Tunable |
 | 작성일 | 2026-06-13 |
+| 현행화일 | 2026-06-14 |
 | 기준 PRD | ../prd/market-manipulator-survival-prd-v0.1.5.md |
 | 기준 Freeze 후보 | ../prd/market-manipulator-survival-mvp-freeze-candidate.md |
 
@@ -60,7 +61,7 @@ MVP의 Core Game State는 다음 계층으로 나눈다.
 | 계층 | 설명 | 대표 상태 |
 | --- | --- | --- |
 | Run State | 5-Day Run 전체에 유지되는 상태 | Seed, 선택 종목, 예산, 누적 수익, 자동 카드 |
-| Day State | 하루 시장 세션에 적용되는 상태 | Morning News, Today Condition, 목표 밴드, 개장 전 카드 |
+| Day State | 하루 시장 세션에 적용되는 상태 | Morning News items, Today Condition, 목표 밴드, 개장 전 카드 |
 | Intraday State | 3분 장중 운용 중 실시간으로 변하는 상태 | 가격, 감시도, 변동성, 개인 참여도 |
 | Event State | 문서 이벤트와 자동 카드 선택 등 일시적 상태 | 활성 문서 이벤트, 선택지, 일시정지 |
 | Market Board State | 장중 시장 보드와 대시보드 상태 | 내 종목 상세, 경쟁 종목, 타 섹터 평균, 24개 개별 종목 거래대금 순위 |
@@ -147,7 +148,8 @@ Day State는 각 Day 시작 시 생성되며, Day Settlement까지 유지된다.
 | 변수 | 범위/형태 | 수명 | 설명 |
 | --- | --- | --- | --- |
 | `dayIndex` | 1~5 | Day 전체 | 현재 Day 번호 |
-| `morningNews` | 뉴스 템플릿 + 대상 | Day 전체 | 해당 Day의 아침 뉴스 |
+| `morningNewsItems` | 뉴스 템플릿 + 대상 배열 | Day 전체 | 해당 Day의 아침 뉴스 3개: 섹터 뉴스 1개 + 종목 뉴스 2개 |
+| `morningNews` | 뉴스 템플릿 + 대상 | Day 전체 | 대표/첫 번째 아침 뉴스. 기존 단수 참조 호환용 |
 | `todayCondition` | 대상 종목 보정값 | Day 전체 | 해당 Day의 종목 컨디션 |
 | `targetBandMin` | 숫자 | Day 전체 | 목표 밴드 하한 |
 | `targetBandMax` | 숫자 | Day 전체 | 목표 밴드 상한 |
@@ -164,7 +166,7 @@ Day State는 각 Day 시작 시 생성되며, Day Settlement까지 유지된다.
 
 | ID | Requirement |
 | --- | --- |
-| SRS-STATE-DAY-001 | 각 Day 시작 시 시스템은 `morningNews`를 1개 생성해야 한다. |
+| SRS-STATE-DAY-001 | 각 Day 시작 시 시스템은 `morningNewsItems`를 3개 생성해야 한다. 구성은 섹터 뉴스 1개와 허구 종목 뉴스 2개다. |
 | SRS-STATE-DAY-002 | 각 Day 시작 시 시스템은 `todayCondition`을 생성해야 한다. |
 | SRS-STATE-DAY-003 | `preOpenCardId`는 Day당 최대 1개만 설정될 수 있다. |
 | SRS-STATE-DAY-004 | 카드를 사용하지 않는 선택은 `none`이 아니라 플레이어-facing으로 `관망`으로 표시해야 한다. |
@@ -182,6 +184,12 @@ Intraday Core State는 장중 운용 중 실시간으로 변한다.
 | `timeRemainingSec` | 0~180 | Day 시작 시 180 | 장중 남은 시간 |
 | `isIntradayPaused` | boolean | 기본 false | 문서 이벤트 등으로 장중 시간이 멈췄는지 여부 |
 | `budget` | 0 이상 숫자 | MVP 시작 기준 100, 최소 유지 기준 10 | 핵심 생존 자원 |
+| `openingPrice` | 양수 | Day 시작 시 설정 | fictional 기준 시초가 |
+| `currentPrice` | 양수 | Tick마다 갱신 | 현재 fictional 가격 |
+| `averageEntryPrice` | 양수 또는 없음 | 선취매/매수봇/매도봇/정리 결과 | 플레이어 데스크의 평균단가 |
+| `heldUnits` | 0 이상 | 보유/정리 결과 | 보유 fictional 유닛 수 |
+| `fictionalFloatUnits` | 양수 | 종목별 기준 | 보유 비중 산정용 fictional 유통 수량 |
+| `assetInfluenceResistance` | 0.55 이상 권장 | 종목 시장 체급에서 도출 | 같은 예산/압력이 가격과 비중에 미치는 영향을 조정하는 허구 체급 저항 |
 | `priceChangePercent` | 숫자 | 목표 밴드와 붕괴선 기준으로 평가 | 현재 가격 등락률 |
 | `marketPressure` | -100~100 권장 | 0은 중립 | 가격 방향 압력 |
 | `holdingRatio` | 0~100 | 정산 구간 적용 | 보유 비중 / 시장 영향력 |
@@ -481,10 +489,10 @@ MVP에서는 localStorage 기반 로컬 저장만 사용한다.
 | SRS-STATE-VALID-001 | 0~100 범위 상태는 계산 후 항상 0~100으로 보정되어야 한다. |
 | SRS-STATE-VALID-002 | `currentDay`는 1~5 범위를 벗어날 수 없다. |
 | SRS-STATE-VALID-003 | `autoCards`의 레벨은 1~3 범위를 벗어날 수 없다. |
-| SRS-STATE-VALID-004 | Day당 `morningNews`는 정확히 1개여야 한다. |
+| SRS-STATE-VALID-004 | Day당 `morningNewsItems`는 정확히 3개여야 한다. `morningNews` 단수 값은 대표/첫 번째 뉴스 참조로만 사용할 수 있다. |
 | SRS-STATE-VALID-005 | Day당 `preOpenCardId`는 최대 1개여야 한다. |
 | SRS-STATE-VALID-006 | 한 번에 활성 문서 이벤트는 최대 1개여야 한다. |
-| SRS-STATE-VALID-007 | 시장 보드 표시 종목은 8개여야 한다. |
+| SRS-STATE-VALID-007 | 시장 보드 컨텍스트는 플레이어 종목 1개, 같은 섹터 경쟁 종목 2개, 타 섹터 평균 7개를 표시해야 하며, 마켓 대시보드는 24개 개별 종목 거래대금 순위 창을 별도로 표시해야 한다. |
 | SRS-STATE-VALID-008 | 실제 종목명, 실제 거래소명, 실제 시장 데이터는 어떤 상태에도 저장하지 않는다. |
 
 ---

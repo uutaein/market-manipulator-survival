@@ -1,6 +1,6 @@
 # Market Manipulator Survival
 
-`Market Manipulator Survival` is a documentation-first game design workspace for a fictional, satirical market-pressure management browser game.
+`Market Manipulator Survival` is a documentation-led game design and implementation workspace for a fictional, satirical market-pressure management browser game.
 
 The project combines:
 
@@ -18,9 +18,9 @@ The MVP is a 5-Day Run.
 
 Each Day follows:
 
-1. Morning News
-2. Market Briefing
-3. Pre-open Card selection
+1. Pre-open Card selection
+2. Morning News
+3. Market Briefing
 4. Opening Approval / stamp action
 5. Intraday operation
 6. Day Settlement
@@ -31,6 +31,7 @@ MVP defaults:
 
 - Intraday duration: 3 minutes per Day
 - Morning News templates: 5
+- Morning News per Day: 3, with 1 sector item and 2 fictional asset items
 - Pre-open Cards: 4
 - Pre-open flow: choose a card before Morning News is revealed, then approve opening after briefing
 - Manual Actions: 4
@@ -61,7 +62,7 @@ Current implementation status:
 
 - Project scaffold: present
 - MVP scene shell: present
-- Immediate failure scene routing: partial
+- Immediate failure scene routing: present
 - Core Run State domain module: present
 - Day Setup / Morning News domain module: present
 - Pre-open Card domain module: present
@@ -75,18 +76,18 @@ Current implementation status:
 - Day Carryover domain module: present
 - Local Persistence domain module: present
 - Safety Contract domain module: present
-- Run/Day scene wiring: partial
-- Intraday candle/volume chart and money-flow panel: partial
-- Market Board scene wiring: partial
-- Intraday tick/action scene wiring: partial
-- Auto Card scene wiring: partial
-- Document Event scene wiring: partial
-- Retail Swarm scene wiring: partial
-- Day Settlement scene wiring: partial
-- Final Settlement scene wiring: partial
-- Local persistence browser wiring: partial
+- Run/Day scene wiring: first playable
+- Intraday candle/volume chart and money-flow panel: first playable
+- Market Board scene wiring: first playable
+- Intraday tick/action scene wiring: first playable
+- Auto Card scene wiring: first playable
+- Document Event scene wiring: first playable
+- Retail Swarm scene wiring: first playable
+- Day Settlement scene wiring: first playable
+- Final Settlement scene wiring: first playable
+- Local persistence browser wiring: first playable
 - Cucumber step definitions: present
-- Gameplay simulation: first playable loop wiring in progress
+- Gameplay simulation: first playable loop implemented, playtest tuning ongoing
 - BDD validation: executable against an in-memory support world, not yet against Phaser gameplay modules
 
 ---
@@ -158,7 +159,6 @@ Use fictional, abstract terminology:
 
 ## Current Status
 
-The repository is still documentation-first.
+The repository remains documentation-led, but implementation has started.
 
-Implementation has started with a minimal project scaffold.  
-The first playable loop is now partially wired through Phaser scenes and domain modules. The Cucumber layer still validates accepted Gherkin coverage against an in-memory support world, not the rendered Phaser UI.
+The first playable loop is wired through Phaser scenes, domain modules, and browser chart/table overlays. The Cucumber layer still validates accepted Gherkin coverage against an in-memory support world, not the rendered Phaser UI.

@@ -6,8 +6,9 @@
 | Product | Market Manipulator Survival |
 | Scope | MVP first playable implementation specification |
 | Version | v0.1.0 |
-| Status | Accepted |
+| Status | Accepted / Current First-Playable Baseline |
 | Date | 2026-06-13 |
+| Current As Of | 2026-06-14 |
 | Baseline PRD | ../prd/market-manipulator-survival-prd-v0.1.5.md |
 | Baseline SRS | ../srs/market-manipulator-survival-srs-v0.1.0-core-game-state.md through ../srs/market-manipulator-survival-srs-v0.1.6-baseline-values-and-triggers.md |
 | Baseline SDD | ../sdd/market-manipulator-survival-sdd-v0.1.0-simulation-modularity.md |
@@ -17,13 +18,13 @@ This SPEC defines what the first playable MVP build must include.
 
 It does not freeze balance quality. Numeric values from SRS v0.1.6 are first playable defaults and should be adjusted after real playtesting.
 
-This SPEC does not create TC documents, Gherkin feature files, implementation tasks, or project scaffolding.
+At acceptance time, this SPEC did not create TC documents, Gherkin feature files, implementation tasks, or project scaffolding. Those artifacts now exist where explicitly approved, and this SPEC remains the implementation-facing scope baseline rather than a TC document.
 
 ---
 
 ## 1. Implementation Target
 
-The later implementation target is:
+The current implementation target is:
 
 ```text
 TypeScript + Phaser 3 + Vite
@@ -160,12 +161,14 @@ directionalDelta =
   + attentionFade
 
 priceDeltaPerTick =
-  directionalDelta
+  (directionalDelta / assetInfluenceResistance)
   × liquidityMultiplier
-  × orderBookDepth
+  × orderBookMultiplier
   + simulatorAdjustment
   + volatilityNoise
 ```
+
+`assetInfluenceResistance` comes from the selected fictional asset's market profile. Larger baseline trade-value assets are harder for the same budget and pressure to move. `orderBookMultiplier` is a fictional depth-readability factor, not real order-book data.
 
 `simulatorAdjustment` may use a seeded fake OHLCV generator package to add realistic candle noise and volume impulse. It must not fetch real market data, real tickers, or real exchange data.
 
@@ -239,7 +242,9 @@ The Intraday chart must include a fictional order-book/depth panel for the playe
 
 Manual actions are unavailable while a document event or auto card reward choice is open.
 
-The Intraday screen must show a simple fictional position and money-flow readout: opening price, current price, average entry price, held units, fictional float units, position value, unrealized gain/loss, spent budget, recovered budget, and current budget.
+The Intraday screen must show a simple fictional position and money-flow readout: opening price, current price, average entry price, held units, fictional float units, position value, total account value, total P&L, unrealized gain/loss, spent budget, recovered budget, and current budget.
+
+Position value must be normalized against the same fictional influence resistance used for acquisition. First playable account value uses `holdingRatio * max(1, assetInfluenceResistance)` as normalized cost basis and multiplies it by `currentPrice / averageEntryPrice`. This keeps large-asset acquisition cost, position value, and total P&L internally consistent without becoming a real accounting model.
 
 ### 7.4 Auto Cards
 
@@ -275,6 +280,8 @@ Each document event has 3 choices:
 
 Document events pause intraday time until the player selects a choice.
 
+If a document event choice changes budget, its choice description must show the budget delta before selection. The `유동성 경색 보고` aggressive response is displayed as `유동성 긴급 공급`, costs 2B in the first playable, and is intentionally distinct from the manual `유동성 공급` button.
+
 ---
 
 ## 8. Balancing Data Modules
@@ -285,6 +292,7 @@ The first playable build must keep these value groups easy to find and change.
 | --- | --- |
 | `runDefaults` | starting values, target band, crash line |
 | `assetCatalog` | fictional sectors and assets |
+| `assetMarketProfiles` | fixed fictional baseline trade value, market role, and influence resistance |
 | `marketBoardRules` | player/peer/sector-average context and 24-asset value ranking |
 | `preOpenCardValues` | pre-open effects |
 | `manualActionValues` | costs, cooldowns, effects |
@@ -294,6 +302,8 @@ The first playable build must keep these value groups easy to find and change.
 | `settlementValues` | profit bands, result matrix, final grade rules |
 | `carryoverValues` | Day-to-Day carryover and aftereffects |
 | `persistenceKeys` | localStorage keys and schema version |
+| `priceTickValues` | component coefficients, resistance, order-book, and simulator tuning |
+| `retailSwarmValues` | participant mood thresholds and display/risk values |
 
 These names are conceptual. They do not have to be exact file names, but the implementation must preserve the separation.
 
@@ -393,8 +403,8 @@ The MVP has no separate tutorial mode.
 
 Day 1 must:
 
-1. start with a simple or weak Morning News setup,
-2. show all 4 pre-open cards,
+1. require `선취매` as the first-position pre-open choice before Morning News reveal,
+2. keep the Day 1 Morning News setup readable and avoid harsh high-risk combinations,
 3. expose all 4 manual actions with tooltip-level explanation,
 4. avoid high-risk event chains,
 5. provide one low-risk document event if no event has appeared,
@@ -410,9 +420,9 @@ Day 1 can still fail if the player ignores the system or overuses resources.
 Do not include these in the first playable build:
 
 1. SRS final balance freeze,
-2. Gherkin feature files,
-3. TC documents,
-4. Phaser/Vite scaffolding before explicit approval,
+2. TC documents,
+3. unapproved project scaffolding,
+4. features not covered by PRD/SRS/SPEC/Traceability,
 5. card synergy,
 6. card evolution,
 7. rare or legendary cards,
@@ -464,4 +474,4 @@ If it improves a future version, record it as P1/P2.
 If it changes balance feel only, update balancing data after playtest.
 ```
 
-TC documents and Gherkin feature files should be created after this SPEC is accepted.
+Gherkin feature files and step definitions now exist after SPEC acceptance. TC documents should still be created after the accepted Gherkin coverage is reviewed.

@@ -16,8 +16,8 @@ This directory contains TypeScript step definitions for the accepted MVP Gherkin
 
 ## Current Test Layer
 
-The current steps execute against the shared in-memory world in `feature/support/world.ts`.
+The current steps execute through the shared Cucumber support world in `feature/support/world.ts`.
 
-They are intended to make the accepted Gherkin coverage executable and to catch obvious spec drift. They do not yet exercise Phaser scenes, browser persistence, or real gameplay simulation modules.
+They are intended to make the accepted Gherkin coverage executable and to catch obvious spec drift. They cover domain-level behavior where wired, but they do not yet exercise rendered Phaser scenes, browser layout, or real browser localStorage.
 
 As implementation progresses, replace broad in-memory checks with module-backed assertions while keeping the same domain grouping.

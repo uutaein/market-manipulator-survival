@@ -72,9 +72,9 @@ Never add real:
 The MVP exists to validate this loop:
 
 ```text
-Morning News
+Pre-open Card
+-> Morning News
 -> Market Briefing
--> Pre-open Card
 -> Opening Approval
 -> Intraday pressure
 -> Document Event
@@ -107,8 +107,8 @@ The core game state is grouped into:
 | Group | Examples |
 | --- | --- |
 | Run State | `runSeed`, `currentDay`, `budget`, `cumulativeProfit`, `autoCards` |
-| Day State | generated `morningNews`, `todayCondition`, `targetBand`, `preOpenCard` selected before news reveal |
-| Intraday State | `openingPrice`, `currentPrice`, `averageEntryPrice`, `heldUnits`, `priceChangePercent`, `marketPressure`, `holdingRatio`, `personalParticipation`, `surveillance` |
+| Day State | generated `morningNewsItems`, representative `morningNews`, `todayCondition`, `targetBand`, `preOpenCard` selected before news reveal |
+| Intraday State | `openingPrice`, `currentPrice`, `averageEntryPrice`, `heldUnits`, `fictionalFloatUnits`, `assetInfluenceResistance`, `priceChangePercent`, `marketPressure`, `holdingRatio`, `personalParticipation`, `surveillance` |
 | Event State | active document event, choices, pause state |
 | Market Board State | player detail, same-sector competitors, other-sector averages, current/average prices, 24-asset value ranking |
 | Settlement State | Day result, Final grade, social cost |
@@ -137,14 +137,18 @@ Core idea:
 
 ```text
 priceDeltaPerTick =
-  pressure
-  + participation
-  + holding
-  + liquidity
-  + competition
-  + news
-  + aftereffect
-  + attentionFade
+  ((pressure
+    + participation
+    + holding
+    + liquidity
+    + competition
+    + news
+    + aftereffect
+    + attentionFade)
+   / assetInfluenceResistance)
+  * liquidityMultiplier
+  * orderBookMultiplier
+  + simulatorAdjustment
   + volatilityNoise
 ```
 
@@ -158,6 +162,7 @@ Important rules:
 6. Manual actions commit budget immediately, then apply non-budget effects gradually over their execution duration.
 7. Same `runSeed` plus same input sequence should reproduce the same game-affecting results.
 8. Coefficients belong in balancing data, not scattered logic.
+9. Chart/OHLCV realism uses seeded fictional generation only; never real market data.
 
 Current default values are in:
 
@@ -175,6 +180,7 @@ Keep these balancing groups separate:
 ```text
 runDefaults
 assetCatalog
+assetMarketProfiles
 marketBoardRules
 preOpenCardValues
 manualActionValues
@@ -184,6 +190,8 @@ documentEventRules
 settlementValues
 carryoverValues
 persistenceKeys
+priceTickValues
+retailSwarmValues
 ```
 
 These names are conceptual. They do not have to be exact file names later.

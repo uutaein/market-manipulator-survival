@@ -6,8 +6,9 @@
 | 제품명 | Market Manipulator Survival |
 | 문서 범위 | Run Flow and Screens |
 | 버전 | v0.1.2 |
-| 상태 | Draft |
+| 상태 | First Playable Baseline / Playtest Tunable |
 | 작성일 | 2026-06-13 |
+| 현행화일 | 2026-06-14 |
 | 기준 PRD | ../prd/market-manipulator-survival-prd-v0.1.5.md |
 | 기준 SRS | ./market-manipulator-survival-srs-v0.1.0-core-game-state.md |
 
@@ -44,8 +45,8 @@ MVP는 다음 8개 화면으로 제한한다.
 | --- | --- |
 | 메인 메뉴 | 새 Run 시작, 설정, 기록 보기 진입 |
 | Run 시작 / 종목 선택 | 섹터와 종목 직접 선택 |
-| 아침 뉴스 / 시장 브리핑 | 오늘의 뉴스, 짧은 종목 브리핑, 목표 조건 확인 |
-| 개장 전 카드 선택 | 개장 전 카드 4개 중 최대 1개 선택 |
+| 개장 전 카드 선택 | 아침 뉴스 공개 전 개장 전 카드 4개 중 최대 1개 선택 |
+| 아침 뉴스 / 시장 브리핑 | 오늘의 뉴스 3개, 짧은 종목 브리핑, 목표 조건 확인 |
 | 장중 운용 화면 | fictional 캔들 차트, 볼륨 바, 시장 보드, 핵심 지표, 액션, 자동 카드 표시 |
 | 문서 이벤트 팝업 | 장중 조건 기반 이벤트와 3개 선택지 표시 |
 | Day 정산 화면 | 하루 결과와 힌트 표시 |
@@ -67,8 +68,8 @@ MVP Run은 다음 흐름을 따른다.
 ```text
 메인 메뉴
 → Run 시작 / 종목 선택
-→ Day 1 아침 뉴스 / 시장 브리핑
 → 개장 전 카드 선택
+→ 아침 뉴스 / 시장 브리핑
 → 개장 승인
 → 장중 운용 화면
 → Day 정산
@@ -92,21 +93,21 @@ MVP Run은 다음 흐름을 따른다.
 
 각 Day는 다음 단계를 순서대로 진행한다.
 
-1. Morning News
-2. Market Briefing
-3. Pre-open Card selection
+1. Pre-open Card selection
+2. Morning News
+3. Market Briefing
 4. Opening Approval / stamp action
 5. Intraday operation
 6. Day Settlement
 
 | ID | Requirement |
 | --- | --- |
-| SRS-FLOW-DAY-001 | 각 Day는 Morning News 화면으로 시작해야 한다. |
+| SRS-FLOW-DAY-001 | 각 Day는 개장 전 카드 선택 화면으로 시작해야 하며, Morning News는 카드 선택 이후 공개되어야 한다. |
 | SRS-FLOW-DAY-002 | Market Briefing은 뉴스 영향, 목표 조건, 주요 리스크를 요약해야 한다. |
 | SRS-FLOW-DAY-003 | 플레이어는 개장 전 카드 중 최대 1개를 선택할 수 있어야 한다. |
 | SRS-FLOW-DAY-004 | 카드 미사용은 `관망`으로 표현해야 한다. |
 | SRS-FLOW-DAY-005 | 플레이어가 개장 승인 버튼 또는 도장 액션을 수행해야 장중 운용으로 진입할 수 있다. |
-| SRS-FLOW-DAY-006 | 장중 운용 기본 시간은 360초여야 한다. |
+| SRS-FLOW-DAY-006 | 장중 운용 기본 시간은 180초여야 한다. |
 | SRS-FLOW-DAY-007 | 장중 시간이 끝나면 Day Settlement로 전환해야 한다. |
 
 ---
@@ -134,10 +135,11 @@ Day 1은 인게임 온보딩 역할을 한다.
 
 | ID | Requirement |
 | --- | --- |
-| SRS-FLOW-ONBOARD-001 | Day 1은 아침 뉴스 확인, 개장 전 카드 선택, 개장 승인, 장중 수동 액션, Day 정산 확인을 자연스럽게 경험하게 해야 한다. |
+| SRS-FLOW-ONBOARD-001 | Day 1은 `선취매`로 첫 포지션을 확보한 뒤 아침 뉴스 확인, 개장 승인, 장중 수동 액션, Day 정산 확인을 자연스럽게 경험하게 해야 한다. |
 | SRS-FLOW-ONBOARD-002 | Day 1에서는 지나치게 복잡한 이벤트 조합을 피해야 한다. |
 | SRS-FLOW-ONBOARD-003 | Day 1에서는 감시도 증가와 가격 붕괴 위험을 완만하게 조정할 수 있다. |
 | SRS-FLOW-ONBOARD-004 | Day Settlement 화면은 다음 플레이에 도움이 되는 짧은 힌트를 제공해야 한다. |
+| SRS-FLOW-ONBOARD-005 | Day 1 또는 보유 포지션이 없는 상태에서는 `선취매`만 활성화하고, 다른 개장 전 카드는 비활성 상태로 표시해야 한다. |
 
 ---
 

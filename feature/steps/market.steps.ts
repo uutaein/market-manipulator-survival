@@ -140,10 +140,6 @@ When("the Market Board is shown", function (this: MmsWorld) {
   this.nonPlayerAssets = this.marketBoardState.nonPlayerAssetSummaries.length;
 });
 
-Then("exactly 8 assets are displayed", function (this: MmsWorld) {
-  assert.equal(this.displayedAssets, 8);
-});
-
 Then("exactly 10 market board rows are displayed", function (this: MmsWorld) {
   assert.equal(this.displayedAssets, 10);
 });

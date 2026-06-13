@@ -6,4 +6,4 @@ SPEC documents consolidate PRD, ADR, SRS, and SDD decisions into a buildable sco
 
 Current SPEC:
 
-- [MVP SPEC v0.1.0 — First Playable Build](market-manipulator-survival-mvp-spec-v0.1.0.md)
+- [MVP SPEC v0.1.0 — First Playable Build](market-manipulator-survival-mvp-spec-v0.1.0.md) — accepted and current as the first-playable baseline

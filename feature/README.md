@@ -24,7 +24,7 @@ The `.feature` files are grouped by domain and function. They are not TC documen
 npm run bdd
 ```
 
-The current step definitions execute against an in-memory support world. They validate that the accepted MVP Gherkin scenarios are internally coherent and executable, but they do not yet drive Phaser scenes or real gameplay modules.
+The current step definitions execute through a Cucumber support world with domain-level behavior coverage. They validate that the accepted MVP Gherkin scenarios are executable, but they do not yet drive rendered Phaser scenes, browser layout, or real browser localStorage.
 
 ## Status
 

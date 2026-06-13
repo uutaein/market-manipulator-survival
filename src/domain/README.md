@@ -7,15 +7,16 @@ Current implemented scope:
 | Module | Purpose |
 | --- | --- |
 | `assets/assetCatalog.ts` | Fictional 8-sector / 24-asset catalog from SRS v0.1.6 |
+| `assets/assetMarketProfiles.ts` | Fictional baseline trade value, market role, and influence resistance by asset |
 | `balancing/autoCardValues.ts` | First-playable Auto Card values from SRS v0.1.6 |
 | `balancing/documentEventValues.ts` | First-playable Document Event values and global rules from SRS v0.1.6 |
 | `balancing/manualActionValues.ts` | First-playable Manual Action values from SRS v0.1.6 |
 | `balancing/runDefaults.ts` | First-playable Run defaults and MVP auto card IDs |
 | `balancing/preOpenCardValues.ts` | First-playable Pre-open Card values from SRS v0.1.6 |
 | `balancing/priceTickValues.ts` | First-playable price tick coefficients and news pressure values |
-| `balancing/retailSwarmValues.ts` | First-playable Retail Swarm thresholds, token scaling, and risk effects |
+| `balancing/retailSwarmValues.ts` | First-playable Retail Swarm thresholds, participant mood scaling, and risk effects |
 | `day/` | Day start state, Morning News generation, Today Condition, Market Briefing summary |
-| `intraday/` | Intraday state, timer pause/resume, bounded stats, and player asset price tick |
+| `intraday/` | Intraday state, timer pause/resume, bounded stats, player asset price tick, order-book/depth model, and seeded chart motion |
 | `market/marketBoard.ts` | MVP player/peer/sector-average Market Board context and simplified non-player summaries |
 | `persistence/localPersistence.ts` | Versioned local save envelopes, current Run save/load, recent Final, and best record updates |
 | `preopen/` | Pre-open Card selection and Opening Approval rules |
@@ -25,6 +26,6 @@ Current implemented scope:
 | `settlement/settlement.ts` | Day/Final Settlement classification, holding bands, and abstract social cost adjustments |
 | `settlement/carryover.ts` | Day-to-Day Run carryover and weak market aftereffects |
 
-The current domain layer supports early Run, Day setup, Pre-open Card selection, the player asset intraday tick skeleton, Market Board selection, Manual Action state effects, Auto Card rewards/effects, Document Event decisions, Retail Swarm state modeling, Day/Final Settlement classification, Day-to-Day carryover, local persistence envelopes, and safety-contract validation.
+The current domain layer supports early Run, Day setup, Pre-open Card selection, the player asset intraday tick, fictional order-book/depth response, Market Board selection, Manual Action position/accounting effects, Auto Card rewards/effects, Document Event decisions, Retail Swarm state modeling, Day/Final Settlement classification, Day-to-Day carryover, local persistence envelopes, and safety-contract validation.
 
 BDD steps currently exercise this domain layer for Run start, same-seed restart, asset catalog completeness, hidden profile assignment, Morning News generation, Market Briefing data, Pre-open Card selection, Opening Approval, Market Board selection/simplified summaries, intraday timer behavior, pause/resume behavior, bounded stat clamping, player price tick components, Manual Action state effects, Auto Card rewards/effects, Document Event trigger/choice behavior, Retail Swarm participation/overheat/panic behavior, Day/Final Settlement outcomes, Day carryover/aftereffects, local persistence, and safety abstraction.

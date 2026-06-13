@@ -6,8 +6,9 @@
 | 제품명 | Market Manipulator Survival |
 | 문서 범위 | Settlement, Carryover, and Persistence |
 | 버전 | v0.1.4 |
-| 상태 | Draft |
+| 상태 | First Playable Baseline / Playtest Tunable |
 | 작성일 | 2026-06-13 |
+| 현행화일 | 2026-06-14 |
 | 기준 PRD | ../prd/market-manipulator-survival-prd-v0.1.5.md |
 | 기준 SRS | ./market-manipulator-survival-srs-v0.1.0-core-game-state.md |
 
@@ -32,7 +33,7 @@
 
 1. 정교한 실현/평가손익 분리
 2. 세금, 수수료, 슬리피지
-3. 호가창 단위 계산
+3. 정교한 호가창 단위 체결 계산
 4. 상세 플레이 로그
 5. 리플레이 데이터
 6. 클라우드 저장
@@ -95,7 +96,7 @@ MVP Day 결과는 다음 8개다.
 
 | ID | Requirement |
 | --- | --- |
-| SRS-SETTLE-DAY-001 | Day Settlement는 장중 360초 종료 후 진행해야 한다. |
+| SRS-SETTLE-DAY-001 | Day Settlement는 장중 180초 종료 후 진행해야 한다. |
 | SRS-SETTLE-DAY-002 | Day Settlement는 실제 수익과 감시등급을 핵심 축으로 사용해야 한다. |
 | SRS-SETTLE-DAY-003 | Day Settlement는 잔여 예산, 보유 비중, 개인 참여도, 변동성, 사회적 비용을 보조 지표로 표시해야 한다. |
 | SRS-SETTLE-DAY-004 | 가격 목표를 달성했더라도 감시등급이 높으면 완전 성공으로 처리하지 않아야 한다. |

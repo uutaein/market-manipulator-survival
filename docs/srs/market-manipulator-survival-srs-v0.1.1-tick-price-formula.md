@@ -6,8 +6,9 @@
 | 제품명 | Market Manipulator Survival |
 | 문서 범위 | Tick Price Formula |
 | 버전 | v0.1.1 |
-| 상태 | Draft |
+| 상태 | First Playable Baseline / Playtest Tunable |
 | 작성일 | 2026-06-13 |
+| 현행화일 | 2026-06-14 |
 | 기준 PRD | ../prd/market-manipulator-survival-prd-v0.1.5.md |
 | 기준 SRS | ./market-manipulator-survival-srs-v0.1.0-core-game-state.md |
 
@@ -34,7 +35,7 @@ MVP 가격 Tick 공식은 다음 감각을 목표로 한다.
 
 | ID | Requirement |
 | --- | --- |
-| SRS-PRICE-MOD-001 | 가격 Tick 공식은 `pressure`, `participation`, `holding`, `liquidity`, `competition`, `news`, `aftereffect`, `volatilityNoise` 컴포넌트로 분리되어야 한다. |
+| SRS-PRICE-MOD-001 | 가격 Tick 공식은 `pressure`, `participation`, `holding`, `liquidity`, `competition`, `news`, `aftereffect`, `attentionFade`, `assetInfluenceResistance`, `orderBookMultiplier`, `simulatorAdjustment`, `volatilityNoise` 컴포넌트로 분리되어야 한다. |
 | SRS-PRICE-MOD-002 | 각 컴포넌트의 계수는 밸런싱 데이터에서 교체 가능해야 한다. |
 | SRS-PRICE-MOD-003 | 수동 액션 효과량, 자동 카드 효과량, 뉴스 압력값, 시장 여파 압력값은 가격 공식 본문과 분리되어야 한다. |
 | SRS-PRICE-MOD-004 | 대상 종목 가격 계산과 비플레이어 종목 간략 계산은 별도 계산 경로로 유지해야 한다. |
@@ -47,14 +48,14 @@ MVP 가격 Tick 공식은 다음 감각을 목표로 한다.
 | 항목 | 값 |
 | --- | ---: |
 | Tick interval | 1초 |
-| Intraday duration | 360초 |
-| Ticks per Day | 360 |
+| Intraday duration | 180초 |
+| Ticks per Day | 180 |
 
 | ID | Requirement |
 | --- | --- |
 | SRS-PRICE-TICK-001 | 장중 가격 계산은 1초마다 1회 수행한다. |
 | SRS-PRICE-TICK-002 | 문서 이벤트로 장중 시간이 일시정지된 동안에는 가격 Tick을 수행하지 않는다. |
-| SRS-PRICE-TICK-003 | Day당 최대 가격 Tick 수는 360회를 기준으로 한다. |
+| SRS-PRICE-TICK-003 | Day당 최대 가격 Tick 수는 180회를 기준으로 한다. |
 
 ---
 
@@ -110,6 +111,9 @@ newsComponent =
 aftereffectComponent =
   marketAftereffectPressure
 
+attentionFadeComponent =
+  lowAttentionDrift
+
 directionalDelta =
   pressureComponent
   + participationComponent
@@ -118,15 +122,26 @@ directionalDelta =
   + competitionComponent
   + newsComponent
   + aftereffectComponent
+  + attentionFadeComponent
 
 liquidityMultiplier =
   0.75 + (marketLiquidity / 100) * 0.75
+
+assetInfluenceResistance =
+  selectedAssetMarketProfile.influenceResistance
+
+orderBookMultiplier =
+  fictionalOrderBookDepthMultiplier
+
+simulatorAdjustment =
+  seededFictionalOhlcvAdjustment
 
 volatilityNoise =
   seededRandom(-1, 1) * (0.015 + volatility * 0.0012)
 
 rawDelta =
-  directionalDelta * liquidityMultiplier
+  (directionalDelta / assetInfluenceResistance) * liquidityMultiplier * orderBookMultiplier
+  + simulatorAdjustment
   + volatilityNoise
 
 priceDeltaPerTick =
@@ -147,6 +162,10 @@ priceChangePercent =
 | `competitionPressure` | 가격 추진을 방해하는 저항 |
 | `activeNewsPricePressure` | 당일 Morning News의 방향성 |
 | `marketAftereffectPressure` | 전날 시장 여파의 약한 잔류 효과 |
+| `attentionFadeComponent` | 관심을 충분히 끌지 못하면 상승 압력이 서서히 약해지는 보정 |
+| `assetInfluenceResistance` | 종목 시장 체급이 클수록 같은 예산/압력의 가격 영향이 약해지는 허구 저항 |
+| `orderBookMultiplier` | fictional 호가창/매물대 깊이에 따른 반응성 보정 |
+| `simulatorAdjustment` | seeded fake OHLCV/차트 모션 보정. 실제 데이터 사용 금지 |
 | `volatilityNoise` | 변동성에 따른 흔들림 |
 
 ---
@@ -281,7 +300,7 @@ surveillance = surveillance + 5
 
 ## 9. Non-player Asset Formula
 
-비플레이어 종목 7개는 간략 계산한다.
+비플레이어 종목은 컨텍스트 표시와 마켓 대시보드를 위해 간략 계산한다. 컨텍스트는 같은 섹터 경쟁 종목 2개와 타 섹터 평균 7개를 사용하고, 마켓 대시보드는 24개 개별 허구 종목의 거래대금 순위를 사용한다.
 
 ```text
 nonPlayerDelta =
