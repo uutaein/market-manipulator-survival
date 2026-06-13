@@ -1,6 +1,7 @@
 import { BaseDocumentScene } from "./BaseDocumentScene";
 import { SceneKeys } from "./SceneKeys";
 import { autoCardRewardElapsedSeconds, autoCardValues } from "../../domain/balancing/autoCardValues";
+import { documentEventRules, documentEventValues } from "../../domain/balancing/documentEventValues";
 import { runDefaults } from "../../domain/balancing/runDefaults";
 import { getAutoCardPeriodSec } from "../../domain/intraday/autoCards";
 import { manualActions } from "../../domain/intraday/manualActions";
@@ -12,6 +13,7 @@ export class IntradayScene extends BaseDocumentScene {
   private actionStatusText: Phaser.GameObjects.Text | null = null;
   private autoCardText: Phaser.GameObjects.Text | null = null;
   private autoChoiceButtons: Phaser.GameObjects.Text[] = [];
+  private documentEventObjects: Phaser.GameObjects.GameObject[] = [];
 
   constructor() {
     super(SceneKeys.Intraday);
@@ -107,6 +109,7 @@ export class IntradayScene extends BaseDocumentScene {
     this.refreshIntradayText();
     this.refreshAutoCardText();
     this.renderAutoCardChoices();
+    this.renderDocumentEventPopup();
   }
 
   private refreshIntradayText(): void {
@@ -129,6 +132,7 @@ export class IntradayScene extends BaseDocumentScene {
         `SURVEILLANCE ${formatNumber(state.surveillance)}`,
         `VOLATILITY ${formatNumber(state.volatility)}`,
         `PRESSURE ${formatNumber(state.marketPressure)}`,
+        `DOCUMENTS ${state.documentEventHistory.length}/${documentEventRules.maxEventsPerDay}`,
         "",
         ...manualActions.map(
           (action) => `${action.displayName}: ${formatNumber(state.manualActionCooldowns[action.id])}s`
@@ -180,6 +184,61 @@ export class IntradayScene extends BaseDocumentScene {
       this.autoChoiceButtons.push(button);
     });
   }
+
+  private renderDocumentEventPopup(): void {
+    this.documentEventObjects.forEach((object) => object.destroy());
+    this.documentEventObjects = [];
+
+    const state = gameSession.intradayState;
+
+    if (!state?.activeDocumentEventId) {
+      return;
+    }
+
+    const event = documentEventValues[state.activeDocumentEventId];
+    const { width, height } = this.scale;
+    const panelX = width / 2 - 310;
+    const panelY = height / 2 - 180;
+    const panel = this.add
+      .rectangle(width / 2, height / 2, 660, 380, 0x1b1f22, 0.98)
+      .setStrokeStyle(2, 0xd9c58b)
+      .setDepth(30);
+    const title = this.add
+      .text(panelX, panelY, event.displayName, {
+        color: "#f3e8ca",
+        fontFamily: this.fontFamily,
+        fontSize: "25px"
+      })
+      .setDepth(31)
+      .setOrigin(0, 0);
+    const body = this.add
+      .text(panelX, panelY + 48, "SURVEILLANCE DESK NOTICE\n응답 전까지 장중 운용이 보류됩니다.", {
+        color: "#c9c1ad",
+        fontFamily: this.fontFamily,
+        fontSize: "16px",
+        lineSpacing: 8,
+        wordWrap: { width: 580 }
+      })
+      .setDepth(31)
+      .setOrigin(0, 0);
+
+    this.documentEventObjects.push(panel, title, body);
+
+    event.choices.forEach((choice, index) => {
+      const button = this.addDocumentButton(
+        panelX,
+        panelY + 132 + index * 60,
+        `${getChoiceTone(choice.type)}: ${choice.label}`,
+        () => {
+          const message = gameSession.chooseDocumentEventChoice(index);
+          this.actionStatusText?.setText(`Document event: ${message}`);
+          this.refreshIntradayUi();
+        }
+      ).setDepth(31);
+
+      this.documentEventObjects.push(button);
+    });
+  }
 }
 
 function formatMarketBoard(marketBoardState: MarketBoardState | null): string {
@@ -206,4 +265,16 @@ function formatNumber(value: number): string {
 
 function formatPercent(value: number): string {
   return `${value >= 0 ? "+" : ""}${formatNumber(value)}%`;
+}
+
+function getChoiceTone(choiceType: string): string {
+  if (choiceType === "stable") {
+    return "안정";
+  }
+
+  if (choiceType === "aggressive") {
+    return "공격";
+  }
+
+  return "관망";
 }

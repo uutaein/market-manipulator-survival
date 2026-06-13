@@ -33,9 +33,10 @@ Current baseline:
 19. Phaser Run/Day flow scene wiring now exists for Main Menu, Run Setup, Morning Briefing, Pre-open Card selection, Opening Approval, and initial Intraday state display.
 20. Phaser Intraday scene now advances one-second price/timer ticks and exposes the 4 manual action buttons with cooldown feedback.
 21. Phaser Intraday scene now displays owned Auto Cards, opens paused reward choices, and applies periodic Auto Card effects.
-22. Phaser Day Settlement scene now displays Day result, surveillance grade, holding band, social cost, risk metrics, learning hint, and next-Day/Final routing.
-23. Phaser Final Settlement scene now displays Final grade, cumulative profit, surveillance summary, holding band, social cost, and restart choices.
-24. Document Event scene wiring, Retail Swarm rendering, localStorage browser wiring, and polished UI interaction are not implemented yet.
+22. Phaser Intraday scene now opens Document Event modals, pauses time, applies one of 3 choices, and resumes.
+23. Phaser Day Settlement scene now displays Day result, surveillance grade, holding band, social cost, risk metrics, learning hint, and next-Day/Final routing.
+24. Phaser Final Settlement scene now displays Final grade, cumulative profit, surveillance summary, holding band, social cost, and restart choices.
+25. Retail Swarm rendering, localStorage browser wiring, and polished UI interaction are not implemented yet.
 
 ---
 
@@ -157,6 +158,7 @@ MVP shape:
 28. Added Day Settlement scene wiring for result display, risk metrics, learning hints, and next-Day/Final routing.
 29. Added Final Settlement scene wiring for Day 5 cumulative carryover, Final grade display, surveillance summary, and same-seed/new-Run restart choices.
 30. Added Auto Card scene wiring for periodic effects, 90/180/270-second paused reward choices, owned card display, and reward choice buttons.
+31. Added Document Event scene wiring for condition-based modal opening, Day 1 fallback event, paused choice display, choice effects, and resume behavior.
 
 ---
 
@@ -225,4 +227,5 @@ Current branch baseline includes:
 20. Day Settlement scene wiring,
 21. Final Settlement scene wiring,
 22. Auto Card scene wiring,
-23. README, docs index, feature index, traceability, and MEMORY updates.
+23. Document Event scene wiring,
+24. README, docs index, feature index, traceability, and MEMORY updates.

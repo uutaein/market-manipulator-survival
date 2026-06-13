@@ -1,6 +1,7 @@
 import { getAssetById, getAssetsBySector, getSectorById, sectors, type AssetId, type SectorId } from "../domain/assets/assetCatalog";
 import { createDayState, createMarketBriefing, type DayState, type MarketBriefing } from "../domain/day/daySetup";
 import { autoCardRewardElapsedSeconds, autoCardValues } from "../domain/balancing/autoCardValues";
+import { documentEventRules } from "../domain/balancing/documentEventValues";
 import {
   advanceIntradayTime,
   createIntradayState,
@@ -17,6 +18,12 @@ import {
   type AutoCardChoice,
   type AutoCardEffectResult
 } from "../domain/intraday/autoCards";
+import {
+  applyDocumentEventChoice,
+  evaluateDocumentEvent,
+  openDocumentEvent,
+  type DocumentEventChoiceResult
+} from "../domain/intraday/documentEvents";
 import { tickManualActionCooldowns, useManualAction, type ManualActionResult } from "../domain/intraday/manualActions";
 import { runPlayerPriceTick } from "../domain/intraday/priceTick";
 import { buildMarketBoard, type MarketBoardState } from "../domain/market/marketBoard";
@@ -49,6 +56,8 @@ export class GameSession {
   autoCardRewardChoices: readonly AutoCardChoice[] = [];
   lastAutoCardEffects: readonly AutoCardEffectResult[] = [];
   lastAutoCardRewardMessage: string | null = null;
+  lastDocumentEventChoiceResult: DocumentEventChoiceResult | null = null;
+  lastDocumentEventMessage: string | null = null;
   private autoCardLastTriggeredAt: Partial<Record<AutoCardState["cardId"], number>> = {};
 
   setSelectedSector(sectorId: SectorId): void {
@@ -168,6 +177,11 @@ export class GameSession {
     const advancedState = advanceIntradayTime(cooldownState, 1);
     this.intradayState = this.applyDueAutoCardEffects(advancedState);
     this.openDueAutoCardReward();
+
+    if (!this.intradayState.isPaused) {
+      this.openTriggeredDocumentEvent();
+    }
+
     return this.intradayState;
   }
 
@@ -200,6 +214,22 @@ export class GameSession {
     };
     this.intradayState = resumeIntraday(currentState);
     return this.lastAutoCardRewardMessage;
+  }
+
+  chooseDocumentEventChoice(choiceIndex: number): string {
+    const currentState = this.intradayState ?? this.startIntraday();
+    const choiceType = currentState.documentEventChoices[choiceIndex];
+
+    if (!currentState.activeDocumentEventId || !choiceType) {
+      return "No document event choice available.";
+    }
+
+    const result = applyDocumentEventChoice(currentState, choiceType);
+    const choice = result.event.choices.find((candidate) => candidate.type === result.choiceType);
+    this.intradayState = result.state;
+    this.lastDocumentEventChoiceResult = result;
+    this.lastDocumentEventMessage = `${result.event.displayName}: ${choice?.label ?? result.choiceType}`;
+    return this.lastDocumentEventMessage;
   }
 
   calculateDaySettlement(): DaySettlementResult {
@@ -337,11 +367,47 @@ export class GameSession {
     this.intradayState = pauseIntraday(this.intradayState);
   }
 
+  private openTriggeredDocumentEvent(): void {
+    const state = this.intradayState;
+
+    if (!state || this.autoCardRewardChoices.length > 0 || state.activeDocumentEventId) {
+      return;
+    }
+
+    if (this.shouldOpenDay1OnboardingEvent(state)) {
+      const result = openDocumentEvent(state, "liquidity_dryness_report");
+      this.intradayState = result.state;
+      this.lastDocumentEventMessage = result.event ? `${result.event.displayName} opened.` : null;
+      return;
+    }
+
+    const result = evaluateDocumentEvent(state);
+
+    if (result.opened) {
+      this.intradayState = result.state;
+      this.lastDocumentEventMessage = result.event ? `${result.event.displayName} opened.` : null;
+    }
+  }
+
+  private shouldOpenDay1OnboardingEvent(state: IntradayState): boolean {
+    const runState = this.ensureRun();
+    const elapsedSec = getIntradayElapsedSec(state);
+
+    return (
+      runState.currentDay === 1 &&
+      state.documentEventHistory.length === 0 &&
+      elapsedSec >= documentEventRules.day1FallbackMinElapsedSec &&
+      elapsedSec <= documentEventRules.day1FallbackMaxElapsedSec
+    );
+  }
+
   private resetDayAutoCardSession(): void {
     this.autoCardRewardIndex = 0;
     this.autoCardRewardChoices = [];
     this.lastAutoCardEffects = [];
     this.lastAutoCardRewardMessage = null;
+    this.lastDocumentEventChoiceResult = null;
+    this.lastDocumentEventMessage = null;
     this.autoCardLastTriggeredAt = {};
   }
 }
