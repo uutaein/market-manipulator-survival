@@ -2,24 +2,49 @@ import { Given, Then, When } from "@cucumber/cucumber";
 import assert from "node:assert/strict";
 import type { MmsWorld } from "../support/world";
 import { dayResultCategories, finalGrades, holdingBands } from "../support/world";
+import {
+  calculateDaySettlement,
+  calculateFinalSettlement,
+  getHoldingBand
+} from "../../src/domain/settlement/settlement";
 
 Given("intraday operation ends without forced failure", function (this: MmsWorld) {
   this.openIntraday();
   this.forcedFailure = false;
+  this.daySettlementActualProfit = 10;
   this.timerSeconds = 0;
 });
 
 When("Day Settlement is calculated", function (this: MmsWorld) {
+  assert.ok(this.intradayState);
+  assert.ok(this.runState);
+  this.latestDaySettlement = calculateDaySettlement({
+    dayIndex: this.currentDay,
+    actualProfit: this.daySettlementActualProfit,
+    surveillance: this.intradayState.surveillance,
+    budget: this.intradayState.budget,
+    holdingRatio: this.intradayState.holdingRatio,
+    personalParticipation: this.intradayState.personalParticipation,
+    volatility: this.intradayState.volatility,
+    socialCost: this.runState.socialCost + this.intradayState.pendingSocialCostDelta,
+    retailSwarmState: this.intradayState.retailSwarmState,
+    priceChangePercent: this.intradayState.priceChangePercent,
+    marketPressure: this.intradayState.marketPressure,
+    forcedFailure: this.forcedFailure,
+    failureReason: this.failureReason || null
+  });
   this.daySettlementComplete = true;
-  this.latestDayResult = this.forcedFailure ? "강제 실패" : "안정 운용";
+  this.latestDayResult = this.latestDaySettlement.dayResultCategory;
 });
 
 Then("actual profit and surveillance grade are the primary result axes", function (this: MmsWorld) {
   assert.equal(this.daySettlementComplete, true);
+  assert.deepEqual(this.latestDaySettlement?.primaryAxes, ["actualProfit", "surveillanceGrade"]);
 });
 
 Then("supporting risk metrics are displayed", function (this: MmsWorld) {
   assert.equal(this.daySettlementComplete, true);
+  assert.ok(this.latestDaySettlement?.supportingRiskMetrics);
 });
 
 Then("the Day result is one of the 8 MVP Day result categories", function (this: MmsWorld) {
@@ -27,25 +52,34 @@ Then("the Day result is one of the 8 MVP Day result categories", function (this:
 });
 
 Given("the player reaches the target band", function (this: MmsWorld) {
-  this.visibleOptions.add("target band reached");
+  this.openIntraday();
+  this.daySettlementActualProfit = 22;
+  this.intradayState = {
+    ...this.intradayState!,
+    priceChangePercent: 10
+  };
 });
 
 Then("the surveillance grade is high", function (this: MmsWorld) {
-  this.visibleOptions.add("high surveillance grade");
+  assert.ok(this.intradayState);
+  this.intradayState = {
+    ...this.intradayState,
+    surveillance: 82
+  };
 });
 
 Then("the Day result is not {string}", function (this: MmsWorld, forbiddenResult: string) {
-  this.latestDayResult = "고위험 성공";
   assert.notEqual(this.latestDayResult, forbiddenResult);
 });
 
 Given("Day Settlement or Final Settlement is calculated", function (this: MmsWorld) {
   this.daySettlementComplete = true;
   this.finalSettlementComplete = true;
+  this.latestHoldingBand = getHoldingBand(60).displayName;
 });
 
 When("holding ratio is evaluated", function (this: MmsWorld) {
-  this.latestHoldingBand = "안정 구간";
+  this.latestHoldingBand = getHoldingBand(60).displayName;
 });
 
 Then("it is classified into one of the 4 MVP holding bands", function (this: MmsWorld) {
@@ -53,8 +87,8 @@ Then("it is classified into one of the 4 MVP holding bands", function (this: Mms
 });
 
 Then("high holding ratio is shown as a settlement risk", function (this: MmsWorld) {
-  this.latestHoldingBand = "과점 위험";
   assert.ok(holdingBands.has(this.latestHoldingBand));
+  assert.equal(this.latestHoldingBand, "과점 위험");
 });
 
 Given("Day 5 Settlement is complete", function (this: MmsWorld) {
@@ -63,12 +97,32 @@ Given("Day 5 Settlement is complete", function (this: MmsWorld) {
 });
 
 When("Final Settlement is calculated", function (this: MmsWorld) {
+  this.latestFinalSettlement = calculateFinalSettlement({
+    cumulativeProfit: 30,
+    finalSurveillance: 42,
+    surveillanceHistory: [20, 35, 40, 45, 42],
+    successfulDays: 3,
+    finalBudget: 78,
+    finalHoldingRatio: 30,
+    socialCost: 12,
+    forcedFailure: false,
+    failureReason: null
+  });
   this.finalSummaryConsidered = true;
-  this.finalGrade = "C";
+  this.finalGrade = this.latestFinalSettlement.finalGrade;
 });
 
 Then("cumulative actual profit, final surveillance grade, average surveillance grade, successful Days, final budget, final holding ratio, and social cost are considered", function (this: MmsWorld) {
   assert.equal(this.finalSummaryConsidered, true);
+  assert.deepEqual(this.latestFinalSettlement?.consideredMetrics, [
+    "cumulativeProfit",
+    "finalSurveillanceGrade",
+    "averageSurveillanceGrade",
+    "successfulDays",
+    "finalBudget",
+    "finalHoldingRatio",
+    "socialCost"
+  ]);
 });
 
 Then("the final grade is one of S, A, B, C, D, or F", function (this: MmsWorld) {
@@ -80,6 +134,18 @@ Given("a forced failure occurred during the Run", function (this: MmsWorld) {
 });
 
 When("the final result is shown", function (this: MmsWorld) {
+  this.latestFinalSettlement = calculateFinalSettlement({
+    cumulativeProfit: 0,
+    finalSurveillance: 100,
+    surveillanceHistory: [100],
+    successfulDays: 0,
+    finalBudget: 0,
+    finalHoldingRatio: 0,
+    socialCost: 0,
+    forcedFailure: true,
+    failureReason: this.failureReason
+  });
+  this.finalGrade = this.latestFinalSettlement.finalGrade;
   this.currentScreen = "final-settlement";
 });
 
