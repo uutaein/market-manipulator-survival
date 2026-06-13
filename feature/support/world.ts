@@ -1,6 +1,7 @@
 import { World, setWorldConstructor } from "@cucumber/cucumber";
 import type { DayState, MarketBriefing } from "../../src/domain/day/daySetup";
 import { createDayState, createMarketBriefing } from "../../src/domain/day/daySetup";
+import type { AutoCardId } from "../../src/domain/balancing/runDefaults";
 import {
   advanceIntradayTime,
   applyIntradayStatUpdate,
@@ -12,6 +13,8 @@ import {
 } from "../../src/domain/intraday/intradayState";
 import type { ManualActionResult } from "../../src/domain/intraday/manualActions";
 import { getManualActionDisplayNames, useManualAction } from "../../src/domain/intraday/manualActions";
+import type { AutoCardChoice, AutoCardEffectResult } from "../../src/domain/intraday/autoCards";
+import { applyAutoCardEffect, generateAutoCardChoices } from "../../src/domain/intraday/autoCards";
 import { runPlayerPriceTick } from "../../src/domain/intraday/priceTick";
 import {
   approveOpening,
@@ -86,6 +89,9 @@ export class MmsWorld extends World {
   documentEventsToday = 0;
   autoCardRewardOpen = false;
   autoCards = new Map<string, number>();
+  pendingAutoCardChoices: readonly AutoCardChoice[] = [];
+  autoRewardIndex = 0;
+  lastAutoCardEffectResult?: AutoCardEffectResult;
   visibleOptions = new Set<string>();
   visibleScreens = new Set<string>();
   displayedAssets = 0;
@@ -115,6 +121,7 @@ export class MmsWorld extends World {
     this.runState = createRunState({ runSeed: this.previousRunSeed });
     this.runSeed = this.runState.runSeed;
     this.runAssetProfiles = this.runState.runAssetProfiles;
+    this.syncAutoCardsMap();
     this.hiddenProfilesAssigned = true;
     this.currentDay = this.runState.currentDay;
     this.runStatus = this.runState.runStatus;
@@ -183,6 +190,7 @@ export class MmsWorld extends World {
     this.runState = restartRunWithSameSeed(this.runState);
     this.runSeed = this.runState.runSeed;
     this.runAssetProfiles = this.runState.runAssetProfiles;
+    this.syncAutoCardsMap();
     this.currentDay = this.runState.currentDay;
     this.runStatus = this.runState.runStatus;
     this.currentScreen = this.runState.phase;
@@ -243,6 +251,50 @@ export class MmsWorld extends World {
     this.priceBeforeManualAction = this.intradayState!.priceChangePercent;
     this.lastManualActionResult = useManualAction(this.intradayState!, actionName);
     this.intradayState = this.lastManualActionResult.state;
+  }
+
+  syncAutoCardsMap(): void {
+    this.autoCards = new Map((this.runState?.autoCards ?? []).map((card) => [card.cardId, card.level]));
+  }
+
+  setOwnedAutoCard(cardId: AutoCardId, level: 1 | 2 | 3): void {
+    if (!this.runState) {
+      this.startNewRun();
+    }
+
+    this.runState = {
+      ...this.runState!,
+      autoCards: [{ cardId, level }]
+    };
+    this.syncAutoCardsMap();
+  }
+
+  openAutoCardRewardChoice(): void {
+    if (!this.runState) {
+      this.startNewRun();
+    }
+
+    if (!this.intradayState) {
+      this.openIntraday();
+    }
+
+    this.autoRewardIndex += 1;
+    this.pendingAutoCardChoices = generateAutoCardChoices(this.runState!, this.currentDay, this.autoRewardIndex);
+    this.openModal("auto-card");
+  }
+
+  triggerOwnedAutoCardEffect(): void {
+    if (!this.runState) {
+      this.startNewRun();
+    }
+
+    if (!this.intradayState) {
+      this.openIntraday();
+    }
+
+    const card = this.runState!.autoCards[0];
+    this.lastAutoCardEffectResult = applyAutoCardEffect(this.intradayState!, card);
+    this.intradayState = this.lastAutoCardEffectResult.state;
   }
 
   forceBoundedStatUpdate(): void {

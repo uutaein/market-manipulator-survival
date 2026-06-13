@@ -22,7 +22,8 @@ Current baseline:
 8. Pre-open Card domain module exists for 4 card values, one-card-per-Day selection, no-effect `관망`, and Opening Approval guard.
 9. Intraday State / Price Tick domain module exists for 360-second timer, pause/resume, bounded stat clamping, news pressure, and component price tick.
 10. Manual Action domain module exists for 4 action values, modal availability, budget/cooldown checks, state effects, and cooldown entry.
-11. Auto card, document event, settlement, carryover, persistence, and Phaser gameplay wiring are not implemented yet.
+11. Auto Card domain module exists for 8 card values, reward choices, Lv.1~Lv.3 handling, and simple periodic state effects.
+12. Document event effects, settlement, carryover, persistence, and Phaser gameplay wiring are not implemented yet.
 
 ---
 
@@ -131,6 +132,7 @@ MVP shape:
 15. Added Pre-open Card domain module for MVP card values, selection rules, and Opening Approval.
 16. Added Intraday State / Price Tick domain module for timer, pause/resume, bounded stats, news pressure, and fictional component-based player price ticks.
 17. Added Manual Action domain module for four MVP manual actions, state effects, and cooldown entry.
+18. Added Auto Card domain module for eight MVP auto cards, reward choices, level caps, and simple periodic state effects.
 
 ---
 
@@ -186,4 +188,5 @@ Current branch baseline includes:
 7. Pre-open Card domain module,
 8. Intraday State / Price Tick domain module,
 9. Manual Action domain module,
-10. README, docs index, feature index, traceability, and MEMORY updates.
+10. Auto Card domain module,
+11. README, docs index, feature index, traceability, and MEMORY updates.

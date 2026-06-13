@@ -2,6 +2,8 @@ import { Given, Then, When } from "@cucumber/cucumber";
 import assert from "node:assert/strict";
 import type { MmsWorld } from "../support/world";
 import { excludedManualActions, manualActions } from "../support/world";
+import { autoCardIds } from "../../src/domain/balancing/runDefaults";
+import { isMvpAutoCardId } from "../../src/domain/intraday/autoCards";
 import { areManualActionsAvailable } from "../../src/domain/intraday/manualActions";
 
 const normalizeLabel = (label: string) => label.normalize("NFC").trim();
@@ -122,49 +124,54 @@ Then("{string} is not a manual action button", function (this: MmsWorld, actionN
 });
 
 When("initial Run state is created", function (this: MmsWorld) {
-  this.autoCards.set("attention_signal", 1);
+  if (!this.runState) {
+    this.startNewRun();
+  }
+  this.syncAutoCardsMap();
 });
 
 Then("the player receives one random Lv.1 auto card from the 8 MVP auto cards", function (this: MmsWorld) {
-  assert.equal(this.autoCards.size, 1);
-  assert.equal([...this.autoCards.values()][0], 1);
+  assert.equal(autoCardIds.length, 8);
+  assert.equal(this.runState?.autoCards.length, 1);
+  assert.ok(this.runState?.autoCards[0]);
+  assert.ok(isMvpAutoCardId(this.runState.autoCards[0].cardId));
+  assert.equal(this.runState.autoCards[0].level, 1);
 });
 
 When("an auto card reward timing is reached", function (this: MmsWorld) {
-  this.openModal("auto-card");
-  this.visibleOptions.add("auto choice 1");
-  this.visibleOptions.add("auto choice 2");
-  this.visibleOptions.add("auto choice 3");
+  this.openAutoCardRewardChoice();
 });
 
 Then("up to 3 auto card choices are shown", function (this: MmsWorld) {
-  assert.ok(this.visibleOptions.has("auto choice 1"));
-  assert.ok(this.visibleOptions.has("auto choice 2"));
-  assert.ok(this.visibleOptions.has("auto choice 3"));
+  assert.ok(this.pendingAutoCardChoices.length > 0);
+  assert.ok(this.pendingAutoCardChoices.length <= 3);
 });
 
 Then("the player can choose a new Lv.1 card or level up an owned card below Lv.3", function (this: MmsWorld) {
   assert.equal(this.autoCardRewardOpen, true);
+  assert.ok(this.pendingAutoCardChoices.every((choice) => choice.type === "new" || choice.type === "level_up"));
 });
 
 Given("the player owns an auto card", function (this: MmsWorld) {
-  this.autoCards.set("attention_signal", 1);
+  this.setOwnedAutoCard("attention_signal", 1);
 });
 
 When("the card period is reached during intraday operation", function (this: MmsWorld) {
-  this.visibleOptions.add("auto card effect applied");
+  this.triggerOwnedAutoCardEffect();
 });
 
 Then("the card applies its configured state effect", function (this: MmsWorld) {
-  assert.ok(this.visibleOptions.has("auto card effect applied"));
+  assert.equal(this.lastAutoCardEffectResult?.applied, true);
+  assert.equal(this.lastAutoCardEffectResult.card.id, "attention_signal");
 });
 
 Then("the card effect uses abstract fictional stats only", function (this: MmsWorld) {
-  assert.ok(this.visibleOptions.has("auto card effect applied"));
+  assert.ok(this.intradayState);
+  assert.ok(this.intradayState.personalParticipation > 30);
 });
 
 Given("the player owns auto cards", function (this: MmsWorld) {
-  this.autoCards.set("attention_signal", 3);
+  this.setOwnedAutoCard("attention_signal", 3);
 });
 
 Then("no card can exceed Lv.3", function (this: MmsWorld) {
@@ -172,15 +179,15 @@ Then("no card can exceed Lv.3", function (this: MmsWorld) {
 });
 
 Then("card evolution is not available", function (this: MmsWorld) {
-  assert.equal(this.autoCards.has("evolved_card"), false);
+  assert.equal(isMvpAutoCardId("evolved_card"), false);
 });
 
 Then("card synergy is not available", function (this: MmsWorld) {
-  assert.equal(this.autoCards.has("synergy_card"), false);
+  assert.equal(isMvpAutoCardId("synergy_card"), false);
 });
 
 Then("rare or legendary card types are not available", function (this: MmsWorld) {
-  assert.equal(this.autoCards.has("legendary_card"), false);
+  assert.equal(isMvpAutoCardId("legendary_card"), false);
 });
 
 When("a document event trigger condition is met", function (this: MmsWorld) {

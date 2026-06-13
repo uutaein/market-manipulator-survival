@@ -7,6 +7,7 @@ Current implemented scope:
 | Module | Purpose |
 | --- | --- |
 | `assets/assetCatalog.ts` | Fictional 8-sector / 24-asset catalog from SRS v0.1.6 |
+| `balancing/autoCardValues.ts` | First-playable Auto Card values from SRS v0.1.6 |
 | `balancing/manualActionValues.ts` | First-playable Manual Action values from SRS v0.1.6 |
 | `balancing/runDefaults.ts` | First-playable Run defaults and MVP auto card IDs |
 | `balancing/preOpenCardValues.ts` | First-playable Pre-open Card values from SRS v0.1.6 |
@@ -17,6 +18,6 @@ Current implemented scope:
 | `random/SeededRandom.ts` | Deterministic seeded random source for reproducible Run setup |
 | `run/runState.ts` | Core Run State creation, same-seed restart, hidden asset tendency assignment |
 
-The current domain layer supports early Run, Day setup, Pre-open Card selection, the player asset intraday tick skeleton, and Manual Action state effects. It does not yet include auto card effects, document event effects, settlement, carryover, or persistence modules.
+The current domain layer supports early Run, Day setup, Pre-open Card selection, the player asset intraday tick skeleton, Manual Action state effects, and Auto Card rewards/effects. It does not yet include document event effects, settlement, carryover, or persistence modules.
 
-BDD steps currently exercise this domain layer for Run start, same-seed restart, asset catalog completeness, hidden profile assignment, Morning News generation, Market Briefing data, Pre-open Card selection, Opening Approval, intraday timer behavior, pause/resume behavior, bounded stat clamping, player price tick components, and Manual Action state effects.
+BDD steps currently exercise this domain layer for Run start, same-seed restart, asset catalog completeness, hidden profile assignment, Morning News generation, Market Briefing data, Pre-open Card selection, Opening Approval, intraday timer behavior, pause/resume behavior, bounded stat clamping, player price tick components, Manual Action state effects, and Auto Card rewards/effects.
