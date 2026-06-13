@@ -3,7 +3,7 @@
 | Item | Value |
 | --- | --- |
 | Product | Market Manipulator Survival |
-| Purpose | Link MVP PRD decisions to SRS requirements and future test cases |
+| Purpose | Link MVP PRD decisions to SRS requirements, Gherkin features, and future test cases |
 | Status | Living Document |
 | Date | 2026-06-13 |
 | Baseline PRD | ./prd/market-manipulator-survival-prd-v0.1.5.md |
@@ -25,6 +25,7 @@ This document tracks MVP feature scope from PRD decisions through SRS requiremen
 | `SRS Ready` | Requirements are specific enough for implementation planning. |
 | `SPEC Scoped` | Feature is included in the MVP SPEC. |
 | `SPEC Accepted` | Feature is included in the accepted MVP SPEC. |
+| `Gherkin Drafted` | Gherkin feature coverage exists. |
 | `TC Planned` | Test case ID is reserved but not written. |
 | `TC Drafted` | Test case is written but not executed. |
 | `Implemented` | Feature has code implementation. |
@@ -35,35 +36,35 @@ This document tracks MVP feature scope from PRD decisions through SRS requiremen
 
 ## MVP Feature Traceability
 
-| Feature ID | Feature | PRD / ADR Source | SRS Source | TC ID | Status | Notes |
-| --- | --- | --- | --- | --- | --- | --- |
-| FEAT-001 | 5-Day Run structure | PRD v0.1.5; ADR-0007; ADR-0009 | SRS v0.1.0, v0.1.2 | TC-RUN-001 | SPEC Accepted / TC Planned | Day 1~5, no early success ending. |
-| FEAT-002 | Day phase flow | PRD v0.1.5; ADR-0007; ADR-0012 | SRS v0.1.0, v0.1.2 | TC-FLOW-001 | SPEC Accepted / TC Planned | Morning News through Day Settlement. |
-| FEAT-003 | Immediate Run failure | PRD v0.1.5; ADR-0008 | SRS v0.1.0, v0.1.1, v0.1.4, v0.1.6 | TC-FAIL-001 | SPEC Accepted / TC Planned | Budget, surveillance, price collapse. |
-| FEAT-004 | Fictional sectors and assets | PRD v0.1.5; ADR-0003; ADR-0023; ADR-0026 | SRS v0.1.0, v0.1.6 | TC-ASSET-001 | SPEC Accepted / TC Planned | 8 sectors, 24 fictional assets. |
-| FEAT-005 | Run-random hidden asset profile | PRD v0.1.5; ADR-0022; ADR-0023 | SRS v0.1.0, v0.1.6 | TC-ASSET-002 | SPEC Accepted / TC Planned | Stable/standard/high-risk tendency hidden from player. |
-| FEAT-006 | Run Seed and same-condition restart | PRD v0.1.5; ADR-0024 | SRS v0.1.0, v0.1.2, v0.1.4 | TC-SEED-001 | SPEC Accepted / TC Planned | Seed reproducibility must be verified during implementation. |
-| FEAT-007 | Morning News templates | PRD v0.1.5; ADR-0005; ADR-0011 | SRS v0.1.3, v0.1.6 | TC-NEWS-001 | SPEC Accepted / TC Planned | 5 templates, 1 per Day, fictional targets only. |
-| FEAT-008 | Market Briefing | PRD v0.1.5; ADR-0005; ADR-0010 | SRS v0.1.2, v0.1.3 | TC-BRIEF-001 | SPEC Accepted / TC Planned | Needs UI copy later, but behavior is scoped. |
-| FEAT-009 | Pre-open cards | PRD v0.1.5; ADR-0012 | SRS v0.1.3, v0.1.6 | TC-PREOPEN-001 | SPEC Accepted / TC Planned | 4 cards, max 1 per Day, effects defined. |
-| FEAT-010 | Opening approval / stamp action | PRD v0.1.5; ADR-0012 | SRS v0.1.0, v0.1.2, v0.1.3 | TC-OPEN-001 | SPEC Accepted / TC Planned | Exact input gesture can be UX-level. |
-| FEAT-011 | Intraday 360-second operation | PRD v0.1.5; ADR-0007 | SRS v0.1.0, v0.1.1, v0.1.2 | TC-INTRA-001 | SPEC Accepted / TC Planned | Pauses during document/reward choices. |
-| FEAT-012 | Core intraday stats | PRD v0.1.5; ADR-0002; ADR-0006 | SRS v0.1.0, v0.1.1 | TC-STATE-001 | SPEC Accepted / TC Planned | Budget, price, holding, participation, liquidity, surveillance, volatility, pressure. |
-| FEAT-013 | Tick price formula | PRD v0.1.5; ADR-0027 | SRS v0.1.1, v0.1.6 | TC-PRICE-001 | SPEC Accepted / TC Planned | Fictional game formula, not real market model. |
-| FEAT-014 | Manual actions | PRD v0.1.5; ADR-0011 | SRS v0.1.1, v0.1.3, v0.1.6 | TC-ACTION-001 | SPEC Accepted / TC Planned | 4 actions, costs, cooldowns, effects. |
-| FEAT-015 | Auto cards | PRD v0.1.5; ADR-0013 | SRS v0.1.0, v0.1.1, v0.1.3, v0.1.6 | TC-AUTO-001 | SPEC Accepted / TC Planned | 8 cards, Lv.1~Lv.3, reward timing defined. |
-| FEAT-016 | Document events | PRD v0.1.5; ADR-0014 | SRS v0.1.0, v0.1.3, v0.1.6 | TC-DOC-001 | SPEC Accepted / TC Planned | 8 events, 3 choices, pause behavior, trigger baselines. |
-| FEAT-017 | Retail Swarm | PRD v0.1.5; ADR-0006 | SRS v0.1.1, v0.1.3 | TC-SWARM-001 | SPEC Accepted / TC Planned | Visual behavior still needs implementation-level treatment. |
-| FEAT-018 | Market Board | PRD v0.1.5; ADR-0016 | SRS v0.1.0, v0.1.3, v0.1.6 | TC-MARKET-001 | SPEC Accepted / TC Planned | 1 detailed player asset, 7 simplified non-player assets. |
-| FEAT-019 | Day Settlement | PRD v0.1.5; ADR-0008; ADR-0015 | SRS v0.1.0, v0.1.4, v0.1.6 | TC-SETTLE-001 | SPEC Accepted / TC Planned | Result matrix and profit bands defined. |
-| FEAT-020 | Final Settlement | PRD v0.1.5; ADR-0008; ADR-0015 | SRS v0.1.0, v0.1.4, v0.1.6 | TC-FINAL-001 | SPEC Accepted / TC Planned | Final grades and adjustment rules defined. |
-| FEAT-021 | Holding ratio settlement risk | PRD v0.1.5; ADR-0017 | SRS v0.1.0, v0.1.4, v0.1.6 | TC-HOLD-001 | SPEC Accepted / TC Planned | 4 bands, final-grade adjustment. |
-| FEAT-022 | Social cost | PRD v0.1.5; ADR-0008; ADR-0015 | SRS v0.1.4, v0.1.6 | TC-SOCIAL-001 | SPEC Accepted / TC Planned | Abstract risk score only. |
-| FEAT-023 | Day carryover and aftereffects | PRD v0.1.5; ADR-0021 | SRS v0.1.0, v0.1.4, v0.1.6 | TC-CARRY-001 | SPEC Accepted / TC Planned | Rates and caps defined. |
-| FEAT-024 | Day 1 integrated onboarding | PRD v0.1.5; ADR-0019 | SRS v0.1.2, v0.1.6 | TC-ONBOARD-001 | SPEC Accepted / TC Planned | Hint copy can be written later. |
-| FEAT-025 | MVP screens | PRD v0.1.5; ADR-0018 | SRS v0.1.2, v0.1.6 | TC-SCREEN-001 | SPEC Accepted / TC Planned | 8 screens; failure is Final Settlement variant. |
-| FEAT-026 | Local persistence | PRD v0.1.5; ADR-0025 | SRS v0.1.0, v0.1.4, v0.1.6 | TC-SAVE-001 | SPEC Accepted / TC Planned | localStorage only, versioned keys. |
-| FEAT-027 | Safe abstraction layer | PRD v0.1.5; ADR-0002; ADR-0027 | All SRS docs | TC-SAFE-001 | SPEC Accepted / TC Planned | No real stocks, exchanges, market data, or real procedure modeling. |
+| Feature ID | Feature | PRD / ADR Source | SRS Source | Gherkin Source | TC ID | Status | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| FEAT-001 | 5-Day Run structure | PRD v0.1.5; ADR-0007; ADR-0009 | SRS v0.1.0, v0.1.2 | [run_lifecycle.feature](../feature/run/run_lifecycle.feature) | TC-RUN-001 | SPEC Accepted / Gherkin Drafted / TC Planned | Day 1~5, no early success ending. |
+| FEAT-002 | Day phase flow | PRD v0.1.5; ADR-0007; ADR-0012 | SRS v0.1.0, v0.1.2 | [run_lifecycle.feature](../feature/run/run_lifecycle.feature) | TC-FLOW-001 | SPEC Accepted / Gherkin Drafted / TC Planned | Morning News through Day Settlement. |
+| FEAT-003 | Immediate Run failure | PRD v0.1.5; ADR-0008 | SRS v0.1.0, v0.1.1, v0.1.4, v0.1.6 | [run_lifecycle.feature](../feature/run/run_lifecycle.feature) | TC-FAIL-001 | SPEC Accepted / Gherkin Drafted / TC Planned | Budget, surveillance, price collapse. |
+| FEAT-004 | Fictional sectors and assets | PRD v0.1.5; ADR-0003; ADR-0023; ADR-0026 | SRS v0.1.0, v0.1.6 | [asset_selection_and_profiles.feature](../feature/market/asset_selection_and_profiles.feature) | TC-ASSET-001 | SPEC Accepted / Gherkin Drafted / TC Planned | 8 sectors, 24 fictional assets. |
+| FEAT-005 | Run-random hidden asset profile | PRD v0.1.5; ADR-0022; ADR-0023 | SRS v0.1.0, v0.1.6 | [asset_selection_and_profiles.feature](../feature/market/asset_selection_and_profiles.feature) | TC-ASSET-002 | SPEC Accepted / Gherkin Drafted / TC Planned | Stable/standard/high-risk tendency hidden from player. |
+| FEAT-006 | Run Seed and same-condition restart | PRD v0.1.5; ADR-0024 | SRS v0.1.0, v0.1.2, v0.1.4 | [run_lifecycle.feature](../feature/run/run_lifecycle.feature), [local_storage.feature](../feature/persistence/local_storage.feature) | TC-SEED-001 | SPEC Accepted / Gherkin Drafted / TC Planned | Seed reproducibility must be verified during implementation. |
+| FEAT-007 | Morning News templates | PRD v0.1.5; ADR-0005; ADR-0011 | SRS v0.1.3, v0.1.6 | [news_and_briefing.feature](../feature/preopen/news_and_briefing.feature) | TC-NEWS-001 | SPEC Accepted / Gherkin Drafted / TC Planned | 5 templates, 1 per Day, fictional targets only. |
+| FEAT-008 | Market Briefing | PRD v0.1.5; ADR-0005; ADR-0010 | SRS v0.1.2, v0.1.3 | [news_and_briefing.feature](../feature/preopen/news_and_briefing.feature) | TC-BRIEF-001 | SPEC Accepted / Gherkin Drafted / TC Planned | Needs UI copy later, but behavior is scoped. |
+| FEAT-009 | Pre-open cards | PRD v0.1.5; ADR-0012 | SRS v0.1.3, v0.1.6 | [preopen_cards.feature](../feature/preopen/preopen_cards.feature) | TC-PREOPEN-001 | SPEC Accepted / Gherkin Drafted / TC Planned | 4 cards, max 1 per Day, effects defined. |
+| FEAT-010 | Opening approval / stamp action | PRD v0.1.5; ADR-0012 | SRS v0.1.0, v0.1.2, v0.1.3 | [preopen_cards.feature](../feature/preopen/preopen_cards.feature) | TC-OPEN-001 | SPEC Accepted / Gherkin Drafted / TC Planned | Exact input gesture can be UX-level. |
+| FEAT-011 | Intraday 360-second operation | PRD v0.1.5; ADR-0007 | SRS v0.1.0, v0.1.1, v0.1.2 | [tick_simulation.feature](../feature/intraday/tick_simulation.feature) | TC-INTRA-001 | SPEC Accepted / Gherkin Drafted / TC Planned | Pauses during document/reward choices. |
+| FEAT-012 | Core intraday stats | PRD v0.1.5; ADR-0002; ADR-0006 | SRS v0.1.0, v0.1.1 | [tick_simulation.feature](../feature/intraday/tick_simulation.feature) | TC-STATE-001 | SPEC Accepted / Gherkin Drafted / TC Planned | Budget, price, holding, participation, liquidity, surveillance, volatility, pressure. |
+| FEAT-013 | Tick price formula | PRD v0.1.5; ADR-0027 | SRS v0.1.1, v0.1.6 | [tick_simulation.feature](../feature/intraday/tick_simulation.feature) | TC-PRICE-001 | SPEC Accepted / Gherkin Drafted / TC Planned | Fictional game formula, not real market model. |
+| FEAT-014 | Manual actions | PRD v0.1.5; ADR-0011 | SRS v0.1.1, v0.1.3, v0.1.6 | [manual_actions.feature](../feature/intraday/manual_actions.feature) | TC-ACTION-001 | SPEC Accepted / Gherkin Drafted / TC Planned | 4 actions, costs, cooldowns, effects. |
+| FEAT-015 | Auto cards | PRD v0.1.5; ADR-0013 | SRS v0.1.0, v0.1.1, v0.1.3, v0.1.6 | [auto_cards.feature](../feature/intraday/auto_cards.feature) | TC-AUTO-001 | SPEC Accepted / Gherkin Drafted / TC Planned | 8 cards, Lv.1~Lv.3, reward timing defined. |
+| FEAT-016 | Document events | PRD v0.1.5; ADR-0014 | SRS v0.1.0, v0.1.3, v0.1.6 | [document_events.feature](../feature/intraday/document_events.feature) | TC-DOC-001 | SPEC Accepted / Gherkin Drafted / TC Planned | 8 events, 3 choices, pause behavior, trigger baselines. |
+| FEAT-017 | Retail Swarm | PRD v0.1.5; ADR-0006 | SRS v0.1.1, v0.1.3 | [retail_swarm.feature](../feature/intraday/retail_swarm.feature) | TC-SWARM-001 | SPEC Accepted / Gherkin Drafted / TC Planned | Visual behavior still needs implementation-level treatment. |
+| FEAT-018 | Market Board | PRD v0.1.5; ADR-0016 | SRS v0.1.0, v0.1.3, v0.1.6 | [market_board.feature](../feature/market/market_board.feature) | TC-MARKET-001 | SPEC Accepted / Gherkin Drafted / TC Planned | 1 detailed player asset, 7 simplified non-player assets. |
+| FEAT-019 | Day Settlement | PRD v0.1.5; ADR-0008; ADR-0015 | SRS v0.1.0, v0.1.4, v0.1.6 | [day_and_final_settlement.feature](../feature/settlement/day_and_final_settlement.feature) | TC-SETTLE-001 | SPEC Accepted / Gherkin Drafted / TC Planned | Result matrix and profit bands defined. |
+| FEAT-020 | Final Settlement | PRD v0.1.5; ADR-0008; ADR-0015 | SRS v0.1.0, v0.1.4, v0.1.6 | [day_and_final_settlement.feature](../feature/settlement/day_and_final_settlement.feature) | TC-FINAL-001 | SPEC Accepted / Gherkin Drafted / TC Planned | Final grades and adjustment rules defined. |
+| FEAT-021 | Holding ratio settlement risk | PRD v0.1.5; ADR-0017 | SRS v0.1.0, v0.1.4, v0.1.6 | [day_and_final_settlement.feature](../feature/settlement/day_and_final_settlement.feature) | TC-HOLD-001 | SPEC Accepted / Gherkin Drafted / TC Planned | 4 bands, final-grade adjustment. |
+| FEAT-022 | Social cost | PRD v0.1.5; ADR-0008; ADR-0015 | SRS v0.1.4, v0.1.6 | [day_and_final_settlement.feature](../feature/settlement/day_and_final_settlement.feature) | TC-SOCIAL-001 | SPEC Accepted / Gherkin Drafted / TC Planned | Abstract risk score only. |
+| FEAT-023 | Day carryover and aftereffects | PRD v0.1.5; ADR-0021 | SRS v0.1.0, v0.1.4, v0.1.6 | [carryover_and_aftereffects.feature](../feature/settlement/carryover_and_aftereffects.feature) | TC-CARRY-001 | SPEC Accepted / Gherkin Drafted / TC Planned | Rates and caps defined. |
+| FEAT-024 | Day 1 integrated onboarding | PRD v0.1.5; ADR-0019 | SRS v0.1.2, v0.1.6 | [day1_onboarding.feature](../feature/run/day1_onboarding.feature) | TC-ONBOARD-001 | SPEC Accepted / Gherkin Drafted / TC Planned | Hint copy can be written later. |
+| FEAT-025 | MVP screens | PRD v0.1.5; ADR-0018 | SRS v0.1.2, v0.1.6 | [run_lifecycle.feature](../feature/run/run_lifecycle.feature) | TC-SCREEN-001 | SPEC Accepted / Gherkin Drafted / TC Planned | 8 screens; failure is Final Settlement variant. |
+| FEAT-026 | Local persistence | PRD v0.1.5; ADR-0025 | SRS v0.1.0, v0.1.4, v0.1.6 | [local_storage.feature](../feature/persistence/local_storage.feature) | TC-SAVE-001 | SPEC Accepted / Gherkin Drafted / TC Planned | localStorage only, versioned keys. |
+| FEAT-027 | Safe abstraction layer | PRD v0.1.5; ADR-0002; ADR-0027 | All SRS docs | [safety_abstraction.feature](../feature/safety/safety_abstraction.feature) | TC-SAFE-001 | SPEC Accepted / Gherkin Drafted / TC Planned | No real stocks, exchanges, market data, or real procedure modeling. |
 
 ---
 
@@ -123,6 +124,8 @@ This document tracks MVP feature scope from PRD decisions through SRS requiremen
 When a PRD feature changes, update this file in the same change.
 
 When an SRS section is added, update the matching feature row.
+
+When a Gherkin feature file is added or moved, update the matching `Gherkin Source`.
 
 When tests are created, replace the reserved `TC-*` status with the actual test file, case name, or manual checklist reference.
 

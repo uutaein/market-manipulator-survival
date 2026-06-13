@@ -31,7 +31,8 @@ When adding or changing a feature:
 3. update SRS for behavior or values,
 4. update SDD only if module boundaries change,
 5. update SPEC if first playable scope changes,
-6. update `docs/traceability.md` in the same change.
+6. update root `feature/` Gherkin files if behavior coverage changes,
+7. update `docs/traceability.md` in the same change.
 
 ---
 
@@ -235,7 +236,45 @@ Holding bands:
 
 ---
 
-## 8. Traceability Skill
+## 8. Gherkin Feature Skill
+
+Gherkin feature files live under:
+
+```text
+feature/
+```
+
+Group files by domain first, then function:
+
+```text
+feature/run/
+feature/market/
+feature/preopen/
+feature/intraday/
+feature/settlement/
+feature/persistence/
+feature/safety/
+```
+
+Use English Gherkin keywords for tool compatibility:
+
+```gherkin
+Feature:
+Scenario:
+Given
+When
+Then
+And
+But
+```
+
+Use approved Korean player-facing terms inside quoted game labels.
+
+Do not create TC documents before Gherkin feature coverage exists.
+
+---
+
+## 9. Traceability Skill
 
 Every MVP feature should appear in:
 
@@ -249,9 +288,10 @@ Traceability rows should include:
 2. feature name,
 3. PRD/ADR source,
 4. SRS source,
-5. TC ID,
-6. status,
-7. notes.
+5. Gherkin source,
+6. TC ID,
+7. status,
+8. notes.
 
 When tests are written, update the matching `TC-*` row.
 
@@ -259,7 +299,7 @@ When a feature is deferred, move or mirror it under Deferred Scope Traceability.
 
 ---
 
-## 9. Editing Skill
+## 10. Editing Skill
 
 When editing docs:
 

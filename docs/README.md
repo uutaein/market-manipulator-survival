@@ -16,7 +16,8 @@ This directory contains the product, requirement, decision, and design documents
 
 | Document | Purpose |
 | --- | --- |
-| [traceability.md](traceability.md) | Links PRD/ADR decisions to SRS requirements, future test cases, and status. |
+| [traceability.md](traceability.md) | Links PRD/ADR decisions to SRS requirements, Gherkin features, future test cases, and status. |
+| [../feature/README.md](../feature/README.md) | Root Gherkin feature index grouped by domain and function. |
 
 ## Current Baseline
 

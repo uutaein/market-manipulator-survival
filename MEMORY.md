@@ -30,6 +30,7 @@ Current baseline:
 | `docs/sdd/` | Software design documents |
 | `docs/spec/` | Implementation-facing specifications |
 | `docs/traceability.md` | PRD/ADR/SRS/TC traceability matrix |
+| `feature/` | Gherkin feature files grouped by domain and function |
 | `MEMORY.md` | Current progress memory |
 | `SKILLS.md` | Project-specific rules and reusable design knowledge |
 
@@ -94,6 +95,7 @@ MVP shape:
 | SDD Modularity | `docs/sdd/market-manipulator-survival-sdd-v0.1.0-simulation-modularity.md` |
 | MVP SPEC | `docs/spec/market-manipulator-survival-mvp-spec-v0.1.0.md` |
 | Traceability | `docs/traceability.md` |
+| Gherkin Features | `feature/README.md` |
 
 ---
 
@@ -104,9 +106,11 @@ MVP shape:
 3. Added lightweight SDD for simulation modularity.
 4. Added SRS freeze readiness review.
 5. Added baseline values and triggers for implementation discussion.
-6. Added traceability matrix linking PRD/ADR decisions to SRS and planned TC IDs.
+6. Added traceability matrix linking PRD/ADR decisions to SRS, Gherkin files, and planned TC IDs.
 7. Added MVP SPEC v0.1.0 for first playable scope.
-8. Added this memory file and `SKILLS.md`.
+8. Accepted MVP SPEC v0.1.0 through ADR-0028.
+9. Added root `feature/` Gherkin files grouped by domain and function.
+10. Added this memory file and `SKILLS.md`.
 
 ---
 
@@ -116,12 +120,11 @@ The SRS is close to implementation-planning ready, but a final review pass is st
 
 Remaining non-code work:
 
-1. MVP SPEC v0.1.0 has been accepted as the first playable build scope.
+1. Review root `feature/` Gherkin files for scenario coverage.
 2. Review fictional asset names for tone.
 3. Keep SRS v0.1.6 values as first-playable defaults until real playtesting.
-4. Create Gherkin feature files next.
-5. Convert planned TC IDs in `docs/traceability.md` into actual manual or automated test cases after Gherkin feature files exist.
-6. Keep new ideas in P1/P2 unless they are essential to the MVP loop.
+4. Convert planned TC IDs in `docs/traceability.md` into actual manual or automated test cases after Gherkin review.
+5. Keep new ideas in P1/P2 unless they are essential to the MVP loop.
 
 ---
 
@@ -143,16 +146,16 @@ The game is a fictional resource-management and pressure-management game.
 
 ---
 
-## Latest Commit Memory
+## Recent Commit Memory
 
-Latest known commit before the newest uncommitted documentation additions:
+Latest committed baseline before Gherkin feature coverage:
 
 ```text
-1672c09 Organize design docs and add MVP SRS
+29649bb docs(spec): accept first playable MVP spec
 ```
 
-Current uncommitted work may include:
+Current documentation baseline includes:
 
-1. SPEC v0.1.0 status changed to Accepted,
-2. ADR-0028 MVP SPEC Acceptance,
-3. traceability status updates.
+1. root `feature/` Gherkin files,
+2. traceability Gherkin source links,
+3. README, docs index, MEMORY, and SKILLS updates.

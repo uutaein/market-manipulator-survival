@@ -44,9 +44,19 @@ MVP defaults:
 
 ## Documentation Layout
 
-All product and design documents live under `docs/`.
+Product and design documents live under `docs/`.
+Gherkin feature files live under root `feature/`.
 
 ```text
+feature/
+  run/          Run lifecycle and onboarding features
+  market/       Asset and Market Board features
+  preopen/      Morning News and Pre-open Card features
+  intraday/     Tick, action, auto card, document, and swarm features
+  settlement/   Settlement and carryover features
+  persistence/  Local storage features
+  safety/       Safety abstraction features
+
 docs/
   adr/   Architecture Decision Records
   prd/   Product requirements and MVP freeze documents
@@ -61,6 +71,7 @@ Key current documents:
 - [PRD v0.1.5](docs/prd/market-manipulator-survival-prd-v0.1.5.md)
 - [MVP Freeze Candidate](docs/prd/market-manipulator-survival-mvp-freeze-candidate.md)
 - [Traceability Matrix](docs/traceability.md)
+- [Gherkin Feature Index](feature/README.md)
 - [SRS v0.1.0 — Core Game State](docs/srs/market-manipulator-survival-srs-v0.1.0-core-game-state.md)
 - [SRS v0.1.1 — Tick Price Formula](docs/srs/market-manipulator-survival-srs-v0.1.1-tick-price-formula.md)
 - [SRS v0.1.2 — Run Flow and Screens](docs/srs/market-manipulator-survival-srs-v0.1.2-run-flow-and-screens.md)
@@ -99,4 +110,4 @@ Use fictional, abstract terminology:
 The repository is still documentation-first.
 
 Implementation has not started.  
-The current work is PRD/SRS/SDD refinement for a small MVP.
+The current work is SPEC/Gherkin refinement for a small MVP.
