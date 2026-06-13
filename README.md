@@ -52,18 +52,24 @@ docs/
   prd/   Product requirements and MVP freeze documents
   srs/   Software requirements documents
   sdd/   Software design documents
+  traceability.md
 ```
 
 Key current documents:
 
 - [PRD v0.1.5](docs/prd/market-manipulator-survival-prd-v0.1.5.md)
 - [MVP Freeze Candidate](docs/prd/market-manipulator-survival-mvp-freeze-candidate.md)
+- [Traceability Matrix](docs/traceability.md)
 - [SRS v0.1.0 — Core Game State](docs/srs/market-manipulator-survival-srs-v0.1.0-core-game-state.md)
 - [SRS v0.1.1 — Tick Price Formula](docs/srs/market-manipulator-survival-srs-v0.1.1-tick-price-formula.md)
 - [SRS v0.1.2 — Run Flow and Screens](docs/srs/market-manipulator-survival-srs-v0.1.2-run-flow-and-screens.md)
 - [SRS v0.1.3 — Content and Interactions](docs/srs/market-manipulator-survival-srs-v0.1.3-content-and-interactions.md)
 - [SRS v0.1.4 — Settlement, Carryover, and Persistence](docs/srs/market-manipulator-survival-srs-v0.1.4-settlement-carryover-persistence.md)
+- [SRS v0.1.5 — Freeze Readiness Review](docs/srs/market-manipulator-survival-srs-v0.1.5-freeze-readiness-review.md)
+- [SRS v0.1.6 — Baseline Values and Triggers](docs/srs/market-manipulator-survival-srs-v0.1.6-baseline-values-and-triggers.md)
 - [SDD v0.1.0 — Simulation Modularity](docs/sdd/market-manipulator-survival-sdd-v0.1.0-simulation-modularity.md)
+- [MEMORY](MEMORY.md)
+- [SKILLS](SKILLS.md)
 
 ---
 

@@ -11,6 +11,12 @@ This directory contains the product, requirement, decision, and design documents
 | `srs/` | Software requirements documents |
 | `sdd/` | Software design documents |
 
+## Traceability
+
+| Document | Purpose |
+| --- | --- |
+| [traceability.md](traceability.md) | Links PRD/ADR decisions to SRS requirements, future test cases, and status. |
+
 ## Current Baseline
 
 | Type | Document |
@@ -22,6 +28,8 @@ This directory contains the product, requirement, decision, and design documents
 | SRS | [market-manipulator-survival-srs-v0.1.2-run-flow-and-screens.md](srs/market-manipulator-survival-srs-v0.1.2-run-flow-and-screens.md) |
 | SRS | [market-manipulator-survival-srs-v0.1.3-content-and-interactions.md](srs/market-manipulator-survival-srs-v0.1.3-content-and-interactions.md) |
 | SRS | [market-manipulator-survival-srs-v0.1.4-settlement-carryover-persistence.md](srs/market-manipulator-survival-srs-v0.1.4-settlement-carryover-persistence.md) |
+| SRS Review | [market-manipulator-survival-srs-v0.1.5-freeze-readiness-review.md](srs/market-manipulator-survival-srs-v0.1.5-freeze-readiness-review.md) |
+| SRS | [market-manipulator-survival-srs-v0.1.6-baseline-values-and-triggers.md](srs/market-manipulator-survival-srs-v0.1.6-baseline-values-and-triggers.md) |
 | SDD | [market-manipulator-survival-sdd-v0.1.0-simulation-modularity.md](sdd/market-manipulator-survival-sdd-v0.1.0-simulation-modularity.md) |
 
 ## ADRs
