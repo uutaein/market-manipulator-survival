@@ -62,6 +62,7 @@ Current implementation status:
 - Day Setup / Morning News domain module: present
 - Pre-open Card domain module: present
 - Intraday State / Price Tick domain module: present
+- Manual Action domain module: present
 - Cucumber step definitions: present
 - Gameplay simulation: not implemented yet
 - BDD validation: executable against an in-memory support world, not yet against Phaser gameplay modules

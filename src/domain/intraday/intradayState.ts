@@ -1,4 +1,5 @@
 import type { DayState, PreOpenCardEffect } from "../day/daySetup";
+import { manualActionIds, type ManualActionId } from "../balancing/manualActionValues";
 import { runDefaults } from "../balancing/runDefaults";
 import type { RunState } from "../run/runState";
 import { getActiveNewsPricePressure } from "./newsPressure";
@@ -37,6 +38,8 @@ export interface IntradayState {
   readonly activeNewsPricePressure: number;
   readonly marketAftereffectPressure: number;
   readonly retailSwarmState: RetailSwarmState;
+  readonly manualActionCooldowns: Readonly<Record<ManualActionId, number>>;
+  readonly lastManualActionId: ManualActionId | null;
   readonly latestPriceComponents: PriceTickComponents | null;
 }
 
@@ -68,6 +71,8 @@ export function createIntradayState(runState: RunState, dayState: DayState): Int
     activeNewsPricePressure: getActiveNewsPricePressure(runState, dayState.morningNews),
     marketAftereffectPressure: 0,
     retailSwarmState: "interest",
+    manualActionCooldowns: createEmptyManualActionCooldowns(),
+    lastManualActionId: null,
     latestPriceComponents: null
   });
 }
@@ -104,6 +109,7 @@ export function isIntradayComplete(state: IntradayState): boolean {
 export function clampIntradayState(state: IntradayState): IntradayState {
   const clamped = {
     ...state,
+    budget: Math.max(0, state.budget),
     marketPressure: clamp(state.marketPressure, -100, 100),
     holdingRatio: clamp01To100(state.holdingRatio),
     personalParticipation: clamp01To100(state.personalParticipation),
@@ -117,6 +123,10 @@ export function clampIntradayState(state: IntradayState): IntradayState {
     ...clamped,
     retailSwarmState: getRetailSwarmState(clamped.personalParticipation)
   };
+}
+
+export function createEmptyManualActionCooldowns(): Readonly<Record<ManualActionId, number>> {
+  return Object.fromEntries(manualActionIds.map((actionId) => [actionId, 0])) as Record<ManualActionId, number>;
 }
 
 export function applyIntradayStatUpdate(

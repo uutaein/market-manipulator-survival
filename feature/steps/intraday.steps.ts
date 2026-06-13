@@ -2,6 +2,7 @@ import { Given, Then, When } from "@cucumber/cucumber";
 import assert from "node:assert/strict";
 import type { MmsWorld } from "../support/world";
 import { excludedManualActions, manualActions } from "../support/world";
+import { areManualActionsAvailable } from "../../src/domain/intraday/manualActions";
 
 const normalizeLabel = (label: string) => label.normalize("NFC").trim();
 
@@ -94,23 +95,26 @@ Then("the player can see {string}", function (this: MmsWorld, actionName: string
 });
 
 Then("all manual action buttons are unavailable", function (this: MmsWorld) {
-  assert.equal(this.intradayPaused, true);
+  assert.ok(this.intradayState);
+  assert.equal(areManualActionsAvailable(this.intradayState), false);
 });
 
 Given("the player uses a manual action", function (this: MmsWorld) {
-  this.visibleOptions.add("manual action used");
+  this.useManualAction("가격 추진");
 });
 
 Then("the action affects budget, market pressure, liquidity, participation, holding ratio, surveillance, or volatility", function (this: MmsWorld) {
-  assert.ok(this.visibleOptions.has("manual action used"));
+  assert.equal(this.lastManualActionResult?.applied, true);
+  assert.equal(this.intradayState?.lastManualActionId, "price_push");
 });
 
 Then("the action does not directly set the final price", function (this: MmsWorld) {
-  assert.ok(this.visibleOptions.has("manual action used"));
+  assert.equal(this.intradayState?.priceChangePercent, this.priceBeforeManualAction);
 });
 
 Then("the action enters cooldown if applicable", function (this: MmsWorld) {
-  assert.ok(this.visibleOptions.has("manual action used"));
+  assert.ok(this.intradayState);
+  assert.ok(this.intradayState.manualActionCooldowns.price_push > 0);
 });
 
 Then("{string} is not a manual action button", function (this: MmsWorld, actionName: string) {

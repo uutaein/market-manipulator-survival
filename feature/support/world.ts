@@ -10,6 +10,8 @@ import {
   resumeIntraday,
   type IntradayState
 } from "../../src/domain/intraday/intradayState";
+import type { ManualActionResult } from "../../src/domain/intraday/manualActions";
+import { getManualActionDisplayNames, useManualAction } from "../../src/domain/intraday/manualActions";
 import { runPlayerPriceTick } from "../../src/domain/intraday/priceTick";
 import {
   approveOpening,
@@ -22,12 +24,7 @@ import { createRunState, restartRunWithSameSeed } from "../../src/domain/run/run
 
 export const preOpenCards = new Set(getPreOpenCardDisplayNames());
 
-export const manualActions = new Set([
-  "유동성 공급",
-  "가격 추진",
-  "과열 해소",
-  "포지션 정리"
-]);
+export const manualActions = new Set(getManualActionDisplayNames());
 
 export const excludedManualActions = new Set([
   "방어 자금 투입",
@@ -78,6 +75,8 @@ export class MmsWorld extends World {
   timerSeconds = 0;
   priceBeforeTick = 0;
   tickIndexBefore = 0;
+  priceBeforeManualAction = 0;
+  lastManualActionResult?: ManualActionResult;
   openingApproved = false;
   selectedPreOpenCard = "";
   preOpenSelectionError = "";
@@ -234,6 +233,16 @@ export class MmsWorld extends World {
       runSeed: this.runSeed,
       dayIndex: this.currentDay
     });
+  }
+
+  useManualAction(actionName = "가격 추진"): void {
+    if (!this.intradayState) {
+      this.openIntraday();
+    }
+
+    this.priceBeforeManualAction = this.intradayState!.priceChangePercent;
+    this.lastManualActionResult = useManualAction(this.intradayState!, actionName);
+    this.intradayState = this.lastManualActionResult.state;
   }
 
   forceBoundedStatUpdate(): void {
