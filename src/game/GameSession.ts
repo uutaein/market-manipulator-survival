@@ -28,7 +28,7 @@ import {
 import { applyRetailSwarmRiskEffects, type RetailSwarmEffectResult } from "../domain/intraday/retailSwarm";
 import { tickManualActionCooldowns, useManualAction, type ManualActionResult } from "../domain/intraday/manualActions";
 import { runPlayerPriceTick } from "../domain/intraday/priceTick";
-import { buildMarketBoard, type MarketBoardState } from "../domain/market/marketBoard";
+import { advanceMarketBoard, buildMarketBoard, type MarketBoardState } from "../domain/market/marketBoard";
 import {
   canContinueSavedRun,
   loadCurrentRun,
@@ -254,6 +254,7 @@ export class GameSession {
     const advancedState = advanceIntradayTime(cooldownState, 1);
     const autoCardState = this.applyDueAutoCardEffects(advancedState);
     this.intradayState = this.applyRetailSwarmTransitionRisk(autoCardState);
+    this.advanceMarketBoard();
     this.openDueAutoCardReward();
 
     if (!this.intradayState.isPaused) {
@@ -421,6 +422,23 @@ export class GameSession {
     }
 
     return nextState;
+  }
+
+  private advanceMarketBoard(): void {
+    const runState = this.ensureRun();
+    const dayState = this.ensureDay();
+    const intradayState = this.intradayState;
+
+    if (!this.marketBoardState || !intradayState) {
+      return;
+    }
+
+    this.marketBoardState = advanceMarketBoard(
+      this.marketBoardState,
+      runState,
+      dayState,
+      intradayState.priceTickIndex
+    );
   }
 
   private applyRetailSwarmTransitionRisk(state: IntradayState): IntradayState {
