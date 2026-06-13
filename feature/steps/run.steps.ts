@@ -115,11 +115,7 @@ Given("the player has reached Run failure or Final Settlement", function (this: 
 });
 
 When("the player chooses same-condition restart", function (this: MmsWorld) {
-  const seed = this.previousRunSeed || this.runSeed || "mms-seed-001";
-  this.runSeed = seed;
-  this.previousRunSeed = seed;
-  this.runStatus = "active";
-  this.currentDay = 1;
+  this.restartWithSameSeed();
 });
 
 Then("the new attempt uses the same Run Seed", function (this: MmsWorld) {
@@ -128,6 +124,7 @@ Then("the new attempt uses the same Run Seed", function (this: MmsWorld) {
 
 Then("initial Run-random conditions are reproduced", function (this: MmsWorld) {
   assert.ok(this.runSeed);
+  assert.equal(JSON.stringify(this.runAssetProfiles), this.previousRunProfilesSnapshot);
 });
 
 Then("the player can try different decisions", function (this: MmsWorld) {

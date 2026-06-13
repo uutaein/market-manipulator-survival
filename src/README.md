@@ -6,8 +6,9 @@ Current scope:
 
 1. TypeScript + Phaser 3 + Vite project structure.
 2. Minimal Phaser scene shell for the accepted MVP screen flow.
-3. No gameplay simulation logic yet.
-4. Cucumber step definitions exist outside `src/` under `feature/steps/`.
+3. Core Run State domain module under `src/domain/`.
+4. No gameplay simulation logic yet.
+5. Cucumber step definitions exist outside `src/` under `feature/steps/`.
 
 The scaffold exists so the next implementation work can attach SPEC/Gherkin-driven behavior to a running browser project.
 

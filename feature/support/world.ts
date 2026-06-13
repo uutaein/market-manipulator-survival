@@ -1,4 +1,6 @@
 import { World, setWorldConstructor } from "@cucumber/cucumber";
+import type { RunAssetProfiles, RunState } from "../../src/domain/run/runState";
+import { createRunState, restartRunWithSameSeed } from "../../src/domain/run/runState";
 
 export const preOpenCards = new Set([
   "시장 관찰",
@@ -47,8 +49,10 @@ export class MmsWorld extends World {
   fictionalOnly = false;
   currentScreen = "none";
   runStatus: RunStatus = "none";
+  runState?: RunState;
   runSeed = "";
   previousRunSeed = "";
+  previousRunProfilesSnapshot = "";
   currentDay = 0;
   forcedFailure = false;
   finalGrade = "";
@@ -73,6 +77,7 @@ export class MmsWorld extends World {
   fictionalAssetsPerSector = 0;
   hiddenProfilesAssigned = false;
   hiddenProfilesVisible = false;
+  runAssetProfiles?: RunAssetProfiles;
   selectedAssetVisible = false;
   latestDayResult = "";
   latestHoldingBand = "";
@@ -89,11 +94,30 @@ export class MmsWorld extends World {
 
   startNewRun(): void {
     this.previousRunSeed = this.runSeed || "mms-seed-001";
-    this.runSeed = this.previousRunSeed;
-    this.currentDay = 1;
-    this.runStatus = "active";
-    this.currentScreen = "run-setup";
+    this.runState = createRunState({ runSeed: this.previousRunSeed });
+    this.runSeed = this.runState.runSeed;
+    this.runAssetProfiles = this.runState.runAssetProfiles;
+    this.hiddenProfilesAssigned = true;
+    this.currentDay = this.runState.currentDay;
+    this.runStatus = this.runState.runStatus;
+    this.currentScreen = this.runState.phase;
     this.visibleScreens.add("Run Setup");
+  }
+
+  restartWithSameSeed(): void {
+    if (!this.runState) {
+      this.startNewRun();
+      return;
+    }
+
+    this.previousRunSeed = this.runState.runSeed;
+    this.previousRunProfilesSnapshot = JSON.stringify(this.runState.runAssetProfiles);
+    this.runState = restartRunWithSameSeed(this.runState);
+    this.runSeed = this.runState.runSeed;
+    this.runAssetProfiles = this.runState.runAssetProfiles;
+    this.currentDay = this.runState.currentDay;
+    this.runStatus = this.runState.runStatus;
+    this.currentScreen = this.runState.phase;
   }
 
   openIntraday(): void {

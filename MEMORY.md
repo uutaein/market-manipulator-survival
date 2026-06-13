@@ -17,7 +17,8 @@ Current baseline:
 3. SDD exists only for lightweight simulation modularity.
 4. TypeScript + Phaser 3 + Vite project scaffold has been created.
 5. Cucumber step definitions exist for accepted MVP Gherkin coverage.
-6. Gameplay systems are not implemented yet.
+6. Core Run State domain module exists for seed, asset catalog, hidden profile assignment, and same-seed restart.
+7. Gameplay simulation systems are not implemented yet.
 
 ---
 
@@ -35,6 +36,7 @@ Current baseline:
 | `feature/steps/` | TypeScript Cucumber step definitions grouped by domain |
 | `feature/support/` | Shared Cucumber world and accepted MVP constants |
 | `src/` | TypeScript + Phaser 3 source scaffold |
+| `src/domain/` | Phaser-independent gameplay domain modules |
 | `MEMORY.md` | Current progress memory |
 | `SKILLS.md` | Project-specific rules and reusable design knowledge |
 
@@ -101,6 +103,7 @@ MVP shape:
 | Traceability | `docs/traceability.md` |
 | Gherkin Features | `feature/README.md` |
 | Cucumber Config | `cucumber.mjs` |
+| Domain Modules | `src/domain/README.md` |
 | Source Scaffold | `src/README.md` |
 
 ---
@@ -119,6 +122,7 @@ MVP shape:
 10. Added this memory file and `SKILLS.md`.
 11. Added TypeScript + Phaser 3 + Vite project scaffold.
 12. Added Cucumber configuration, shared in-memory world, and domain step definitions.
+13. Added Core Run State domain module for seeded Run creation, fictional asset catalog, hidden asset tendency assignment, and same-seed restart.
 
 ---
 
@@ -133,7 +137,7 @@ Remaining non-code work:
 3. Keep SRS v0.1.6 values as first-playable defaults until real playtesting.
 4. Convert planned TC IDs in `docs/traceability.md` into actual manual or automated test cases after Gherkin review.
 5. Keep new ideas in P1/P2 unless they are essential to the MVP loop.
-6. Replace in-memory BDD assumptions with module-backed checks as gameplay modules are implemented.
+6. Continue replacing in-memory BDD assumptions with module-backed checks as gameplay modules are implemented.
 
 ---
 
@@ -157,16 +161,17 @@ The game is a fictional resource-management and pressure-management game.
 
 ## Recent Commit Memory
 
-Latest committed baseline before BDD step definitions:
+Latest committed baseline before Core Run State branch:
 
 ```text
-8a3131f build(scaffold): add Phaser Vite project shell
+f7c4b8a test(bdd): add Cucumber step definitions
 ```
 
-Current documentation baseline includes:
+Current branch baseline includes:
 
 1. TypeScript + Phaser 3 + Vite scaffold,
 2. MVP Phaser scene shell,
 3. traceability implementation scaffold section,
 4. Cucumber step definitions for accepted MVP Gherkin scenarios,
-5. README, docs index, feature index, traceability, and MEMORY updates.
+5. Core Run State domain module,
+6. README, docs index, feature index, traceability, and MEMORY updates.

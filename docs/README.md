@@ -35,6 +35,7 @@ This directory contains the product, requirement, decision, and design documents
 | SDD | [market-manipulator-survival-sdd-v0.1.0-simulation-modularity.md](sdd/market-manipulator-survival-sdd-v0.1.0-simulation-modularity.md) |
 | SPEC | [market-manipulator-survival-mvp-spec-v0.1.0.md](spec/market-manipulator-survival-mvp-spec-v0.1.0.md) |
 | Implementation Scaffold | [../src/README.md](../src/README.md) |
+| Domain Modules | [../src/domain/README.md](../src/domain/README.md) |
 | BDD Coverage | [../feature/README.md](../feature/README.md) |
 
 ## ADRs

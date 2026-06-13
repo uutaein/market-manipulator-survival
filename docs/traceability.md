@@ -27,6 +27,7 @@ This document tracks MVP feature scope from PRD decisions through SRS requiremen
 | `SPEC Accepted` | Feature is included in the accepted MVP SPEC. |
 | `Gherkin Drafted` | Gherkin feature coverage exists. |
 | `Step Definitions Drafted` | Executable Cucumber step definitions exist for the Gherkin scenarios. |
+| `Domain Implemented` | Non-UI domain module exists and is exercised by executable checks. |
 | `TC Planned` | Test case ID is reserved but not written. |
 | `TC Drafted` | Test case is written but not executed. |
 | `Implemented` | Feature has code implementation. |
@@ -43,9 +44,9 @@ This document tracks MVP feature scope from PRD decisions through SRS requiremen
 | FEAT-001 | 5-Day Run structure | PRD v0.1.5; ADR-0007; ADR-0009 | SRS v0.1.0, v0.1.2 | [run_lifecycle.feature](../feature/run/run_lifecycle.feature) | TC-RUN-001 | SPEC Accepted / Gherkin Drafted / Step Definitions Drafted / TC Planned | Day 1~5, no early success ending. |
 | FEAT-002 | Day phase flow | PRD v0.1.5; ADR-0007; ADR-0012 | SRS v0.1.0, v0.1.2 | [run_lifecycle.feature](../feature/run/run_lifecycle.feature) | TC-FLOW-001 | SPEC Accepted / Gherkin Drafted / Step Definitions Drafted / TC Planned | Morning News through Day Settlement. |
 | FEAT-003 | Immediate Run failure | PRD v0.1.5; ADR-0008 | SRS v0.1.0, v0.1.1, v0.1.4, v0.1.6 | [run_lifecycle.feature](../feature/run/run_lifecycle.feature) | TC-FAIL-001 | SPEC Accepted / Gherkin Drafted / Step Definitions Drafted / TC Planned | Budget, surveillance, price collapse. |
-| FEAT-004 | Fictional sectors and assets | PRD v0.1.5; ADR-0003; ADR-0023; ADR-0026 | SRS v0.1.0, v0.1.6 | [asset_selection_and_profiles.feature](../feature/market/asset_selection_and_profiles.feature) | TC-ASSET-001 | SPEC Accepted / Gherkin Drafted / Step Definitions Drafted / TC Planned | 8 sectors, 24 fictional assets. |
-| FEAT-005 | Run-random hidden asset profile | PRD v0.1.5; ADR-0022; ADR-0023 | SRS v0.1.0, v0.1.6 | [asset_selection_and_profiles.feature](../feature/market/asset_selection_and_profiles.feature) | TC-ASSET-002 | SPEC Accepted / Gherkin Drafted / Step Definitions Drafted / TC Planned | Stable/standard/high-risk tendency hidden from player. |
-| FEAT-006 | Run Seed and same-condition restart | PRD v0.1.5; ADR-0024 | SRS v0.1.0, v0.1.2, v0.1.4 | [run_lifecycle.feature](../feature/run/run_lifecycle.feature), [local_storage.feature](../feature/persistence/local_storage.feature) | TC-SEED-001 | SPEC Accepted / Gherkin Drafted / Step Definitions Drafted / TC Planned | Seed reproducibility must be verified during implementation. |
+| FEAT-004 | Fictional sectors and assets | PRD v0.1.5; ADR-0003; ADR-0023; ADR-0026 | SRS v0.1.0, v0.1.6 | [asset_selection_and_profiles.feature](../feature/market/asset_selection_and_profiles.feature) | TC-ASSET-001 | SPEC Accepted / Gherkin Drafted / Step Definitions Drafted / Domain Implemented / TC Planned | 8 sectors, 24 fictional assets exist in `src/domain/assets/assetCatalog.ts`; UI wiring pending. |
+| FEAT-005 | Run-random hidden asset profile | PRD v0.1.5; ADR-0022; ADR-0023 | SRS v0.1.0, v0.1.6 | [asset_selection_and_profiles.feature](../feature/market/asset_selection_and_profiles.feature) | TC-ASSET-002 | SPEC Accepted / Gherkin Drafted / Step Definitions Drafted / Domain Implemented / TC Planned | Seeded stable/standard/high-risk tendency assignment exists in `src/domain/run/runState.ts`; player-facing concealment UI pending. |
+| FEAT-006 | Run Seed and same-condition restart | PRD v0.1.5; ADR-0024 | SRS v0.1.0, v0.1.2, v0.1.4 | [run_lifecycle.feature](../feature/run/run_lifecycle.feature), [local_storage.feature](../feature/persistence/local_storage.feature) | TC-SEED-001 | SPEC Accepted / Gherkin Drafted / Step Definitions Drafted / Domain Implemented / TC Planned | Core same-seed Run recreation exists; persistence and UI wiring pending. |
 | FEAT-007 | Morning News templates | PRD v0.1.5; ADR-0005; ADR-0011 | SRS v0.1.3, v0.1.6 | [news_and_briefing.feature](../feature/preopen/news_and_briefing.feature) | TC-NEWS-001 | SPEC Accepted / Gherkin Drafted / Step Definitions Drafted / TC Planned | 5 templates, 1 per Day, fictional targets only. |
 | FEAT-008 | Market Briefing | PRD v0.1.5; ADR-0005; ADR-0010 | SRS v0.1.2, v0.1.3 | [news_and_briefing.feature](../feature/preopen/news_and_briefing.feature) | TC-BRIEF-001 | SPEC Accepted / Gherkin Drafted / Step Definitions Drafted / TC Planned | Needs UI copy later, but behavior is scoped. |
 | FEAT-009 | Pre-open cards | PRD v0.1.5; ADR-0012 | SRS v0.1.3, v0.1.6 | [preopen_cards.feature](../feature/preopen/preopen_cards.feature) | TC-PREOPEN-001 | SPEC Accepted / Gherkin Drafted / Step Definitions Drafted / TC Planned | 4 cards, max 1 per Day, effects defined. |
@@ -95,6 +96,7 @@ This document tracks MVP feature scope from PRD decisions through SRS requiremen
 | SCF-002 | MVP screen shell | SPEC v0.1.0 section 4 | `src/game/scenes/` | Scaffolded | 7 Phaser scenes cover 8 MVP screens; Document Event remains an Intraday modal concept. |
 | SCF-003 | Shared document UI shell | SDD v0.1.0 module boundaries | `src/game/scenes/BaseDocumentScene.ts` | Scaffolded | Temporary document-style shell for first implementation passes. |
 | SCF-004 | Cucumber step definitions | Gherkin feature files | `cucumber.mjs`, `feature/support/`, `feature/steps/` | Step Definitions Drafted | In-memory BDD step layer for accepted MVP Gherkin coverage; not a substitute for gameplay implementation tests. |
+| IMP-001 | Core Run State domain module | SPEC v0.1.0 sections 5, 8, 10 | `src/domain/` | Domain Implemented | Adds seeded random, fictional asset catalog, Run defaults, hidden profile assignment, new Run creation, and same-seed restart. |
 
 ---
 

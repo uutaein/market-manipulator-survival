@@ -1,6 +1,8 @@
 import { Given, Then, When } from "@cucumber/cucumber";
 import assert from "node:assert/strict";
 import type { MmsWorld } from "../support/world";
+import { getAssetsBySector, sectors } from "../../src/domain/assets/assetCatalog";
+import { assignRunAssetProfiles, getSectorTendencies, isValidRunAssetProfiles } from "../../src/domain/run/runState";
 
 Given("a new Run is created", function (this: MmsWorld) {
   this.startNewRun();
@@ -8,8 +10,8 @@ Given("a new Run is created", function (this: MmsWorld) {
 
 When("the Run Setup screen is shown", function (this: MmsWorld) {
   this.currentScreen = "run-setup";
-  this.fictionalSectors = 8;
-  this.fictionalAssetsPerSector = 3;
+  this.fictionalSectors = sectors.length;
+  this.fictionalAssetsPerSector = getAssetsBySector(sectors[0].id).length;
 });
 
 Then("all 8 fictional sectors are available", function (this: MmsWorld) {
@@ -26,24 +28,29 @@ Then("the player can select one sector and one asset", function (this: MmsWorld)
 });
 
 When("Run-random asset profiles are generated", function (this: MmsWorld) {
-  this.hiddenProfilesAssigned = true;
+  this.runAssetProfiles = assignRunAssetProfiles(this.runSeed);
+  this.hiddenProfilesAssigned = isValidRunAssetProfiles(this.runAssetProfiles);
 });
 
 Then("each sector receives one stable tendency", function (this: MmsWorld) {
-  assert.equal(this.hiddenProfilesAssigned, true);
+  assert.ok(this.runAssetProfiles);
+  assert.ok(sectors.every((sector) => getSectorTendencies(this.runAssetProfiles!, sector.id).includes("stable")));
 });
 
 Then("each sector receives one standard tendency", function (this: MmsWorld) {
-  assert.equal(this.hiddenProfilesAssigned, true);
+  assert.ok(this.runAssetProfiles);
+  assert.ok(sectors.every((sector) => getSectorTendencies(this.runAssetProfiles!, sector.id).includes("standard")));
 });
 
 Then("each sector receives one high-risk tendency", function (this: MmsWorld) {
-  assert.equal(this.hiddenProfilesAssigned, true);
+  assert.ok(this.runAssetProfiles);
+  assert.ok(sectors.every((sector) => getSectorTendencies(this.runAssetProfiles!, sector.id).includes("high_risk")));
 });
 
 Then("these tendencies are assigned to the sector assets using the Run Seed", function (this: MmsWorld) {
   assert.ok(this.runSeed);
-  assert.equal(this.hiddenProfilesAssigned, true);
+  assert.ok(this.runAssetProfiles);
+  assert.deepEqual(this.runAssetProfiles, assignRunAssetProfiles(this.runSeed));
 });
 
 Given("the player is choosing an asset", function (this: MmsWorld) {
