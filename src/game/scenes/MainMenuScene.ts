@@ -44,7 +44,7 @@ export class MainMenuScene extends BaseDocumentScene {
       this.addActionButton(
         {
           label: "저장 Run 이어가기",
-          target: SceneKeys.MorningBriefing,
+          target: SceneKeys.PreOpenCard,
           onClick: () => {
             gameSession.loadSavedRun();
           }

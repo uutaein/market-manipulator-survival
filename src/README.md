@@ -7,7 +7,7 @@ Current scope:
 1. TypeScript + Phaser 3 + Vite project structure.
 2. Minimal Phaser scene shell for the accepted MVP screen flow.
 3. Core Run State domain module under `src/domain/`.
-4. No gameplay simulation logic yet.
+4. First playable gameplay simulation wiring is in progress.
 5. Cucumber step definitions exist outside `src/` under `feature/steps/`.
 
 The scaffold exists so the next implementation work can attach SPEC/Gherkin-driven behavior to a running browser project.
@@ -20,7 +20,8 @@ The scaffold exists so the next implementation work can attach SPEC/Gherkin-driv
 | `RunSetupScene` | Run setup / fictional asset selection shell |
 | `MorningBriefingScene` | Morning News / Market Briefing shell |
 | `PreOpenCardScene` | Pre-open Card / Opening Approval shell |
-| `IntradayScene` | Intraday operation shell with live Market Board, tick, manual action, auto card, document event, and Retail Swarm wiring |
+| `IntradayScene` | Intraday operation shell with fictional candle/volume chart, live Market Board, tick, manual action, auto card, document event, and Retail Swarm wiring |
+| `IntradayRepositionScene` | Intraday desk-reposition flow after full position settlement |
 | `DaySettlementScene` | Day Settlement shell |
 | `FinalSettlementScene` | Final Settlement summary and failure variant shell |
 

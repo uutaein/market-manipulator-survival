@@ -13,7 +13,9 @@ export const approvedSafeTerms = [
   "개인 참여자",
   "개인 참여도",
   "가격 추진",
+  "매수봇",
   "과열 해소",
+  "매도봇",
   "가격 안정화",
   "포지션 정리",
   "신호 주문",
@@ -106,7 +108,8 @@ export function collectTerminologyContent(): readonly string[] {
     "개인 참여도",
     "시장 압력",
     "포지션 정리",
-    "과열 해소"
+    "매수봇",
+    "매도봇"
   ];
 }
 

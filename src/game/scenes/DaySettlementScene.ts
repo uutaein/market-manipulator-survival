@@ -10,7 +10,7 @@ export class DaySettlementScene extends BaseDocumentScene {
   create(): void {
     const settlement = gameSession.daySettlementResult ?? gameSession.calculateDaySettlement();
     const runState = gameSession.ensureRun();
-    const nextScene = runState.currentDay >= 5 ? SceneKeys.FinalSettlement : SceneKeys.MorningBriefing;
+    const nextScene = runState.currentDay >= 5 ? SceneKeys.FinalSettlement : SceneKeys.PreOpenCard;
     const nextLabel = runState.currentDay >= 5 ? "Final 정산" : "다음 Day";
 
     this.drawDocumentShell(
@@ -53,11 +53,11 @@ function formatSigned(value: number): string {
 
 function createHint(dayResultCategory: string, surveillanceGrade: string): string {
   if (dayResultCategory === "손실 마감") {
-    return "HINT: 다음 Day에는 유동성 공급 후 가격 추진 타이밍을 확인하세요.";
+    return "HINT: 다음 Day에는 유동성 공급 후 매수봇 타이밍을 확인하세요.";
   }
 
   if (["D", "E"].includes(surveillanceGrade)) {
-    return "HINT: 감시 부담이 높습니다. 과열 해소나 감시 완충 선택을 고려하세요.";
+    return "HINT: 감시 부담이 높습니다. 매도봇이나 감시 완충 선택을 고려하세요.";
   }
 
   if (dayResultCategory === "조용한 실패") {

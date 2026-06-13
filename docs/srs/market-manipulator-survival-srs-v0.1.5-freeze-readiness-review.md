@@ -80,7 +80,7 @@ Recommended baseline:
 | --- | ---: |
 | starting budget | 100 |
 | minimum budget threshold | 10 |
-| initial holding ratio | 15 |
+| initial holding ratio | 0 |
 | initial personal participation | 30 |
 | initial market liquidity | 50 |
 | initial surveillance | 10 |
@@ -111,18 +111,18 @@ If Morning News affects a non-displayed sector, at least one representative from
 
 ### SRS-FR-004 — Pre-open Card Effects
 
-Pre-open card names and roles are fixed, but their baseline effects are not.
+Pre-open card names and baseline roles are fixed in SRS v0.1.6.
 
-Required before implementation:
+Current baseline:
 
-1. `시장 관찰` information reveal behavior,
-2. `사전 포지션 구축` cost and opening pressure effect,
-3. `방어 자금 배정` cost reserve and risk reduction behavior,
+1. `선취매` increases holding ratio with a slightly worse average entry price,
+2. `뉴스 배정` lets the player choose a positive or negative news direction for the selected fictional asset,
+3. `종목 분석` strengthens price-push and overheat-cooldown effects,
 4. `관망` no-effect behavior.
 
-Recommended handling:
+Handling:
 
-> Define light baseline effects in SRS, keep exact values in balancing data, and avoid adding new cards.
+> Keep exact values in balancing data. `뉴스 배정` is one MVP card even though it exposes positive/negative direction buttons.
 
 ### SRS-FR-005 — Manual Action Cooldowns
 
@@ -139,9 +139,9 @@ Recommended baseline:
 | Action | Recommended Cooldown |
 | --- | ---: |
 | 유동성 공급 | 8 sec |
-| 가격 추진 | 10 sec |
-| 과열 해소 | 12 sec |
-| 포지션 정리 | 14 sec |
+| 매수봇 | 16 sec |
+| 매도봇 | 12 sec |
+| 포지션 정리 | 10 sec |
 
 Manual actions should be disabled while a document event is active.
 

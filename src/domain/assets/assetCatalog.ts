@@ -6,7 +6,7 @@ export type SectorId =
   | "chip_equipment"
   | "payment_fintech"
   | "media_game"
-  | "community_token";
+  | "meme_theme";
 
 export type AssetId =
   | "food_agri_01"
@@ -30,9 +30,9 @@ export type AssetId =
   | "media_game_01"
   | "media_game_02"
   | "media_game_03"
-  | "community_token_01"
-  | "community_token_02"
-  | "community_token_03";
+  | "meme_theme_01"
+  | "meme_theme_02"
+  | "meme_theme_03";
 
 export interface SectorDefinition {
   readonly id: SectorId;
@@ -54,153 +54,153 @@ export const sectors = [
   { id: "chip_equipment", displayName: "칩·장비" },
   { id: "payment_fintech", displayName: "결제·핀테크" },
   { id: "media_game", displayName: "미디어·게임" },
-  { id: "community_token", displayName: "커뮤니티 토큰" }
+  { id: "meme_theme", displayName: "밈·테마" }
 ] as const satisfies readonly SectorDefinition[];
 
 export const assets = [
   {
     id: "food_agri_01",
     sectorId: "food_agri",
-    displayName: "곡물회랑",
-    shortBriefing: "Regional supply desk with steady attention."
+    displayName: "밥심푸드",
+    shortBriefing: "식량 가격과 급식 수요 뉴스에 빠르게 반응하는 식품 테마."
   },
   {
     id: "food_agri_02",
     sectorId: "food_agri",
-    displayName: "온실노드",
-    shortBriefing: "Controlled-growth operator with weather-sensitive demand."
+    displayName: "온실상사",
+    shortBriefing: "날씨와 공급 불안 문구에 관심이 붙는 시설농업 테마."
   },
   {
     id: "food_agri_03",
     sectorId: "food_agri",
-    displayName: "수확셀",
-    shortBriefing: "Small seasonal desk with uneven participation."
+    displayName: "작황컴퍼니",
+    shortBriefing: "작황 전망에 따라 거래대금이 출렁이는 농업 테마."
   },
   {
     id: "energy_grid_01",
     sectorId: "energy_grid",
-    displayName: "그리드램프",
-    shortBriefing: "Utility-adjacent desk with broad sector visibility."
+    displayName: "콘센트전력",
+    shortBriefing: "전력망 투자 뉴스에 거래대금이 붙는 전력 테마."
   },
   {
     id: "energy_grid_02",
     sectorId: "energy_grid",
-    displayName: "축전회랑",
-    shortBriefing: "Storage-themed desk with volatile attention bursts."
+    displayName: "축전상회",
+    shortBriefing: "저장장치 기대감이 붙으면 짧고 강하게 움직이는 테마."
   },
   {
     id: "energy_grid_03",
     sectorId: "energy_grid",
-    displayName: "전력노드",
-    shortBriefing: "Infrastructure desk with slower but stronger moves."
+    displayName: "정전복구",
+    shortBriefing: "복구 기대와 장애 경보가 번갈아 등장하는 전력망 테마."
   },
   {
     id: "bio_trial_01",
     sectorId: "bio_trial",
-    displayName: "임상서랍",
-    shortBriefing: "Clinical-file desk with event-heavy sentiment."
+    displayName: "임상대기제약",
+    shortBriefing: "승인 일정 문구 하나로 기대와 경고가 함께 붙는 임상주."
   },
   {
     id: "bio_trial_02",
     sectorId: "bio_trial",
-    displayName: "바이오램프",
-    shortBriefing: "Research-themed desk with sharp attention swings."
+    displayName: "캡슐바이오",
+    shortBriefing: "작은 연구 성과에도 개인 참여도가 튀는 바이오 테마."
   },
   {
     id: "bio_trial_03",
     sectorId: "bio_trial",
-    displayName: "세포문서",
-    shortBriefing: "Thin-flow desk with high uncertainty."
+    displayName: "승인문턱랩스",
+    shortBriefing: "확정 정보보다 분위기에 크게 흔들리는 고변동 테마."
   },
   {
     id: "automation_ai_01",
     sectorId: "automation_ai",
-    displayName: "오토서기",
-    shortBriefing: "Automation desk with strong crowd recognition."
+    displayName: "자동서기",
+    shortBriefing: "업무 자동화 기대감으로 초반 관심을 모으기 쉬운 테마."
   },
   {
     id: "automation_ai_02",
     sectorId: "automation_ai",
-    displayName: "패턴엔진",
-    shortBriefing: "Pattern desk that reacts strongly to news."
+    displayName: "프롬프트공업",
+    shortBriefing: "뉴스 문구와 키워드에 과민하게 반응하는 AI 테마."
   },
   {
     id: "automation_ai_03",
     sectorId: "automation_ai",
-    displayName: "공정노드",
-    shortBriefing: "Factory-flow desk with moderate liquidity."
+    displayName: "클릭봇시스템즈",
+    shortBriefing: "관심은 빨리 붙지만 경고 문서도 빨리 따라오는 자동화 테마."
   },
   {
     id: "chip_equipment_01",
     sectorId: "chip_equipment",
-    displayName: "웨이퍼문",
-    shortBriefing: "Component desk with sector-sensitive pressure."
+    displayName: "웨이퍼상회",
+    shortBriefing: "칩 공급과 수급 뉴스에 민감한 부품 테마."
   },
   {
     id: "chip_equipment_02",
     sectorId: "chip_equipment",
-    displayName: "장비서랍",
-    shortBriefing: "Equipment desk with slower attention buildup."
+    displayName: "회로전자",
+    shortBriefing: "유동성이 붙으면 가격 반응이 선명해지는 전자 테마."
   },
   {
     id: "chip_equipment_03",
     sectorId: "chip_equipment",
-    displayName: "회로등대",
-    shortBriefing: "Signal-heavy desk with fast volatility changes."
+    displayName: "장비납품",
+    shortBriefing: "수주 기대와 납기 지연 경고가 번갈아 나오는 장비 테마."
   },
   {
     id: "payment_fintech_01",
     sectorId: "payment_fintech",
-    displayName: "결제도장",
-    shortBriefing: "Settlement-themed desk with stable baseline interest."
+    displayName: "도장페이",
+    shortBriefing: "승인 건수와 가맹점 뉴스에 반응하는 결제 테마."
   },
   {
     id: "payment_fintech_02",
     sectorId: "payment_fintech",
-    displayName: "원장노드",
-    shortBriefing: "Ledger desk with medium liquidity and pressure."
+    displayName: "원장테크",
+    shortBriefing: "정산 안정성과 원장 기술 뉴스에 유동성이 붙는 핀테크."
   },
   {
     id: "payment_fintech_03",
     sectorId: "payment_fintech",
-    displayName: "정산서랍",
-    shortBriefing: "Budget-efficient desk with surveillance sensitivity."
+    displayName: "영수증핀테크",
+    shortBriefing: "예산 효율은 좋지만 경고 문서에 민감한 결제 테마."
   },
   {
     id: "media_game_01",
     sectorId: "media_game",
-    displayName: "채널잉크",
-    shortBriefing: "Media desk with fast attention movement."
+    displayName: "클릭방송",
+    shortBriefing: "트래픽 소식에 개인 참여도가 빠르게 붙는 미디어 테마."
   },
   {
     id: "media_game_02",
     sectorId: "media_game",
-    displayName: "플레이문",
-    shortBriefing: "Game-themed desk with high participation variance."
+    displayName: "패치노트게임즈",
+    shortBriefing: "업데이트 문구 하나로 과열과 실망이 교차하는 게임 테마."
   },
   {
     id: "media_game_03",
     sectorId: "media_game",
-    displayName: "방송노드",
-    shortBriefing: "Broadcast desk with broad but unstable interest."
+    displayName: "시즌패스미디어",
+    shortBriefing: "넓게 주목받지만 관심 유지가 어려운 콘텐츠 테마."
   },
   {
-    id: "community_token_01",
-    sectorId: "community_token",
-    displayName: "포럼칩",
-    shortBriefing: "Community desk with fast crowd buildup."
+    id: "meme_theme_01",
+    sectorId: "meme_theme",
+    displayName: "밈광장",
+    shortBriefing: "짧은 유행 문구에 관심이 빠르게 모였다가 흩어지는 테마."
   },
   {
-    id: "community_token_02",
-    sectorId: "community_token",
-    displayName: "밈원장",
-    shortBriefing: "Meme-led desk with high panic risk."
+    id: "meme_theme_02",
+    sectorId: "meme_theme",
+    displayName: "밈장부",
+    shortBriefing: "웃음과 패닉이 같은 속도로 번지는 고위험 밈 테마."
   },
   {
-    id: "community_token_03",
-    sectorId: "community_token",
-    displayName: "토큰광장",
-    shortBriefing: "Token-square desk with strong swarm response."
+    id: "meme_theme_03",
+    sectorId: "meme_theme",
+    displayName: "댓글연쇄",
+    shortBriefing: "댓글 분위기가 Retail Swarm으로 바로 번지는 커뮤니티 테마."
   }
 ] as const satisfies readonly AssetDefinition[];
 

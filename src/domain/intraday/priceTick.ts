@@ -1,6 +1,8 @@
 import { priceTickValues } from "../balancing/priceTickValues";
 import { createSeededRandom } from "../random/SeededRandom";
 import { clamp, clampIntradayState, type IntradayState, type PriceTickComponents } from "./intradayState";
+import { buildOrderBookProfile } from "./orderBook";
+import { simulatePriceMotion } from "./priceMotionSimulator";
 
 export interface PriceTickContext {
   readonly runSeed: string;
@@ -37,12 +39,23 @@ export function calculatePriceTickComponents(
   const competition = state.competitionPressure * coefficients.competitionPressure;
   const news = state.activeNewsPricePressure;
   const aftereffect = state.marketAftereffectPressure;
-  const directionalDelta = pressure + participation + holding + liquidity + competition + news + aftereffect;
+  const attentionGap = Math.max(0, baselines.personalParticipation - state.personalParticipation);
+  const unsupportedPrice = Math.max(0, state.priceChangePercent);
+  const attentionFade = -(unsupportedPrice * attentionGap * coefficients.unsupportedPriceFade);
+  const directionalDelta = pressure + participation + holding + liquidity + competition + news + aftereffect + attentionFade;
+  const assetInfluenceResistance = Math.max(0.55, state.assetInfluenceResistance);
+  const orderBook = buildOrderBookProfile(state, context);
+  const orderBookMultiplier =
+    directionalDelta >= 0 ? orderBook.upwardResponsiveness : orderBook.downwardResponsiveness;
+  const simulation = simulatePriceMotion(state, context);
   const liquidityMultiplier = liquidityConfig.base + (state.marketLiquidity / 100) * liquidityConfig.scale;
   const volatilityRandom = random.next() * 2 - 1;
   const noiseRange = volatilityNoise.base + state.volatility * volatilityNoise.perVolatility;
   const volatilityNoiseComponent = volatilityRandom * noiseRange;
-  const rawDelta = directionalDelta * liquidityMultiplier + volatilityNoiseComponent;
+  const rawDelta =
+    (directionalDelta / assetInfluenceResistance) * liquidityMultiplier * orderBookMultiplier +
+    simulation.simulatorAdjustment +
+    volatilityNoiseComponent;
   const clampedDelta = clamp(
     rawDelta,
     priceTickValues.playerMinDeltaPerTick,
@@ -57,8 +70,21 @@ export function calculatePriceTickComponents(
     competition,
     news,
     aftereffect,
+    attentionFade,
+    orderBookMultiplier,
+    sellWallDepth: orderBook.sellWallDepth,
+    buyWallDepth: orderBook.buyWallDepth,
+    meanReversion: simulation.meanReversion,
+    targetResistance: simulation.targetResistance,
+    overheatDrag: simulation.overheatDrag,
+    pullbackShock: simulation.pullbackShock,
+    reboundSupport: simulation.reboundSupport,
+    externalSimulatorImpulse: simulation.externalSimulatorImpulse,
+    externalSimulatorVolumeFactor: simulation.externalSimulatorVolumeFactor,
+    simulatorAdjustment: simulation.simulatorAdjustment,
     volatilityNoise: volatilityNoiseComponent,
     directionalDelta,
+    assetInfluenceResistance,
     liquidityMultiplier,
     rawDelta,
     clampedDelta

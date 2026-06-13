@@ -52,10 +52,11 @@ MVP Morning News는 5개 템플릿으로 제한한다.
 
 | ID | Requirement |
 | --- | --- |
-| SRS-CONTENT-NEWS-001 | 각 Day에는 Morning News가 정확히 1개 표시되어야 한다. |
+| SRS-CONTENT-NEWS-001 | 각 Day에는 Morning News가 정확히 3개 표시되어야 한다. |
 | SRS-CONTENT-NEWS-002 | Morning News는 5개 템플릿과 허구 대상을 조합해 생성해야 한다. |
-| SRS-CONTENT-NEWS-003 | MVP에서는 섹터 단위 영향을 우선해야 한다. |
+| SRS-CONTENT-NEWS-003 | 각 Day의 Morning News는 섹터 뉴스 1개와 허구 종목 뉴스 2개로 구성되어야 한다. |
 | SRS-CONTENT-NEWS-004 | 실제 뉴스, 실제 사건, 실제 시장 데이터는 사용하지 않는다. |
+| SRS-CONTENT-NEWS-005 | 비플레이어 종목 뉴스는 시장 보드 맥락과 배지에는 표시하되, 플레이어 종목 가격 계산에는 직접 반영하지 않아야 한다. |
 
 ---
 
@@ -65,9 +66,9 @@ MVP Pre-open Card는 4개다.
 
 | Card ID | 표시명 | 역할 |
 | --- | --- | --- |
-| `market_observation` | 시장 관찰 | 뉴스 효과와 목표 조건을 더 명확히 보여주는 정보 카드 |
-| `early_positioning` | 사전 포지션 구축 | 시작 예산을 소모해 개장 직후 가격 추진력을 얻는 공격적 카드 |
-| `defense_budget` | 방어 자금 배정 | 시작 예산 일부를 방어용으로 묶어 급락/패닉 리스크를 낮추는 방어 카드 |
+| `early_positioning` | 선취매 | Day 1 또는 보유 포지션이 없을 때는 현재 예산의 10~50%, Day 2 이후 보유 포지션이 있으면 0~50% 투입 비율을 조절해 보유 비중을 늘리거나 유지하는 카드 |
+| `news_assignment` | 뉴스 배정 | 아침 뉴스 공개 전에 내 종목 호재 또는 악재 방향을 배정하는 카드 |
+| `asset_analysis` | 종목 분석 | 매수봇과 매도봇 효과를 강화하는 카드 |
 | `wait_and_see` | 관망 | 아무 카드도 쓰지 않고 예산을 보전한 채 개장 |
 
 | ID | Requirement |
@@ -75,7 +76,10 @@ MVP Pre-open Card는 4개다.
 | SRS-CONTENT-PREOPEN-001 | 플레이어는 Day당 최대 1개의 Pre-open Card를 선택할 수 있어야 한다. |
 | SRS-CONTENT-PREOPEN-002 | `관망`은 카드 미사용 선택으로 제공되어야 한다. |
 | SRS-CONTENT-PREOPEN-003 | Pre-open Card 효과는 해당 Day에만 적용되어야 한다. |
-| SRS-CONTENT-PREOPEN-004 | 카드 선택 후 개장 승인 액션을 통해 장중 단계로 진입해야 한다. |
+| SRS-CONTENT-PREOPEN-004 | 개장 전 카드 선택은 Morning News 공개 전에 이뤄져야 한다. |
+| SRS-CONTENT-PREOPEN-005 | 카드 선택 후 Morning News / Market Briefing을 확인하고 개장 승인 액션을 통해 장중 단계로 진입해야 한다. |
+| SRS-CONTENT-PREOPEN-006 | `뉴스 배정`은 하나의 MVP 카드지만 `호재`와 `악재` 방향 버튼을 제공해야 한다. |
+| SRS-CONTENT-PREOPEN-007 | `선취매`는 고정 비용이 아니라 드래그형 투입 비율 UI를 사용해야 한다. Day 1 또는 보유 포지션이 없을 때는 10~50%, Day 2 이후 보유 포지션이 있으면 0~50%를 선택할 수 있어야 한다. |
 
 ---
 
@@ -86,9 +90,9 @@ MVP 장중 수동 액션은 4개다.
 | Action ID | 표시명 | 요구 역할 |
 | --- | --- | --- |
 | `liquidity_supply` | 유동성 공급 | 시장 유동성과 가격 반응성을 높인다. 예산을 소모하고 감시/변동성 리스크를 올릴 수 있다. |
-| `price_push` | 가격 추진 | 가격을 목표 밴드 방향으로 밀어준다. 강하지만 위험하다. |
-| `overheat_cooldown` | 과열 해소 | 가격, 개인 참여도, 변동성, 감시 리스크를 안정화한다. 상승 압력을 낮출 수 있다. |
-| `position_settlement` | 포지션 정리 | 보유 비중을 낮추고 예산을 회복한다. 가격 지지력이 약해질 수 있다. |
+| `price_push` | 매수봇 | 4B 시작 차감과 실제 매입 대금을 써서 보유 비중과 상방 압력을 키운다. 평단은 현재가 위치에 따라 오르거나, 매도봇 이후 싼 구간에서는 낮아질 수 있다. |
+| `overheat_cooldown` | 매도봇 | 4B를 차감해 가격과 평단 압박을 낮추고 이후 더 싼 재매집 구간을 만든다. 보유 비중은 조금 줄 수 있으나 회수 목적이 아니라 매집 리듬 관리가 주 목적이다. |
+| `position_settlement` | 포지션 정리 | 수익권에서는 수익실현, 손해권에서는 손실차단으로 표시한다. 현재가 기준 예산 회수를 담당하며 시장 충격이 `매도봇`보다 크다. |
 
 | ID | Requirement |
 | --- | --- |
@@ -111,7 +115,7 @@ MVP 장중 자동 카드는 8개다.
 | `news_amplifier` | 뉴스 증폭 | 현재 Morning News 효과 강화 |
 | `surveillance_buffer` | 감시 완충 | 감시도 증가량 완화 |
 | `competition_check` | 경쟁 견제 | 경쟁 압박 감소 |
-| `settlement_routine` | 정리 루틴 | 보유 비중과 예산 회수 보조 |
+| `settlement_routine` | 정리 루틴 | 포지션 정리 시 시장 충격과 변동성 부담 완화 |
 
 | ID | Requirement |
 | --- | --- |

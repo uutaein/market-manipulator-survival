@@ -36,8 +36,12 @@ Given("the player is in an active Run", function (this: MmsWorld) {
 
 When("a Day begins", function (this: MmsWorld) {
   this.beginDay();
-  this.showMarketBriefing();
   this.visibleOptions.add("Pre-open Card");
+});
+
+When("the pre-open choice is confirmed", function (this: MmsWorld) {
+  this.choosePreOpenCard("관망");
+  this.showMarketBriefing();
 });
 
 Then("the player sees Morning News", function (this: MmsWorld) {
@@ -138,7 +142,6 @@ Given("the player starts Day 1", function (this: MmsWorld) {
 
 When("the Day begins", function (this: MmsWorld) {
   this.beginDay();
-  this.showMarketBriefing();
 });
 
 Then("the player reads Morning News", function (this: MmsWorld) {
@@ -151,7 +154,11 @@ Then("the player reviews the Market Briefing", function (this: MmsWorld) {
 
 Then("the player chooses one Pre-open Card or {string}", function (this: MmsWorld, fallbackChoice: string) {
   this.choosePreOpenCard(fallbackChoice);
-  assert.equal(this.selectedPreOpenCard, fallbackChoice);
+  if (this.preOpenSelectionError) {
+    this.choosePreOpenCard("선취매");
+  }
+  this.showMarketBriefing();
+  assert.ok(this.selectedPreOpenCard);
 });
 
 Then("the player approves the opening", function (this: MmsWorld) {

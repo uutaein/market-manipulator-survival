@@ -4,6 +4,7 @@ export const SceneKeys = {
   MorningBriefing: "morning-briefing",
   PreOpenCard: "pre-open-card",
   Intraday: "intraday",
+  IntradayReposition: "intraday-reposition",
   DaySettlement: "day-settlement",
   FinalSettlement: "final-settlement"
 } as const;

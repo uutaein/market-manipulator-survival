@@ -107,10 +107,10 @@ The core game state is grouped into:
 | Group | Examples |
 | --- | --- |
 | Run State | `runSeed`, `currentDay`, `budget`, `cumulativeProfit`, `autoCards` |
-| Day State | `morningNews`, `todayCondition`, `targetBand`, `preOpenCard` |
-| Intraday State | `priceChangePercent`, `marketPressure`, `holdingRatio`, `personalParticipation`, `surveillance` |
+| Day State | generated `morningNews`, `todayCondition`, `targetBand`, `preOpenCard` selected before news reveal |
+| Intraday State | `openingPrice`, `currentPrice`, `averageEntryPrice`, `heldUnits`, `priceChangePercent`, `marketPressure`, `holdingRatio`, `personalParticipation`, `surveillance` |
 | Event State | active document event, choices, pause state |
-| Market Board State | player asset detail, 7 non-player summaries |
+| Market Board State | player detail, same-sector competitors, other-sector averages, current/average prices, 24-asset value ranking |
 | Settlement State | Day result, Final grade, social cost |
 | Persistence State | current Run, recent Final, best record |
 
@@ -144,18 +144,20 @@ priceDeltaPerTick =
   + competition
   + news
   + aftereffect
+  + attentionFade
   + volatilityNoise
 ```
 
 Important rules:
 
 1. Tick interval is 1 second.
-2. Intraday duration is 360 seconds.
+2. Intraday duration is 180 seconds.
 3. Player asset uses detailed tick calculation.
 4. Non-player assets use simplified tick calculation.
 5. Manual actions and cards should affect state variables, not directly overwrite price.
-6. Same `runSeed` plus same input sequence should reproduce the same game-affecting results.
-7. Coefficients belong in balancing data, not scattered logic.
+6. Manual actions commit budget immediately, then apply non-budget effects gradually over their execution duration.
+7. Same `runSeed` plus same input sequence should reproduce the same game-affecting results.
+8. Coefficients belong in balancing data, not scattered logic.
 
 Current default values are in:
 
@@ -349,9 +351,9 @@ TypeScript + Phaser 3 + Vite
 
 Current scaffold rules:
 
-1. Keep the Phaser scene shell aligned with the 8 MVP screens.
+1. Keep the Phaser scene shell aligned with the MVP screen flow; Intraday overlays may be separate Phaser scenes only when they preserve Run/Day state.
 2. Keep Document Event as an Intraday modal concept, not a separate full screen.
-3. Do not implement gameplay simulation inside scene placeholders.
+3. Keep gameplay simulation in domain/session modules rather than burying it in scene placeholders.
 4. Keep balancing values outside scene code when gameplay implementation begins.
 5. Keep Cucumber support code under `feature/support/`.
 6. Use `npm run bdd`, `npm run typecheck`, and `npm run build` before committing implementation-facing changes.

@@ -1,24 +1,34 @@
 import { getAssetById, getSectorById } from "../assets/assetCatalog";
 import { runDefaults } from "../balancing/runDefaults";
-import type { PreOpenCardId } from "../balancing/preOpenCardValues";
+import type { NewsAssignmentDirection, PreOpenCardId } from "../balancing/preOpenCardValues";
 import type { RunState } from "../run/runState";
-import { describeMorningNewsTarget, generateMorningNews, type MorningNews } from "./morningNews";
+import { describeMorningNewsTarget, generateMorningNewsItems, type MorningNews } from "./morningNews";
 import { generateTodayCondition, type TodayCondition } from "./todayCondition";
 
 export interface PreOpenCardEffect {
   readonly sourceCardId: PreOpenCardId;
+  readonly newsAssignmentDirection: NewsAssignmentDirection | null;
+  readonly earlyPositioningBudgetPercent: number | null;
   readonly budgetDelta: number;
   readonly holdingRatioDelta: number;
+  readonly marketLiquidityDelta: number;
   readonly marketPressureDelta: number;
   readonly surveillanceDelta: number;
   readonly volatilityDelta: number;
   readonly defenseReserve: number;
   readonly effectDurationSec: number | null;
   readonly revealsExtraBriefing: boolean;
+  readonly manualActionEffectMultiplier: number;
+  readonly pricePushEffectMultiplier: number;
+  readonly overheatCooldownEffectMultiplier: number;
+  readonly liquiditySupplyPressureBonus: number;
+  readonly upwardActionSurveillanceMultiplier: number;
+  readonly positionSettlementSurveillanceMultiplier: number;
 }
 
 export interface DayState {
   readonly dayIndex: number;
+  readonly morningNewsItems: readonly MorningNews[];
   readonly morningNews: MorningNews;
   readonly todayCondition: TodayCondition;
   readonly targetBandMin: number;
@@ -41,9 +51,12 @@ export interface MarketBriefing {
 }
 
 export function createDayState(runState: RunState, dayIndex = runState.currentDay): DayState {
+  const morningNewsItems = generateMorningNewsItems(runState, dayIndex);
+
   return {
     dayIndex,
-    morningNews: generateMorningNews(runState, dayIndex),
+    morningNewsItems,
+    morningNews: morningNewsItems[0],
     todayCondition: generateTodayCondition(runState, dayIndex),
     targetBandMin: runDefaults.targetBandMin,
     targetBandMax: runDefaults.targetBandMax,
@@ -58,12 +71,14 @@ export function createDayState(runState: RunState, dayIndex = runState.currentDa
 export function createMarketBriefing(runState: RunState, dayState: DayState): MarketBriefing {
   const selectedAsset = getAssetById(runState.selectedAssetId);
   const selectedSector = getSectorById(runState.selectedSectorId);
-  const targetLabel = describeMorningNewsTarget(dayState.morningNews.target);
+  const newsSummary = dayState.morningNewsItems
+    .map((news) => `${news.displayName}: ${describeMorningNewsTarget(news.target)} 대상`)
+    .join(" / ");
 
   return {
     selectedAssetName: selectedAsset.displayName,
     selectedSectorName: selectedSector.displayName,
-    newsSummary: `${dayState.morningNews.displayName}: ${targetLabel} 대상. ${dayState.morningNews.role}`,
+    newsSummary,
     targetBandLabel: `${dayState.targetBandMin}% ~ ${dayState.targetBandMax}%`,
     crashLineLabel: `${dayState.crashLine}%`,
     riskHints: createRiskHints(dayState),
@@ -72,7 +87,7 @@ export function createMarketBriefing(runState: RunState, dayState: DayState): Ma
 }
 
 function createRiskHints(dayState: DayState): readonly string[] {
-  const hints = [dayState.morningNews.displayName];
+  const hints = dayState.morningNewsItems.map((news) => news.displayName);
 
   if (dayState.todayCondition.volatilityShiftPercent > 8) {
     hints.push("변동성 주의");

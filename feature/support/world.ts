@@ -36,8 +36,10 @@ import type { CalculationSafetyReport, SafetyValidationReport } from "../../src/
 import {
   approveOpening,
   canStartIntraday,
+  getAvailablePreOpenCards,
   getPreOpenCardDisplayNames,
-  selectPreOpenCard
+  selectPreOpenCard,
+  type PreOpenCardSelectionOptions
 } from "../../src/domain/preopen/preOpenCards";
 import type { RunAssetProfiles, RunState } from "../../src/domain/run/runState";
 import { createRunState, restartRunWithSameSeed } from "../../src/domain/run/runState";
@@ -51,6 +53,16 @@ export const excludedManualActions = new Set([
   "군중 진정",
   "관심 신호"
 ]);
+
+function getDefaultPreOpenChoice(runState: RunState | undefined): string {
+  const availableCards = getAvailablePreOpenCards(runState);
+
+  if (availableCards.length === 1 && availableCards[0]?.id === "early_positioning") {
+    return "선취매";
+  }
+
+  return "관망";
+}
 
 export const dayResultCategories = new Set([
   "완전 성공",
@@ -96,6 +108,10 @@ export class MmsWorld extends World {
   priceBeforeTick = 0;
   tickIndexBefore = 0;
   priceBeforeManualAction = 0;
+  budgetBeforeManualAction = 0;
+  holdingRatioBeforeManualAction = 0;
+  heldUnitsBeforeManualAction = 0;
+  averageEntryPriceBeforeManualAction = 0;
   lastManualActionResult?: ManualActionResult;
   openingApproved = false;
   selectedPreOpenCard = "";
@@ -150,6 +166,11 @@ export class MmsWorld extends World {
   calculationSafetyReport?: CalculationSafetyReport;
   day1Onboarding = false;
   learningHintShown = false;
+  latestNewsPressure = 0;
+  lowEarlyPositioningHoldingDelta = 0;
+  highEarlyPositioningHoldingDelta = 0;
+  lowEarlyPositioningLiquidityDelta = 0;
+  highEarlyPositioningLiquidityDelta = 0;
 
   startNewRun(): void {
     this.previousRunSeed = this.runSeed || "mms-seed-001";
@@ -171,7 +192,8 @@ export class MmsWorld extends World {
 
     this.dayState = createDayState(this.runState!);
     this.currentDay = this.dayState.dayIndex;
-    this.visibleScreens.add("Morning News");
+    this.visibleScreens.add("Pre-open Card");
+    this.visibleOptions.add("Pre-open Card");
   }
 
   showMarketBriefing(): void {
@@ -184,16 +206,17 @@ export class MmsWorld extends World {
     }
 
     this.marketBriefing = createMarketBriefing(this.runState!, this.dayState!);
+    this.visibleScreens.add("Morning News");
     this.visibleScreens.add("Market Briefing");
   }
 
-  choosePreOpenCard(cardName: string): void {
+  choosePreOpenCard(cardName: string, options: PreOpenCardSelectionOptions = {}): void {
     if (!this.dayState) {
       this.beginDay();
     }
 
     try {
-      this.dayState = selectPreOpenCard(this.dayState!, cardName);
+      this.dayState = selectPreOpenCard(this.dayState!, cardName, this.runState, options);
       this.selectedPreOpenCard = cardName;
       this.preOpenSelectionError = "";
     } catch (error) {
@@ -241,7 +264,7 @@ export class MmsWorld extends World {
     }
 
     if (!this.dayState!.preOpenCardId) {
-      this.choosePreOpenCard("관망");
+      this.choosePreOpenCard(getDefaultPreOpenChoice(this.runState));
     }
 
     if (!this.dayState!.openingApproved) {
@@ -278,12 +301,14 @@ export class MmsWorld extends World {
     });
   }
 
-  useManualAction(actionName = "가격 추진"): void {
+  useManualAction(actionName = "매수봇"): void {
     if (!this.intradayState) {
       this.openIntraday();
     }
 
     this.priceBeforeManualAction = this.intradayState!.priceChangePercent;
+    this.budgetBeforeManualAction = this.intradayState!.budget;
+    this.holdingRatioBeforeManualAction = this.intradayState!.holdingRatio;
     this.lastManualActionResult = useManualAction(this.intradayState!, actionName);
     this.intradayState = this.lastManualActionResult.state;
   }
@@ -340,7 +365,7 @@ export class MmsWorld extends World {
     this.intradayState = applyIntradayStatUpdate(
       {
         ...this.intradayState!,
-        timeRemainingSec: 300
+        timeRemainingSec: 120
       },
       {
         surveillance: 65
@@ -404,15 +429,15 @@ export class MmsWorld extends World {
 
     this.intradayState = {
       ...this.intradayState!,
-      timeRemainingSec: 210,
+      timeRemainingSec: 95,
       documentEventHistory: [
         {
           eventId: "unusual_flow_inquiry",
           choiceType: "stable",
-          elapsedSec: 100
+          elapsedSec: 80
         }
       ],
-      lastDocumentEventElapsedSec: 100
+      lastDocumentEventElapsedSec: 80
     };
     this.documentEventsToday = this.intradayState.documentEventHistory.length;
   }

@@ -44,11 +44,11 @@ export interface DocumentEventValue {
 
 export const documentEventRules = {
   maxEventsPerDay: 2,
-  minimumGapSec: 90,
-  earliestEventElapsedSec: 45,
-  latestNormalEventElapsedSec: 320,
-  day1FallbackMinElapsedSec: 120,
-  day1FallbackMaxElapsedSec: 180
+  minimumGapSec: 45,
+  earliestEventElapsedSec: 30,
+  latestNormalEventElapsedSec: 165,
+  day1FallbackMinElapsedSec: 60,
+  day1FallbackMaxElapsedSec: 90
 } as const;
 
 const noEffect: DocumentChoiceEffectValue = {
@@ -104,7 +104,7 @@ export const documentEventValues = {
     })
   ]),
   market_overheat_warning: createEvent("market_overheat_warning", "시장 과열 경보", 3, [
-    choice("stable", "과열 해소", {
+    choice("stable", "매도봇", {
       ...noEffect,
       personalParticipationDelta: -14,
       volatilityDelta: -10,

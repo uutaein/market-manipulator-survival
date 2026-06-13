@@ -2,7 +2,7 @@ import { autoCardValues, type AutoCardValue } from "../balancing/autoCardValues"
 import { autoCardIds, type AutoCardId } from "../balancing/runDefaults";
 import { createSeededRandom } from "../random/SeededRandom";
 import type { AutoCardState, RunState } from "../run/runState";
-import { applyIntradayStatUpdate, type IntradayState } from "./intradayState";
+import { applyIntradayStatUpdate, clamp, type IntradayState } from "./intradayState";
 
 export type AutoCardChoice =
   | { readonly type: "new"; readonly cardId: AutoCardId }
@@ -62,6 +62,11 @@ export function applyAutoCardEffect(state: IntradayState, cardState: AutoCardSta
     {
       ...state,
       budget: state.budget + card.budgetDelta * scale,
+      positionSettlementImpactMultiplier: clamp(
+        state.positionSettlementImpactMultiplier - card.positionSettlementImpactReductionDelta * scale,
+        0.4,
+        1
+      ),
       activeNewsPricePressure:
         card.newsPressureMultiplierDelta === 0
           ? state.activeNewsPricePressure

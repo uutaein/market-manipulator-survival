@@ -22,3 +22,11 @@ Feature: Asset selection and hidden profiles
     Then the player can see the asset name, sector, and short briefing
     But the player cannot see the hidden stable, standard, or high-risk tendency
     And the player cannot see full profile values before play
+
+  Scenario: Fixed market profiles guide replay progression
+    Given a new Run is created
+    Then entry recommended sectors are available
+    And every sector has one sector leader, one standard asset, and one theme mover
+    And sector leaders have higher baseline trade value than theme movers
+    And top market assets have exponentially higher trade value and influence resistance than entry theme assets
+    And each entry recommended sector has a larger-sector progression target

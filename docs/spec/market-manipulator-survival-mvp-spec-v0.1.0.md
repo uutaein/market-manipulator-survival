@@ -71,23 +71,25 @@ The first playable build must include the following feature set.
 | Feature | SPEC Decision |
 | --- | --- |
 | Run structure | 5-Day Run |
-| Day duration | 360 sec intraday per Day |
-| Day flow | Morning News -> Market Briefing -> Pre-open Card -> Opening Approval -> Intraday -> Day Settlement |
+| Day duration | 180 sec intraday per Day |
+| Day flow | Pre-open Card -> Morning News -> Market Briefing / Opening Approval -> Intraday -> Day Settlement |
 | Final flow | Final Settlement after Day 5 |
 | Immediate failure | budget exhaustion, surveillance 100, critical price collapse |
 | Sectors | 8 fictional sectors |
 | Assets | 24 fictional assets |
-| Asset choice | player selects sector and asset at Run start |
+| Asset choice | player selects sector and asset at Run start; setup may show non-locking entry recommendations |
+| Asset market profile | each sector has one sector leader, one standard asset, and one theme mover with fixed fictional baseline trade value |
 | Hidden asset tendency | stable / standard / high-risk assignment per sector at Run start |
-| Morning News | 5 templates, 1 per Day |
+| Morning News | 5 templates, 3 items per Day: 1 sector item and 2 asset items |
 | Pre-open Cards | 4 |
 | Manual Actions | 4 |
 | Auto Cards | 8, Lv.1~Lv.3 |
 | Document Events | 8 |
 | Retail Swarm | interest / overheated / panic |
-| Market Board | 8 assets total |
+| Market Board | player asset + 2 same-sector competitors + 7 other-sector averages |
+| Market Dashboard | 24 individual fictional assets ranked by baseline-anchored fictional trade value with live activity adjustment |
 | Player asset simulation | detailed |
-| Non-player asset simulation | 7 simplified assets |
+| Non-player asset simulation | simplified competitor/sector-average movement |
 | Day Settlement | actual profit + surveillance grade |
 | Final Settlement | cumulative profit + surveillance + supporting risk metrics |
 | Storage | localStorage only |
@@ -103,8 +105,8 @@ The first playable build must stay within 8 screens.
 | --- | --- |
 | Main Menu | start new Run, continue if save exists, show inline best result |
 | Run Setup / Asset Selection | select sector and asset |
-| Morning News / Market Briefing | show news, target band, brief risk information |
-| Pre-open Card Selection | choose one of 4 pre-open cards |
+| Pre-open Card Selection | choose one of 4 pre-open cards before Morning News is revealed |
+| Morning News / Market Briefing | reveal news, target band, brief risk information, and Opening Approval |
 | Intraday Operation | main playable screen |
 | Document Event Popup | modal over intraday screen |
 | Day Settlement | show Day result, metrics, and short hint |
@@ -121,10 +123,10 @@ The implementation must support these state groups.
 | State Group | Required Contents |
 | --- | --- |
 | Run State | Run Seed, current Day, selected asset, budget, cumulative profit, holding ratio, surveillance, social cost, auto cards, aftereffects |
-| Day State | Morning News, Today Condition, target band, crash line, pre-open card, opening approval |
-| Intraday State | time, pause state, price change, market pressure, participation, liquidity, surveillance, volatility, competition pressure |
+| Day State | generated Morning News items, Today Condition, target band, crash line, pre-open card, opening approval |
+| Intraday State | time, pause state, opening/current/average price, held units, fictional float units, price change, market pressure, participation, liquidity, surveillance, volatility, competition pressure |
 | Event State | active document event, choices, event history |
-| Market Board State | displayed 8 assets, player detail, non-player summaries, news badges |
+| Market Board State | player detail, same-sector competitors, other-sector averages, news badges, 24-asset fictional value ranking |
 | Settlement State | Day result, Day profit, surveillance grade, Final grade, settlement hints |
 | Persistence State | current Run, recent Final Settlement, best record |
 
@@ -139,7 +141,7 @@ All 0~100 bounded states must clamp after updates.
 | Item | Value |
 | --- | ---: |
 | Tick interval | 1 sec |
-| Intraday duration | 360 sec |
+| Intraday duration | 180 sec |
 | Price mode | Day open-relative percentage |
 
 ### 6.2 Price Formula Boundary
@@ -147,7 +149,7 @@ All 0~100 bounded states must clamp after updates.
 The player asset price tick must be component-based.
 
 ```text
-priceDeltaPerTick =
+directionalDelta =
   pressure
   + participation
   + holding
@@ -155,12 +157,27 @@ priceDeltaPerTick =
   + competition
   + news
   + aftereffect
+  + attentionFade
+
+priceDeltaPerTick =
+  directionalDelta
+  × liquidityMultiplier
+  × orderBookDepth
+  + simulatorAdjustment
   + volatilityNoise
 ```
+
+`simulatorAdjustment` may use a seeded fake OHLCV generator package to add realistic candle noise and volume impulse. It must not fetch real market data, real tickers, or real exchange data.
+
+The first playable may use browser-native chart/table renderers for candle, volume, and dashboard display. Phaser should remain responsible for the game scene shell, document popups, manual action controls, and Retail Swarm visuals.
 
 Manual actions, auto cards, news, and document choices must affect state variables or components. They must not directly overwrite the price as a fixed result.
 
 The first playable default formula and coefficients are defined in SRS v0.1.1 and SRS v0.1.6.
+
+Morning News must visibly change market feel through direction, volatility, participation, liquidity, surveillance, and/or fictional trade value. News that only changes hidden numbers is not sufficient for the first playable.
+
+Manual actions commit their budget cost/recovery immediately, then apply non-budget stat effects gradually during their execution/cooldown window. The executing button blinks, shows gauge progress, and can be clicked again to interrupt remaining progress without rolling back already-applied effects.
 
 ### 6.3 Non-player Asset Simulation
 
@@ -175,6 +192,8 @@ They react to:
 
 They do not need budget, holding ratio, surveillance, or manual action state.
 
+The market dashboard ranks all 24 individual fictional assets by fictional trade value. Sector averages may appear in the other-sector context panel, but not as dashboard ranking rows.
+
 ---
 
 ## 7. Required MVP Content
@@ -187,25 +206,40 @@ They do not need budget, holding ratio, surveillance, or manual action state.
 4. 규제 경고
 5. 과열 확산
 
-Each Day has exactly 1 Morning News item.
+Each Day has exactly 3 Morning News items: 1 sector news item and 2 fictional asset news items.
+
+Asset news can target the player asset or another fictional asset. Non-player asset news is used for Market Board context and badges, but it does not directly change the player asset price calculation.
 
 ### 7.2 Pre-open Cards
 
-1. 시장 관찰
-2. 사전 포지션 구축
-3. 방어 자금 배정
+1. 선취매
+2. 뉴스 배정
+3. 종목 분석
 4. 관망
 
-The player can choose at most 1 per Day.
+The player can choose at most 1 per Day before Morning News is revealed.
+
+`뉴스 배정` is one MVP card that exposes two direction choices:
+
+1. `뉴스 배정: 호재`
+2. `뉴스 배정: 악재`
+
+Both directions target the player-selected fictional asset for the current Day. Positive assignment improves attention and upward-action legitimacy. Negative assignment increases downside context and reduces surveillance burden for position settlement.
+
+`선취매` uses a drag-style investment ratio control instead of a fixed budget cost. On Day 1 or when no position carries over, the player chooses 10~50% of the current Day budget. From Day 2 onward, if a position carries over, the player chooses 0~50% because additional accumulation is optional. The chosen ratio determines budget spent and position acquired; a higher ratio increases holding ratio and lowers opening market liquidity. The resulting average entry price starts roughly 2~7% above the opening price using deterministic Run/asset randomness, so the initial valuation can show a loss before intraday pressure changes the price.
+
+The Intraday chart must include a fictional order-book/depth panel for the player asset. Thin sell-side depth should make upward pressure more responsive; thin buy-side depth should make downward pressure more responsive. This is an abstract game model, not real order-book data.
 
 ### 7.3 Manual Actions
 
 1. 유동성 공급
-2. 가격 추진
-3. 과열 해소
-4. 포지션 정리
+2. 매수봇
+3. 매도봇
+4. 포지션 정리, displayed as 수익실현 when above average entry and 손실차단 when below average entry
 
 Manual actions are unavailable while a document event or auto card reward choice is open.
+
+The Intraday screen must show a simple fictional position and money-flow readout: opening price, current price, average entry price, held units, fictional float units, position value, unrealized gain/loss, spent budget, recovered budget, and current budget.
 
 ### 7.4 Auto Cards
 
@@ -251,7 +285,7 @@ The first playable build must keep these value groups easy to find and change.
 | --- | --- |
 | `runDefaults` | starting values, target band, crash line |
 | `assetCatalog` | fictional sectors and assets |
-| `marketBoardRules` | 8-asset display selection |
+| `marketBoardRules` | player/peer/sector-average context and 24-asset value ranking |
 | `preOpenCardValues` | pre-open effects |
 | `manualActionValues` | costs, cooldowns, effects |
 | `autoCardValues` | periods, effects, level scaling |
@@ -405,13 +439,14 @@ The MVP first playable is SPEC-complete when:
 4. continue through Day 5 or fail early,
 5. receive Final Settlement or failure result,
 6. restart with the same condition or start a new Run,
-7. see the Market Board with 8 assets,
-8. use 4 manual actions,
-9. receive auto card rewards,
-10. encounter document events,
-11. see Retail Swarm state changes,
-12. persist and resume the current Run locally,
-13. avoid all real-world market entities and procedures.
+7. see a fictional candlestick chart with volume bars,
+8. see the Market Board context panels and 24-asset fictional value dashboard,
+9. use 4 manual actions,
+10. receive auto card rewards,
+11. encounter document events,
+12. see Retail Swarm state changes,
+13. persist and resume the current Run locally,
+14. avoid all real-world market entities and procedures.
 
 Balance quality is not part of this Definition of Done. Balance quality is evaluated after the playable build exists.
 

@@ -19,10 +19,10 @@ Current baseline:
 5. Cucumber step definitions exist for accepted MVP Gherkin coverage.
 6. Core Run State domain module exists for seed, asset catalog, hidden profile assignment, and same-seed restart.
 7. Day Setup / Morning News domain module exists for Day state, sector-default news, Today Condition, and Market Briefing data.
-8. Pre-open Card domain module exists for 4 card values, one-card-per-Day selection, no-effect `관망`, and Opening Approval guard.
-9. Market Board domain module exists for 8-slot selection, player detail entry, same-sector peers, news-priority representatives, and simplified non-player movement.
-10. Intraday State / Price Tick domain module exists for 360-second timer, pause/resume, bounded stat clamping, news pressure, and component price tick.
-11. Manual Action domain module exists for 4 action values, modal availability, budget/cooldown checks, state effects, and cooldown entry.
+8. Pre-open Card domain module exists for 4 card values, one-card-per-Day selection before Morning News reveal, `뉴스 배정` positive/negative directions, no-effect `관망`, and Opening Approval guard.
+9. Market Board domain module exists for player detail, same-sector competitors, other-sector averages, news badges, simplified non-player movement, and fictional quote fields.
+10. Intraday State / Price Tick domain module exists for 180-second timer, pause/resume, opening/current/average price, held units, bounded stat clamping, news pressure, attention fade, and component price tick.
+11. Manual Action domain module exists for 4 action values, modal availability, budget/cooldown checks, locked gradual effects, cooldown entry, and lightweight position accounting for price push / position settlement.
 12. Auto Card domain module exists for 8 card values, reward choices, Lv.1~Lv.3 handling, and simple periodic state effects.
 13. Document Event domain module exists for 8 event values, trigger priority, cap/gap rules, pause behavior, 3 choices, choice effects, and event history.
 14. Retail Swarm domain module exists for participation-synced state, abstract token model, warning/panic flags, and overheat/panic risk effects.
@@ -31,16 +31,17 @@ Current baseline:
 17. Local Persistence domain module exists for versioned save envelopes, current Run save/load, recent Final save, best record update, forbidden keys, and incompatible save discard.
 18. Safety Contract domain module exists for player-facing content checks, approved safe terms, forbidden procedure/entity terms, and fictional calculation validation.
 19. Phaser Run/Day flow scene wiring now exists for Main Menu, Run Setup, Morning Briefing, Pre-open Card selection, Opening Approval, and initial Intraday state display.
-20. Phaser Market Board now refreshes player price and simplified non-player movement during Intraday.
-21. Phaser Intraday scene now routes budget exhaustion, surveillance 100, and critical price collapse to Final Settlement forced failure.
-22. Phaser Intraday scene now advances one-second price/timer ticks and exposes the 4 manual action buttons with cooldown feedback.
-23. Phaser Intraday scene now displays owned Auto Cards, opens paused reward choices, and applies periodic Auto Card effects.
-24. Phaser Intraday scene now opens Document Event modals, pauses time, applies one of 3 choices, and resumes.
-25. Phaser Intraday scene now renders Retail Swarm abstract tokens and applies one-shot overheat/panic transition risk effects.
-26. Phaser Day Settlement scene now displays Day result, surveillance grade, holding band, social cost, risk metrics, learning hint, and next-Day/Final routing.
-27. Phaser Final Settlement scene now displays Final grade, cumulative profit, surveillance summary, holding band, social cost, and restart choices.
-28. Browser localStorage wiring now saves active Run state, exposes Main Menu continue, saves recent Final results, and tracks best record updates.
-29. Polished UI interaction and browser visual QA are not complete yet.
+20. Phaser Intraday scene now renders a fictional candle chart, volume bars, target band, crash line, current price marker, quote/position/money-flow readout, and action-specific candle/volume responses.
+21. Phaser Market Board now shows competitor context, other-sector averages, current/average prices, and a 24-asset fictional trade-value dashboard during Intraday.
+22. Phaser Intraday scene now routes budget exhaustion, surveillance 100, and critical price collapse to Final Settlement forced failure.
+23. Phaser Intraday scene now advances one-second price/timer ticks and exposes the 4 manual action buttons with locked blinking execution feedback.
+24. Phaser Intraday scene now displays owned Auto Cards, opens paused reward choices, and applies periodic Auto Card effects.
+25. Phaser Intraday scene now opens Document Event modals, pauses time, applies one of 3 choices, and resumes.
+26. Phaser Intraday scene now renders Retail Swarm abstract tokens and applies one-shot overheat/panic transition risk effects.
+27. Phaser Day Settlement scene now displays Day result, surveillance grade, holding band, social cost, risk metrics, learning hint, and next-Day/Final routing.
+28. Phaser Final Settlement scene now displays Final grade, cumulative profit, surveillance summary, holding band, social cost, and restart choices.
+29. Browser localStorage wiring now saves active Run state, exposes Main Menu continue, saves recent Final results, and tracks best record updates.
+30. Polished UI interaction and browser visual QA are not complete yet.
 
 ---
 
@@ -76,7 +77,7 @@ MVP shape:
 
 1. Fictional satirical browser game.
 2. 5-Day Run.
-3. 6-minute intraday session per Day.
+3. 3-minute intraday session per Day.
 4. Papers, Please-style documents, warnings, stamps, and briefings.
 5. Vampire Survivors-style pressure, auto cards, limited manual actions, and visual swarm pressure.
 6. No real company names, real stock names, real exchanges, real market data, or real financial-crime procedures.
@@ -88,7 +89,7 @@ MVP shape:
 | Area | Decision |
 | --- | --- |
 | Run length | 5 Days |
-| Intraday duration | 360 seconds per Day |
+| Intraday duration | 180 seconds per Day |
 | Sectors | 8 fictional sectors |
 | Assets | 24 fictional assets |
 | Morning News | 5 templates, 1 per Day |
@@ -96,9 +97,10 @@ MVP shape:
 | Manual Actions | 4 actions |
 | Auto Cards | 8 cards, Lv.1~Lv.3 |
 | Document Events | 8 events |
-| Market Board | 8 displayed assets total |
+| Market Board | player asset, 2 same-sector competitors, 7 other-sector averages |
+| Market Dashboard | 24 individual fictional assets ranked by fictional trade value |
 | Player asset | detailed simulation |
-| Non-player assets | 7 simplified simulations |
+| Non-player assets | simplified competitor and sector-average movement |
 | Settlement | actual profit + surveillance rating |
 | Final grades | S/A/B/C/D/F |
 | Storage | localStorage only |
@@ -148,11 +150,11 @@ MVP shape:
 14. Added Day Setup / Morning News domain module for seeded Morning News, Today Condition, Day State, and Market Briefing data.
 15. Added Pre-open Card domain module for MVP card values, selection rules, and Opening Approval.
 16. Added Intraday State / Price Tick domain module for timer, pause/resume, bounded stats, news pressure, and fictional component-based player price ticks.
-17. Added Manual Action domain module for four MVP manual actions, state effects, and cooldown entry.
+17. Added Manual Action domain module for four MVP manual actions, immediate budget commit, locked gradual effects, and cooldown entry.
 18. Added Auto Card domain module for eight MVP auto cards, reward choices, level caps, and simple periodic state effects.
 19. Added Document Event domain module for eight MVP document events, trigger/cap/gap rules, popup pause, choices, effects, and history.
 20. Added Retail Swarm domain module for participation-synced token modeling, overheat warnings, panic state, and risk effects.
-21. Added Market Board domain module for 8-slot board selection, same-sector peers, news-priority representatives, and simplified non-player movement.
+21. Added Market Board domain module for player detail, same-sector peers, other-sector averages, and simplified non-player movement.
 22. Added Settlement domain module for Day/Final result classification, holding risk bands, social cost deltas, and forced failure handling.
 23. Added Day Carryover domain module for persistent state carryover, partial risk carryover, reset baselines, weak aftereffects, and Pre-open Card non-carryover.
 24. Added Local Persistence domain module for versioned local save envelopes, current Run save/load, recent Final save, best record update, and incompatible save discard.
@@ -161,12 +163,14 @@ MVP shape:
 27. Added Intraday scene tick/action wiring for one-second ticks, price/timer updates, manual action buttons, result feedback, and cooldown display.
 28. Added Day Settlement scene wiring for result display, risk metrics, learning hints, and next-Day/Final routing.
 29. Added Final Settlement scene wiring for Day 5 cumulative carryover, Final grade display, surveillance summary, and same-seed/new-Run restart choices.
-30. Added Auto Card scene wiring for periodic effects, 90/180/270-second paused reward choices, owned card display, and reward choice buttons.
+30. Added Auto Card scene wiring for periodic effects, 45/90/135-second paused reward choices, owned card display, and reward choice buttons.
 31. Added Document Event scene wiring for condition-based modal opening, Day 1 fallback event, paused choice display, choice effects, and resume behavior.
 32. Added Retail Swarm scene wiring for abstract token rendering, participation-synced density/speed, and one-shot overheat/panic transition risk effects.
 33. Added browser localStorage wiring for active Run save/load, Main Menu continue, Final Settlement record save, best-record update flag, and current Run cleanup after Final.
 34. Added Market Board live scene wiring for simplified non-player movement advancement and live player price display.
 35. Added immediate failure scene routing for budget exhaustion, surveillance 100, critical price collapse, and forced Final Settlement.
+36. Added Intraday fictional candle/volume chart with target band, crash line, current price marker, liquidity volume spike, action-specific candle responses, and money-flow readout.
+37. Added intraday desk-reposition flow after full position settlement and 24-asset fictional trade-value dashboard.
 
 ---
 
@@ -240,4 +244,5 @@ Current branch baseline includes:
 25. Local persistence browser wiring,
 26. Market Board live scene wiring,
 27. Immediate failure scene routing,
-28. README, docs index, feature index, traceability, and MEMORY updates.
+28. Intraday candle/volume chart wiring,
+29. README, docs index, feature index, traceability, and MEMORY updates.

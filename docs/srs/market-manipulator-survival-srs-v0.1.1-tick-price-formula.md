@@ -24,8 +24,8 @@ MVP 가격 Tick 공식은 다음 감각을 목표로 한다.
 
 1. 가격은 매초 작게 흔들린다.
 2. 플레이어가 아무것도 하지 않으면 큰 상승보다 완만한 횡보/하락 위험이 많다.
-3. `가격 추진`, `관심 신호`, `유동성 공급`은 가격을 움직이게 하지만 감시/변동성 리스크를 만든다.
-4. `과열 해소`, `변동성 흡수`, `가격 지지`는 급격한 이탈을 줄인다.
+3. `매수봇`, `관심 신호`, `유동성 공급`은 가격을 움직이게 하지만 감시/변동성 리스크를 만든다.
+4. `매도봇`, `변동성 흡수`, `가격 지지`는 급격한 이탈을 줄인다.
 5. 변동성이 높으면 목표 밴드 도달도 쉬워질 수 있지만 붕괴 위험도 커진다.
 6. 가격은 한 Tick에 너무 크게 움직이지 않도록 제한한다.
 7. 계수와 효과량은 코드에 고정하지 않고 밸런싱 데이터로 분리할 수 있어야 한다.
@@ -214,17 +214,17 @@ MVP 권장 수치는 다음이다.
 
 | 수동 액션 | 즉시 상태 변화 | 지속 시간 |
 | --- | --- | --- |
-| 유동성 공급 | `marketLiquidity +18`, `volatility +4`, `surveillance +3`, `budget -6` | 즉시 반영, 유동성은 20초에 걸쳐 감소 |
-| 가격 추진 | `marketPressure +35`, `volatility +6`, `surveillance +5`, `budget -8` | 12초 |
-| 과열 해소 | `marketPressure -18`, `personalParticipation -12`, `volatility -10`, `surveillance -4`, `budget -4` | 즉시 반영 |
-| 포지션 정리 | `holdingRatio -10`, `budget +7`, `marketPressure -12`, `volatility +3` | 즉시 반영 |
+| 유동성 공급 | `marketLiquidity +22`, `volatility +6`, `surveillance +2`, `budget -2` | 점진 적용 |
+| 매수봇 | `holdingRatio +5`, `marketPressure +52`, `volatility +10`, `surveillance +7`, `budget -4` plus actual purchase budget for acquired units | 점진 적용 |
+| 매도봇 | `budget -4`, `holdingRatio -4`, `marketPressure -42`, `volatility -10`, average-entry compression when applicable | 점진 적용 |
+| 포지션 정리 | current-price-based `budget` recovery, `holdingRatio -12`, `marketPressure -58`, `volatility +22` | 점진 적용 |
 
 | ID | Requirement |
 | --- | --- |
 | SRS-PRICE-ACTION-001 | 수동 액션은 가격을 직접 고정값으로 이동시키지 않고, 상태 변수를 통해 Tick 공식에 영향을 줘야 한다. |
-| SRS-PRICE-ACTION-002 | `가격 추진`은 가장 강한 단기 상승 압력 액션이어야 한다. |
-| SRS-PRICE-ACTION-003 | `과열 해소`는 상승 압력을 줄일 수 있지만 감시도와 변동성 안정에 기여해야 한다. |
-| SRS-PRICE-ACTION-004 | `포지션 정리`는 보유 비중과 정산 리스크를 낮추지만 가격 지지력을 약화시켜야 한다. |
+| SRS-PRICE-ACTION-002 | `매수봇`은 가장 강한 단기 상승 압력 액션이어야 하며, 늘어난 보유량에는 실제 매입 대금 차감이 따라야 한다. |
+| SRS-PRICE-ACTION-003 | `매도봇`은 상승 압력을 줄이고 평단 압박 관리에 기여해야 한다. |
+| SRS-PRICE-ACTION-004 | `포지션 정리`는 수익실현 또는 손실차단 역할을 하며 가격 지지력을 약화시켜야 한다. |
 
 ---
 
@@ -243,7 +243,7 @@ MVP 권장 수치는 Lv.1 기준이며, Lv.2~Lv.3은 효과량 또는 발동 주
 | 뉴스 증폭 | 15초 | `activeNewsPricePressure` 20% 강화 |
 | 감시 완충 | 16초 | 다음 감시도 증가량 20% 감소 |
 | 경쟁 견제 | 14초 | `competitionPressure -5`, `surveillance +1` |
-| 정리 루틴 | 18초 | `holdingRatio -3`, `budget +2`, `marketPressure -2` |
+| 정리 루틴 | 18초 | `포지션 정리`의 시장 충격과 변동성 부담 완화. 자동 매도 없음 |
 
 | 레벨 | 개선 규칙 |
 | --- | --- |
@@ -326,8 +326,8 @@ nonPlayerPriceChangePercent =
 | --- | --- |
 | 아무 행동도 하지 않음 | 가격은 대체로 횡보하거나 약하게 하락하며 목표 밴드 도달이 어렵다. |
 | 유동성 공급만 반복 | 가격 반응은 커지지만 변동성과 감시 리스크가 누적된다. |
-| 가격 추진만 반복 | 단기 상승은 강하지만 예산, 감시도, 변동성 리스크가 빠르게 커진다. |
-| 과열 해소를 섞음 | 목표 밴드 안착은 느려지지만 감시/변동성 리스크가 낮아진다. |
+| 매수봇만 반복 | 단기 상승과 보유량 증가는 강하지만 예산, 감시도, 변동성 리스크가 빠르게 커진다. |
+| 매도봇을 섞음 | 목표 밴드 안착은 느려지지만 평단 압박, 감시/변동성 리스크가 낮아진다. |
 | 포지션 정리를 하지 않음 | 장중 영향력은 높지만 정산 리스크가 커진다. |
 | 패닉 발생 | 하락 압력과 변동성이 커져 붕괴선 접근 위험이 높아진다. |
 
@@ -338,8 +338,8 @@ nonPlayerPriceChangePercent =
 | ID | Acceptance Criteria |
 | --- | --- |
 | SRS-PRICE-AC-001 | 중립 상태에서 대상 종목 가격은 60초 동안 큰 방향성 없이 작게 흔들려야 한다. |
-| SRS-PRICE-AC-002 | `가격 추진`을 사용하면 10~15초 동안 가격 상승 압력이 눈에 띄게 증가해야 한다. |
-| SRS-PRICE-AC-003 | `과열 해소`를 사용하면 상승 압력은 줄 수 있지만 변동성과 감시도가 낮아져야 한다. |
+| SRS-PRICE-AC-002 | `매수봇`을 사용하면 진행 시간 동안 가격 상승 압력, 보유량, 평균단가 상승이 눈에 띄게 증가해야 한다. |
+| SRS-PRICE-AC-003 | `매도봇`을 사용하면 상승 압력은 줄 수 있지만 평단 압박, 변동성, 감시 부담이 낮아져야 한다. |
 | SRS-PRICE-AC-004 | 높은 변동성 상태에서는 Tick당 흔들림 폭이 커져야 한다. |
 | SRS-PRICE-AC-005 | `priceChangePercent`가 `crashLine` 이하가 되면 즉시 Run 실패가 발생해야 한다. |
 | SRS-PRICE-AC-006 | 같은 `runSeed`와 같은 입력 순서에서는 같은 가격 흐름이 재현되어야 한다. |
