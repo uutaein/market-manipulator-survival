@@ -73,6 +73,7 @@ Current implementation status:
 - Safety Contract domain module: present
 - Run/Day scene wiring: partial
 - Intraday tick/action scene wiring: partial
+- Auto Card scene wiring: partial
 - Day Settlement scene wiring: partial
 - Final Settlement scene wiring: partial
 - Cucumber step definitions: present

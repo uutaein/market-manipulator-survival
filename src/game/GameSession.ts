@@ -1,17 +1,28 @@
 import { getAssetById, getAssetsBySector, getSectorById, sectors, type AssetId, type SectorId } from "../domain/assets/assetCatalog";
 import { createDayState, createMarketBriefing, type DayState, type MarketBriefing } from "../domain/day/daySetup";
+import { autoCardRewardElapsedSeconds, autoCardValues } from "../domain/balancing/autoCardValues";
 import {
   advanceIntradayTime,
   createIntradayState,
   isIntradayComplete,
+  pauseIntraday,
+  resumeIntraday,
   type IntradayState
 } from "../domain/intraday/intradayState";
+import {
+  applyAutoCardChoice,
+  applyAutoCardEffect,
+  generateAutoCardChoices,
+  getAutoCardPeriodSec,
+  type AutoCardChoice,
+  type AutoCardEffectResult
+} from "../domain/intraday/autoCards";
 import { tickManualActionCooldowns, useManualAction, type ManualActionResult } from "../domain/intraday/manualActions";
 import { runPlayerPriceTick } from "../domain/intraday/priceTick";
 import { buildMarketBoard, type MarketBoardState } from "../domain/market/marketBoard";
 import { approveOpening, selectPreOpenCard } from "../domain/preopen/preOpenCards";
 import { runDefaults } from "../domain/balancing/runDefaults";
-import { createRunState, restartRunWithSameSeed, type RunState } from "../domain/run/runState";
+import { createRunState, restartRunWithSameSeed, type AutoCardState, type RunState } from "../domain/run/runState";
 import { prepareNextDayCarryover } from "../domain/settlement/carryover";
 import {
   calculateDaySettlement,
@@ -34,6 +45,11 @@ export class GameSession {
   daySettlementResult: DaySettlementResult | null = null;
   finalSettlementResult: FinalSettlementResult | null = null;
   surveillanceHistory: number[] = [];
+  autoCardRewardIndex = 0;
+  autoCardRewardChoices: readonly AutoCardChoice[] = [];
+  lastAutoCardEffects: readonly AutoCardEffectResult[] = [];
+  lastAutoCardRewardMessage: string | null = null;
+  private autoCardLastTriggeredAt: Partial<Record<AutoCardState["cardId"], number>> = {};
 
   setSelectedSector(sectorId: SectorId): void {
     this.selectedSectorId = sectorId;
@@ -59,6 +75,7 @@ export class GameSession {
     this.daySettlementResult = null;
     this.finalSettlementResult = null;
     this.surveillanceHistory = [];
+    this.resetDayAutoCardSession();
     return this.runState;
   }
 
@@ -75,6 +92,7 @@ export class GameSession {
     this.daySettlementResult = null;
     this.finalSettlementResult = null;
     this.surveillanceHistory = [];
+    this.resetDayAutoCardSession();
     return this.runState;
   }
 
@@ -91,6 +109,7 @@ export class GameSession {
     this.lastManualActionResult = null;
     this.daySettlementResult = null;
     this.finalSettlementResult = null;
+    this.resetDayAutoCardSession();
     return this.dayState;
   }
 
@@ -124,6 +143,8 @@ export class GameSession {
     const dayState = this.approveOpening();
     this.intradayState = createIntradayState(runState, dayState);
     this.marketBoardState = buildMarketBoard(runState, dayState);
+    this.lastAutoCardEffects = [];
+    this.lastAutoCardRewardMessage = null;
     return this.intradayState;
   }
 
@@ -135,12 +156,18 @@ export class GameSession {
       return currentState;
     }
 
+    if (currentState.isPaused) {
+      return currentState;
+    }
+
     const tickedState = runPlayerPriceTick(currentState, {
       runSeed: runState.runSeed,
       dayIndex: runState.currentDay
     });
     const cooldownState = tickManualActionCooldowns(tickedState, 1);
-    this.intradayState = advanceIntradayTime(cooldownState, 1);
+    const advancedState = advanceIntradayTime(cooldownState, 1);
+    this.intradayState = this.applyDueAutoCardEffects(advancedState);
+    this.openDueAutoCardReward();
     return this.intradayState;
   }
 
@@ -149,6 +176,30 @@ export class GameSession {
     this.lastManualActionResult = useManualAction(currentState, actionIdOrDisplayName);
     this.intradayState = this.lastManualActionResult.state;
     return this.lastManualActionResult;
+  }
+
+  chooseAutoCardReward(choiceIndex: number): string {
+    const choice = this.autoCardRewardChoices[choiceIndex];
+
+    if (!choice) {
+      return "No auto card choice available.";
+    }
+
+    const runState = this.ensureRun();
+    this.runState = applyAutoCardChoice(runState, choice);
+    this.autoCardRewardChoices = [];
+    const card = autoCardValues[choice.cardId];
+    this.lastAutoCardRewardMessage =
+      choice.type === "new" ? `${card.displayName} acquired.` : `${card.displayName} upgraded.`;
+
+    const currentState = this.intradayState ?? this.startIntraday();
+    const elapsedSec = getIntradayElapsedSec(currentState);
+    this.autoCardLastTriggeredAt = {
+      ...this.autoCardLastTriggeredAt,
+      [choice.cardId]: elapsedSec
+    };
+    this.intradayState = resumeIntraday(currentState);
+    return this.lastAutoCardRewardMessage;
   }
 
   calculateDaySettlement(): DaySettlementResult {
@@ -233,10 +284,74 @@ export class GameSession {
     const sector = getSectorById(asset.sectorId);
     return `${sector.displayName} / ${asset.displayName}`;
   }
+
+  private applyDueAutoCardEffects(state: IntradayState): IntradayState {
+    const runState = this.ensureRun();
+    const elapsedSec = getIntradayElapsedSec(state);
+    let nextState = state;
+    const effects: AutoCardEffectResult[] = [];
+
+    for (const cardState of runState.autoCards) {
+      const periodSec = getAutoCardPeriodSec(cardState);
+      const lastTriggeredAt = this.autoCardLastTriggeredAt[cardState.cardId] ?? 0;
+
+      if (elapsedSec >= periodSec && elapsedSec - lastTriggeredAt >= periodSec) {
+        const result = applyAutoCardEffect(nextState, cardState);
+        nextState = result.state;
+        effects.push(result);
+        this.autoCardLastTriggeredAt = {
+          ...this.autoCardLastTriggeredAt,
+          [cardState.cardId]: elapsedSec
+        };
+      }
+    }
+
+    if (effects.length > 0) {
+      this.lastAutoCardEffects = effects;
+    }
+
+    return nextState;
+  }
+
+  private openDueAutoCardReward(): void {
+    if (!this.intradayState || this.autoCardRewardChoices.length > 0) {
+      return;
+    }
+
+    const rewardTiming = autoCardRewardElapsedSeconds[this.autoCardRewardIndex];
+
+    if (!rewardTiming || getIntradayElapsedSec(this.intradayState) < rewardTiming) {
+      return;
+    }
+
+    const runState = this.ensureRun();
+    const choices = generateAutoCardChoices(runState, runState.currentDay, this.autoCardRewardIndex + 1);
+    this.autoCardRewardIndex += 1;
+
+    if (choices.length === 0) {
+      return;
+    }
+
+    this.autoCardRewardChoices = choices;
+    this.lastAutoCardRewardMessage = "Auto card reward opened.";
+    this.intradayState = pauseIntraday(this.intradayState);
+  }
+
+  private resetDayAutoCardSession(): void {
+    this.autoCardRewardIndex = 0;
+    this.autoCardRewardChoices = [];
+    this.lastAutoCardEffects = [];
+    this.lastAutoCardRewardMessage = null;
+    this.autoCardLastTriggeredAt = {};
+  }
 }
 
 export const gameSession = new GameSession();
 
 function round1(value: number): number {
   return Math.round(value * 10) / 10;
+}
+
+function getIntradayElapsedSec(state: IntradayState): number {
+  return runDefaults.intradayDurationSec - state.timeRemainingSec;
 }

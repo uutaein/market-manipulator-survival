@@ -1,5 +1,8 @@
 import { BaseDocumentScene } from "./BaseDocumentScene";
 import { SceneKeys } from "./SceneKeys";
+import { autoCardRewardElapsedSeconds, autoCardValues } from "../../domain/balancing/autoCardValues";
+import { runDefaults } from "../../domain/balancing/runDefaults";
+import { getAutoCardPeriodSec } from "../../domain/intraday/autoCards";
 import { manualActions } from "../../domain/intraday/manualActions";
 import type { MarketBoardState } from "../../domain/market/marketBoard";
 import { gameSession } from "../GameSession";
@@ -7,6 +10,8 @@ import { gameSession } from "../GameSession";
 export class IntradayScene extends BaseDocumentScene {
   private statsText: Phaser.GameObjects.Text | null = null;
   private actionStatusText: Phaser.GameObjects.Text | null = null;
+  private autoCardText: Phaser.GameObjects.Text | null = null;
+  private autoChoiceButtons: Phaser.GameObjects.Text[] = [];
 
   constructor() {
     super(SceneKeys.Intraday);
@@ -54,6 +59,16 @@ export class IntradayScene extends BaseDocumentScene {
       })
       .setOrigin(0, 0);
 
+    this.autoCardText = this.add
+      .text(610, 410, "", {
+        color: "#c9c1ad",
+        fontFamily: this.fontFamily,
+        fontSize: "15px",
+        lineSpacing: 7,
+        wordWrap: { width: 560 }
+      })
+      .setOrigin(0, 0);
+
     this.actionStatusText = this.add
       .text(96, 476, "Manual action: ready", {
         color: "#8f9f7a",
@@ -67,25 +82,31 @@ export class IntradayScene extends BaseDocumentScene {
       this.addDocumentButton(96 + index * 220, 520, action.displayName, () => {
         const result = gameSession.useManualAction(action.id);
         this.actionStatusText?.setText(`Manual action: ${action.displayName} / ${result.reason}`);
-        this.refreshIntradayText();
+        this.refreshIntradayUi();
       });
     });
 
     this.addActionButton({ label: "Day 정산", target: SceneKeys.DaySettlement });
-    this.refreshIntradayText();
+    this.refreshIntradayUi();
 
     this.time.addEvent({
       delay: 1000,
       loop: true,
       callback: () => {
         const nextState = gameSession.runIntradaySecond();
-        this.refreshIntradayText();
+        this.refreshIntradayUi();
 
         if (nextState.timeRemainingSec <= 0) {
           this.scene.start(SceneKeys.DaySettlement);
         }
       }
     });
+  }
+
+  private refreshIntradayUi(): void {
+    this.refreshIntradayText();
+    this.refreshAutoCardText();
+    this.renderAutoCardChoices();
   }
 
   private refreshIntradayText(): void {
@@ -114,6 +135,50 @@ export class IntradayScene extends BaseDocumentScene {
         )
       ].join("\n")
     );
+  }
+
+  private refreshAutoCardText(): void {
+    const state = gameSession.intradayState;
+    const runState = gameSession.ensureRun();
+
+    if (!state) {
+      return;
+    }
+
+    const elapsedSec = runDefaults.intradayDurationSec - state.timeRemainingSec;
+    const nextReward = autoCardRewardElapsedSeconds[gameSession.autoCardRewardIndex];
+    const recentEffects = gameSession.lastAutoCardEffects.map((effect) => effect.card.displayName).join(", ");
+
+    this.autoCardText?.setText(
+      [
+        "AUTO CARDS",
+        ...runState.autoCards.map((card) => {
+          const value = autoCardValues[card.cardId];
+          return `${value.displayName} Lv.${card.level} / ${formatNumber(getAutoCardPeriodSec(card))}s`;
+        }),
+        "",
+        nextReward ? `NEXT REWARD: ${Math.max(0, nextReward - elapsedSec)}s` : "NEXT REWARD: none",
+        `RECENT EFFECT: ${recentEffects || "-"}`,
+        gameSession.autoCardRewardChoices.length > 0 ? "REWARD PAUSED: choose one card." : ""
+      ].join("\n")
+    );
+  }
+
+  private renderAutoCardChoices(): void {
+    this.autoChoiceButtons.forEach((button) => button.destroy());
+    this.autoChoiceButtons = [];
+
+    gameSession.autoCardRewardChoices.forEach((choice, index) => {
+      const value = autoCardValues[choice.cardId];
+      const prefix = choice.type === "new" ? "NEW" : "LV UP";
+      const button = this.addDocumentButton(610, 560 + index * 44, `${prefix}: ${value.displayName}`, () => {
+        const message = gameSession.chooseAutoCardReward(index);
+        this.actionStatusText?.setText(`Auto card: ${message}`);
+        this.refreshIntradayUi();
+      });
+
+      this.autoChoiceButtons.push(button);
+    });
   }
 }
 
