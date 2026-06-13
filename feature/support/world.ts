@@ -23,6 +23,11 @@ import {
   openDocumentEvent
 } from "../../src/domain/intraday/documentEvents";
 import { runPlayerPriceTick } from "../../src/domain/intraday/priceTick";
+import type { RetailSwarmEffectResult, RetailSwarmModel } from "../../src/domain/intraday/retailSwarm";
+import {
+  applyRetailSwarmRiskEffects,
+  calculateRetailSwarmModel
+} from "../../src/domain/intraday/retailSwarm";
 import {
   approveOpening,
   canStartIntraday,
@@ -97,6 +102,10 @@ export class MmsWorld extends World {
   documentEventLimitAllowsAnother = true;
   lastDocumentEventOpenResult?: DocumentEventOpenResult;
   lastDocumentEventChoiceResult?: DocumentEventChoiceResult;
+  retailSwarmModelBefore?: RetailSwarmModel;
+  latestRetailSwarmModel?: RetailSwarmModel;
+  lastRetailSwarmEffectResult?: RetailSwarmEffectResult;
+  participationBeforeSwarm = 0;
   autoCardRewardOpen = false;
   autoCards = new Map<string, number>();
   pendingAutoCardChoices: readonly AutoCardChoice[] = [];
@@ -398,6 +407,69 @@ export class MmsWorld extends World {
     }
 
     this.documentEventLimitAllowsAnother = canOpenAnotherDocumentEvent(this.intradayState!);
+  }
+
+  increasePersonalParticipationForSwarm(): void {
+    if (!this.intradayState) {
+      this.openIntraday();
+    }
+
+    this.participationBeforeSwarm = this.intradayState!.personalParticipation;
+    this.retailSwarmModelBefore = calculateRetailSwarmModel(this.intradayState!);
+    this.intradayState = applyIntradayStatUpdate(this.intradayState!, {
+      personalParticipation: this.intradayState!.personalParticipation + 35
+    });
+    this.latestRetailSwarmModel = calculateRetailSwarmModel(this.intradayState);
+  }
+
+  setHighParticipationForSwarm(): void {
+    if (!this.intradayState) {
+      this.openIntraday();
+    }
+
+    this.intradayState = applyIntradayStatUpdate(this.intradayState!, {
+      personalParticipation: 75,
+      surveillance: 10,
+      volatility: 35
+    });
+    this.latestRetailSwarmModel = calculateRetailSwarmModel(this.intradayState);
+  }
+
+  evaluateRetailSwarmState(): void {
+    if (!this.intradayState) {
+      this.openIntraday();
+    }
+
+    this.latestRetailSwarmModel = calculateRetailSwarmModel(this.intradayState!);
+  }
+
+  setPanicRiskForSwarm(): void {
+    if (!this.intradayState) {
+      this.openIntraday();
+    }
+
+    this.intradayState = applyIntradayStatUpdate(
+      {
+        ...this.intradayState!,
+        marketPressure: 25
+      },
+      {
+        personalParticipation: 92,
+        volatility: 45,
+        surveillance: 20
+      }
+    );
+    this.latestRetailSwarmModel = calculateRetailSwarmModel(this.intradayState);
+  }
+
+  triggerRetailSwarmPanic(): void {
+    if (!this.intradayState) {
+      this.setPanicRiskForSwarm();
+    }
+
+    this.lastRetailSwarmEffectResult = applyRetailSwarmRiskEffects(this.intradayState!);
+    this.intradayState = this.lastRetailSwarmEffectResult.state;
+    this.latestRetailSwarmModel = this.lastRetailSwarmEffectResult.model;
   }
 
   forceBoundedStatUpdate(): void {

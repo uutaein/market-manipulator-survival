@@ -1,6 +1,7 @@
 import type { DayState, PreOpenCardEffect } from "../day/daySetup";
 import type { DocumentEventChoiceType, DocumentEventId } from "../balancing/documentEventValues";
 import { manualActionIds, type ManualActionId } from "../balancing/manualActionValues";
+import { retailSwarmValues } from "../balancing/retailSwarmValues";
 import { runDefaults } from "../balancing/runDefaults";
 import type { RunState } from "../run/runState";
 import { getActiveNewsPricePressure } from "./newsPressure";
@@ -159,11 +160,11 @@ export function applyIntradayStatUpdate(
 }
 
 export function getRetailSwarmState(personalParticipation: number): RetailSwarmState {
-  if (personalParticipation >= 86) {
+  if (personalParticipation >= retailSwarmValues.thresholds.panicMin) {
     return "panic";
   }
 
-  if (personalParticipation >= 61) {
+  if (personalParticipation >= retailSwarmValues.thresholds.overheatedMin) {
     return "overheated";
   }
 

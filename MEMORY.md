@@ -24,7 +24,8 @@ Current baseline:
 10. Manual Action domain module exists for 4 action values, modal availability, budget/cooldown checks, state effects, and cooldown entry.
 11. Auto Card domain module exists for 8 card values, reward choices, Lv.1~Lv.3 handling, and simple periodic state effects.
 12. Document Event domain module exists for 8 event values, trigger priority, cap/gap rules, pause behavior, 3 choices, choice effects, and event history.
-13. Settlement, carryover, persistence, and Phaser gameplay wiring are not implemented yet.
+13. Retail Swarm domain module exists for participation-synced state, abstract token model, warning/panic flags, and overheat/panic risk effects.
+14. Settlement, carryover, persistence, and Phaser gameplay wiring are not implemented yet.
 
 ---
 
@@ -135,6 +136,7 @@ MVP shape:
 17. Added Manual Action domain module for four MVP manual actions, state effects, and cooldown entry.
 18. Added Auto Card domain module for eight MVP auto cards, reward choices, level caps, and simple periodic state effects.
 19. Added Document Event domain module for eight MVP document events, trigger/cap/gap rules, popup pause, choices, effects, and history.
+20. Added Retail Swarm domain module for participation-synced token modeling, overheat warnings, panic state, and risk effects.
 
 ---
 
@@ -192,4 +194,5 @@ Current branch baseline includes:
 9. Manual Action domain module,
 10. Auto Card domain module,
 11. Document Event domain module,
-12. README, docs index, feature index, traceability, and MEMORY updates.
+12. Retail Swarm domain module,
+13. README, docs index, feature index, traceability, and MEMORY updates.
