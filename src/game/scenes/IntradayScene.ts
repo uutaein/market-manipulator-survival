@@ -5,6 +5,7 @@ import { documentEventRules, documentEventValues } from "../../domain/balancing/
 import { runDefaults } from "../../domain/balancing/runDefaults";
 import { getAutoCardPeriodSec } from "../../domain/intraday/autoCards";
 import { manualActions } from "../../domain/intraday/manualActions";
+import { calculateRetailSwarmModel, type RetailSwarmModel } from "../../domain/intraday/retailSwarm";
 import type { MarketBoardState } from "../../domain/market/marketBoard";
 import { gameSession } from "../GameSession";
 
@@ -14,6 +15,7 @@ export class IntradayScene extends BaseDocumentScene {
   private autoCardText: Phaser.GameObjects.Text | null = null;
   private autoChoiceButtons: Phaser.GameObjects.Text[] = [];
   private documentEventObjects: Phaser.GameObjects.GameObject[] = [];
+  private retailSwarmObjects: Phaser.GameObjects.GameObject[] = [];
 
   constructor() {
     super(SceneKeys.Intraday);
@@ -37,8 +39,8 @@ export class IntradayScene extends BaseDocumentScene {
       .text(96, 186, "", {
         color: "#c9c1ad",
         fontFamily: this.fontFamily,
-        fontSize: "18px",
-        lineSpacing: 8,
+        fontSize: "16px",
+        lineSpacing: 5,
         wordWrap: { width: 470 }
       })
       .setOrigin(0, 0);
@@ -107,6 +109,7 @@ export class IntradayScene extends BaseDocumentScene {
 
   private refreshIntradayUi(): void {
     this.refreshIntradayText();
+    this.renderRetailSwarm();
     this.refreshAutoCardText();
     this.renderAutoCardChoices();
     this.renderDocumentEventPopup();
@@ -121,22 +124,23 @@ export class IntradayScene extends BaseDocumentScene {
 
     this.statsText?.setText(
       [
-        `TIME ${state.timeRemainingSec}s`,
-        `PRICE ${formatPercent(state.priceChangePercent)}`,
+        `TIME ${state.timeRemainingSec}s / PRICE ${formatPercent(state.priceChangePercent)}`,
         `LAST TICK ${formatPercent(state.priceDeltaPerTick)}`,
         "",
-        `BUDGET ${formatNumber(state.budget)}`,
-        `HOLDING ${formatNumber(state.holdingRatio)}%`,
-        `PARTICIPATION ${formatNumber(state.personalParticipation)} (${state.retailSwarmState})`,
-        `LIQUIDITY ${formatNumber(state.marketLiquidity)}`,
-        `SURVEILLANCE ${formatNumber(state.surveillance)}`,
-        `VOLATILITY ${formatNumber(state.volatility)}`,
-        `PRESSURE ${formatNumber(state.marketPressure)}`,
-        `DOCUMENTS ${state.documentEventHistory.length}/${documentEventRules.maxEventsPerDay}`,
+        `BUDGET ${formatNumber(state.budget)} / HOLDING ${formatNumber(state.holdingRatio)}%`,
+        `PARTICIPATION ${formatNumber(state.personalParticipation)} / LIQUIDITY ${formatNumber(state.marketLiquidity)}`,
+        `SURVEILLANCE ${formatNumber(state.surveillance)} / VOLATILITY ${formatNumber(state.volatility)}`,
+        `PRESSURE ${formatNumber(state.marketPressure)} / DOCUMENTS ${state.documentEventHistory.length}/${documentEventRules.maxEventsPerDay}`,
         "",
-        ...manualActions.map(
-          (action) => `${action.displayName}: ${formatNumber(state.manualActionCooldowns[action.id])}s`
-        )
+        "COOLDOWNS",
+        manualActions
+          .slice(0, 2)
+          .map((action) => `${action.displayName} ${formatNumber(state.manualActionCooldowns[action.id])}s`)
+          .join(" / "),
+        manualActions
+          .slice(2)
+          .map((action) => `${action.displayName} ${formatNumber(state.manualActionCooldowns[action.id])}s`)
+          .join(" / ")
       ].join("\n")
     );
   }
@@ -183,6 +187,53 @@ export class IntradayScene extends BaseDocumentScene {
 
       this.autoChoiceButtons.push(button);
     });
+  }
+
+  private renderRetailSwarm(): void {
+    this.retailSwarmObjects.forEach((object) => object.destroy());
+    this.retailSwarmObjects = [];
+
+    const state = gameSession.intradayState;
+
+    if (!state) {
+      return;
+    }
+
+    const model = calculateRetailSwarmModel(state);
+    const panelX = 96;
+    const panelY = 366;
+    const panelWidth = 470;
+    const panelHeight = 90;
+    const panelColor = getSwarmPanelColor(model);
+    const tokenColor = getSwarmTokenColor(model);
+    const panel = this.add
+      .rectangle(panelX, panelY, panelWidth, panelHeight, panelColor, 0.22)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, tokenColor, model.warningVisual ? 0.95 : 0.55);
+    const label = this.add
+      .text(
+        panelX + 12,
+        panelY + 9,
+        `RETAIL SWARM ${model.state.toUpperCase()} / ${formatNumber(model.participationNumber)}`,
+        {
+          color: model.panicVisual ? "#f0a6a0" : "#d9c58b",
+          fontFamily: this.fontFamily,
+          fontSize: "13px"
+        }
+      )
+      .setOrigin(0, 0);
+
+    this.retailSwarmObjects.push(panel, label);
+
+    for (let index = 0; index < model.tokenCount; index += 1) {
+      const position = getSwarmTokenPosition(model, state.priceTickIndex, index, panelX, panelY, panelWidth, panelHeight);
+      const token =
+        model.state === "panic"
+          ? this.add.rectangle(position.x, position.y, 7, 7, tokenColor, 0.88).setAngle(45)
+          : this.add.circle(position.x, position.y, position.radius, tokenColor, position.alpha);
+
+      this.retailSwarmObjects.push(token);
+    }
   }
 
   private renderDocumentEventPopup(): void {
@@ -277,4 +328,54 @@ function getChoiceTone(choiceType: string): string {
   }
 
   return "관망";
+}
+
+function getSwarmPanelColor(model: RetailSwarmModel): number {
+  if (model.state === "panic") {
+    return 0x3b2224;
+  }
+
+  if (model.state === "overheated") {
+    return 0x3b3422;
+  }
+
+  return 0x202b25;
+}
+
+function getSwarmTokenColor(model: RetailSwarmModel): number {
+  if (model.state === "panic") {
+    return 0xc46b5b;
+  }
+
+  if (model.state === "overheated") {
+    return 0xd9c58b;
+  }
+
+  return 0x8f9f7a;
+}
+
+function getSwarmTokenPosition(
+  model: RetailSwarmModel,
+  tickIndex: number,
+  tokenIndex: number,
+  panelX: number,
+  panelY: number,
+  panelWidth: number,
+  panelHeight: number
+): { readonly x: number; readonly y: number; readonly radius: number; readonly alpha: number } {
+  const centerBias = model.movement === "reverse" ? 0.7 : model.movement === "surging" ? 0.58 : 0.46;
+  const centerX = panelX + panelWidth * centerBias;
+  const centerY = panelY + panelHeight * 0.58;
+  const phase = tickIndex * model.speed * 0.12;
+  const angle = tokenIndex * 2.399 + phase;
+  const ring = 10 + ((tokenIndex % 9) / 8) * 52 * model.density;
+  const reverseBoost = model.movement === "reverse" ? 1.35 : 1;
+  const surgeOffset = model.movement === "surging" ? Math.sin(phase + tokenIndex) * 8 : 0;
+
+  return {
+    x: centerX + Math.cos(angle) * ring * reverseBoost + surgeOffset,
+    y: centerY + Math.sin(angle) * ring * 0.52 * reverseBoost,
+    radius: 2.2 + model.density * 1.8,
+    alpha: 0.52 + model.density * 0.4
+  };
 }

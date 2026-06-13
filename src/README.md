@@ -20,7 +20,7 @@ The scaffold exists so the next implementation work can attach SPEC/Gherkin-driv
 | `RunSetupScene` | Run setup / fictional asset selection shell |
 | `MorningBriefingScene` | Morning News / Market Briefing shell |
 | `PreOpenCardScene` | Pre-open Card / Opening Approval shell |
-| `IntradayScene` | Intraday operation shell with tick, manual action, and auto card wiring |
+| `IntradayScene` | Intraday operation shell with tick, manual action, auto card, document event, and Retail Swarm wiring |
 | `DaySettlementScene` | Day Settlement shell |
 | `FinalSettlementScene` | Final Settlement summary and failure variant shell |
 

@@ -75,6 +75,7 @@ Current implementation status:
 - Intraday tick/action scene wiring: partial
 - Auto Card scene wiring: partial
 - Document Event scene wiring: partial
+- Retail Swarm scene wiring: partial
 - Day Settlement scene wiring: partial
 - Final Settlement scene wiring: partial
 - Cucumber step definitions: present

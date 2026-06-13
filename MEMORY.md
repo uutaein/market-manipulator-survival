@@ -34,9 +34,10 @@ Current baseline:
 20. Phaser Intraday scene now advances one-second price/timer ticks and exposes the 4 manual action buttons with cooldown feedback.
 21. Phaser Intraday scene now displays owned Auto Cards, opens paused reward choices, and applies periodic Auto Card effects.
 22. Phaser Intraday scene now opens Document Event modals, pauses time, applies one of 3 choices, and resumes.
-23. Phaser Day Settlement scene now displays Day result, surveillance grade, holding band, social cost, risk metrics, learning hint, and next-Day/Final routing.
-24. Phaser Final Settlement scene now displays Final grade, cumulative profit, surveillance summary, holding band, social cost, and restart choices.
-25. Retail Swarm rendering, localStorage browser wiring, and polished UI interaction are not implemented yet.
+23. Phaser Intraday scene now renders Retail Swarm abstract tokens and applies one-shot overheat/panic transition risk effects.
+24. Phaser Day Settlement scene now displays Day result, surveillance grade, holding band, social cost, risk metrics, learning hint, and next-Day/Final routing.
+25. Phaser Final Settlement scene now displays Final grade, cumulative profit, surveillance summary, holding band, social cost, and restart choices.
+26. localStorage browser wiring and polished UI interaction are not implemented yet.
 
 ---
 
@@ -159,6 +160,7 @@ MVP shape:
 29. Added Final Settlement scene wiring for Day 5 cumulative carryover, Final grade display, surveillance summary, and same-seed/new-Run restart choices.
 30. Added Auto Card scene wiring for periodic effects, 90/180/270-second paused reward choices, owned card display, and reward choice buttons.
 31. Added Document Event scene wiring for condition-based modal opening, Day 1 fallback event, paused choice display, choice effects, and resume behavior.
+32. Added Retail Swarm scene wiring for abstract token rendering, participation-synced density/speed, and one-shot overheat/panic transition risk effects.
 
 ---
 
@@ -228,4 +230,5 @@ Current branch baseline includes:
 21. Final Settlement scene wiring,
 22. Auto Card scene wiring,
 23. Document Event scene wiring,
-24. README, docs index, feature index, traceability, and MEMORY updates.
+24. Retail Swarm scene wiring,
+25. README, docs index, feature index, traceability, and MEMORY updates.
