@@ -10,6 +10,7 @@ This directory contains the product, requirement, decision, and design documents
 | `prd/` | Product requirements, PRD versions, and MVP freeze candidate |
 | `srs/` | Software requirements documents |
 | `sdd/` | Software design documents |
+| `spec/` | Implementation-facing specifications |
 
 ## Traceability
 
@@ -31,6 +32,7 @@ This directory contains the product, requirement, decision, and design documents
 | SRS Review | [market-manipulator-survival-srs-v0.1.5-freeze-readiness-review.md](srs/market-manipulator-survival-srs-v0.1.5-freeze-readiness-review.md) |
 | SRS | [market-manipulator-survival-srs-v0.1.6-baseline-values-and-triggers.md](srs/market-manipulator-survival-srs-v0.1.6-baseline-values-and-triggers.md) |
 | SDD | [market-manipulator-survival-sdd-v0.1.0-simulation-modularity.md](sdd/market-manipulator-survival-sdd-v0.1.0-simulation-modularity.md) |
+| SPEC | [market-manipulator-survival-mvp-spec-v0.1.0.md](spec/market-manipulator-survival-mvp-spec-v0.1.0.md) |
 
 ## ADRs
 

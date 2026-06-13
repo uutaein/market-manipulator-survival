@@ -11,7 +11,7 @@ This is not a Codex system skill file. It is a repository-local design memory fo
 Use this order unless the user explicitly changes it:
 
 ```text
-PRD -> ADR -> SRS -> SDD -> Implementation -> Tests
+PRD -> ADR -> SRS -> SDD -> SPEC -> Gherkin -> TC -> Implementation -> Tests
 ```
 
 Current project rule:
@@ -20,7 +20,9 @@ Current project rule:
 2. ADR records accepted product or architecture decisions.
 3. SRS defines observable behavior, state, values, triggers, and requirements.
 4. SDD defines lightweight module boundaries.
-5. Implementation starts only after explicit approval.
+5. SPEC consolidates the buildable first playable scope.
+6. Gherkin feature files come before TC documents.
+7. Implementation starts only after explicit approval.
 
 When adding or changing a feature:
 
@@ -28,7 +30,8 @@ When adding or changing a feature:
 2. add ADR only for a durable decision,
 3. update SRS for behavior or values,
 4. update SDD only if module boundaries change,
-5. update `docs/traceability.md` in the same change.
+5. update SPEC if first playable scope changes,
+6. update `docs/traceability.md` in the same change.
 
 ---
 

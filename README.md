@@ -52,6 +52,7 @@ docs/
   prd/   Product requirements and MVP freeze documents
   srs/   Software requirements documents
   sdd/   Software design documents
+  spec/  Implementation-facing specifications
   traceability.md
 ```
 
@@ -68,6 +69,7 @@ Key current documents:
 - [SRS v0.1.5 — Freeze Readiness Review](docs/srs/market-manipulator-survival-srs-v0.1.5-freeze-readiness-review.md)
 - [SRS v0.1.6 — Baseline Values and Triggers](docs/srs/market-manipulator-survival-srs-v0.1.6-baseline-values-and-triggers.md)
 - [SDD v0.1.0 — Simulation Modularity](docs/sdd/market-manipulator-survival-sdd-v0.1.0-simulation-modularity.md)
+- [MVP SPEC v0.1.0 — First Playable Build](docs/spec/market-manipulator-survival-mvp-spec-v0.1.0.md)
 - [MEMORY](MEMORY.md)
 - [SKILLS](SKILLS.md)
 

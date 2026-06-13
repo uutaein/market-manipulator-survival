@@ -28,6 +28,7 @@ Current baseline:
 | `docs/adr/` | Product and architecture decision records |
 | `docs/srs/` | Software requirement documents |
 | `docs/sdd/` | Software design documents |
+| `docs/spec/` | Implementation-facing specifications |
 | `docs/traceability.md` | PRD/ADR/SRS/TC traceability matrix |
 | `MEMORY.md` | Current progress memory |
 | `SKILLS.md` | Project-specific rules and reusable design knowledge |
@@ -91,6 +92,7 @@ MVP shape:
 | SRS Review | `docs/srs/market-manipulator-survival-srs-v0.1.5-freeze-readiness-review.md` |
 | SRS Baselines | `docs/srs/market-manipulator-survival-srs-v0.1.6-baseline-values-and-triggers.md` |
 | SDD Modularity | `docs/sdd/market-manipulator-survival-sdd-v0.1.0-simulation-modularity.md` |
+| MVP SPEC | `docs/spec/market-manipulator-survival-mvp-spec-v0.1.0.md` |
 | Traceability | `docs/traceability.md` |
 
 ---
@@ -103,7 +105,8 @@ MVP shape:
 4. Added SRS freeze readiness review.
 5. Added baseline values and triggers for implementation discussion.
 6. Added traceability matrix linking PRD/ADR decisions to SRS and planned TC IDs.
-7. Added this memory file and `SKILLS.md`.
+7. Added MVP SPEC v0.1.0 for first playable scope.
+8. Added this memory file and `SKILLS.md`.
 
 ---
 
@@ -113,11 +116,12 @@ The SRS is close to implementation-planning ready, but a final review pass is st
 
 Remaining non-code work:
 
-1. Review whether SRS v0.1.6 baseline values feel too harsh or too soft.
+1. Review MVP SPEC v0.1.0 and accept it as the first playable build scope.
 2. Review fictional asset names for tone.
-3. Decide whether SRS should be marked `Accepted` or remain `Draft`.
-4. Convert planned TC IDs in `docs/traceability.md` into actual manual or automated test cases after implementation begins.
-5. Keep new ideas in P1/P2 unless they are essential to the MVP loop.
+3. Keep SRS v0.1.6 values as first-playable defaults until real playtesting.
+4. Create Gherkin feature files after SPEC acceptance.
+5. Convert planned TC IDs in `docs/traceability.md` into actual manual or automated test cases after Gherkin feature files exist.
+6. Keep new ideas in P1/P2 unless they are essential to the MVP loop.
 
 ---
 
