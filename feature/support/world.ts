@@ -137,7 +137,9 @@ export class MmsWorld extends World {
   finalSummaryConsidered = false;
   carryover = new Set<string>();
   aftereffectsWeak = false;
-  storage = new Map<string, unknown>();
+  storage = new Map<string, string>();
+  canContinueSavedRun = false;
+  bestRecordUpdated = false;
   incompatibleSaveDiscarded = false;
   safeContentChecked = false;
   safeTerminologyChecked = false;

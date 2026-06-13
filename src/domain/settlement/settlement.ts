@@ -69,6 +69,7 @@ export interface FinalSettlementResult {
   readonly finalGrade: FinalGrade;
   readonly baseFinalGrade: FinalGrade;
   readonly cumulativeProfit: number;
+  readonly finalSurveillance: number;
   readonly finalSurveillanceGrade: SurveillanceGrade;
   readonly averageSurveillanceGrade: SurveillanceGrade;
   readonly successfulDays: number;
@@ -332,6 +333,7 @@ function createFinalSettlementResult(
     finalGrade: result.finalGrade,
     baseFinalGrade: result.baseFinalGrade,
     cumulativeProfit: input.cumulativeProfit,
+    finalSurveillance: input.finalSurveillance,
     finalSurveillanceGrade: result.finalSurveillanceGrade,
     averageSurveillanceGrade: result.averageSurveillanceGrade,
     successfulDays: input.successfulDays,
