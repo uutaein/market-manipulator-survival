@@ -82,7 +82,7 @@ Current implementation status:
 - Final Settlement scene wiring: partial
 - Local persistence browser wiring: partial
 - Cucumber step definitions: present
-- Gameplay simulation: not implemented yet
+- Gameplay simulation: first playable loop wiring in progress
 - BDD validation: executable against an in-memory support world, not yet against Phaser gameplay modules
 
 ---
@@ -157,4 +157,4 @@ Use fictional, abstract terminology:
 The repository is still documentation-first.
 
 Implementation has started with a minimal project scaffold.  
-The current work is still early: gameplay systems are not implemented yet. The Cucumber layer currently validates accepted Gherkin coverage against an in-memory support world.
+The first playable loop is now partially wired through Phaser scenes and domain modules. The Cucumber layer still validates accepted Gherkin coverage against an in-memory support world, not the rendered Phaser UI.
