@@ -59,6 +59,7 @@ Current implementation status:
 - Project scaffold: present
 - MVP scene shell: present
 - Core Run State domain module: present
+- Day Setup / Morning News domain module: present
 - Cucumber step definitions: present
 - Gameplay simulation: not implemented yet
 - BDD validation: executable against an in-memory support world, not yet against Phaser gameplay modules

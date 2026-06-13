@@ -1,4 +1,6 @@
 import { World, setWorldConstructor } from "@cucumber/cucumber";
+import type { DayState, MarketBriefing } from "../../src/domain/day/daySetup";
+import { createDayState, createMarketBriefing } from "../../src/domain/day/daySetup";
 import type { RunAssetProfiles, RunState } from "../../src/domain/run/runState";
 import { createRunState, restartRunWithSameSeed } from "../../src/domain/run/runState";
 
@@ -50,6 +52,8 @@ export class MmsWorld extends World {
   currentScreen = "none";
   runStatus: RunStatus = "none";
   runState?: RunState;
+  dayState?: DayState;
+  marketBriefing?: MarketBriefing;
   runSeed = "";
   previousRunSeed = "";
   previousRunProfilesSnapshot = "";
@@ -102,6 +106,29 @@ export class MmsWorld extends World {
     this.runStatus = this.runState.runStatus;
     this.currentScreen = this.runState.phase;
     this.visibleScreens.add("Run Setup");
+  }
+
+  beginDay(): void {
+    if (!this.runState) {
+      this.startNewRun();
+    }
+
+    this.dayState = createDayState(this.runState!);
+    this.currentDay = this.dayState.dayIndex;
+    this.visibleScreens.add("Morning News");
+  }
+
+  showMarketBriefing(): void {
+    if (!this.runState) {
+      this.startNewRun();
+    }
+
+    if (!this.dayState) {
+      this.beginDay();
+    }
+
+    this.marketBriefing = createMarketBriefing(this.runState!, this.dayState!);
+    this.visibleScreens.add("Market Briefing");
   }
 
   restartWithSameSeed(): void {

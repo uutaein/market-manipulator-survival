@@ -2,63 +2,69 @@ import { Given, Then, When } from "@cucumber/cucumber";
 import assert from "node:assert/strict";
 import type { MmsWorld } from "../support/world";
 import { preOpenCards } from "../support/world";
+import { isMorningNewsTemplateId, morningNewsTemplates } from "../../src/domain/day/morningNews";
 
 Given("a new Day begins", function (this: MmsWorld) {
-  this.visibleScreens.add("Morning News");
+  this.beginDay();
 });
 
 When("Morning News is generated", function (this: MmsWorld) {
-  this.visibleOptions.add("Morning News");
-  this.visibleOptions.add("fictional target");
+  this.beginDay();
 });
 
 Then("exactly one Morning News item is shown", function (this: MmsWorld) {
-  assert.ok(this.visibleOptions.has("Morning News"));
+  assert.ok(this.dayState?.morningNews);
 });
 
 Then("it is generated from one of the five MVP news templates", function (this: MmsWorld) {
-  assert.ok(this.visibleOptions.has("Morning News"));
+  assert.equal(morningNewsTemplates.length, 5);
+  assert.ok(this.dayState?.morningNews);
+  assert.ok(isMorningNewsTemplateId(this.dayState.morningNews.templateId));
 });
 
 Then("it has a fictional target", function (this: MmsWorld) {
-  assert.ok(this.visibleOptions.has("fictional target"));
+  assert.ok(this.dayState?.morningNews.target);
 });
 
 When("the target type is selected", function (this: MmsWorld) {
-  this.visibleOptions.add("sector target");
+  if (!this.dayState) {
+    this.beginDay();
+  }
 });
 
 Then("sector-level targeting is preferred for MVP", function (this: MmsWorld) {
-  assert.ok(this.visibleOptions.has("sector target"));
+  assert.equal(this.dayState?.morningNews.target.type, "sector");
 });
 
 Then("market-level or asset-level targeting may only appear within the accepted SPEC scope", function (this: MmsWorld) {
-  assert.ok(this.visibleOptions.has("sector target"));
+  assert.ok(["sector", "market", "asset"].includes(this.dayState?.morningNews.target.type ?? ""));
 });
 
 Given("Morning News has been shown", function (this: MmsWorld) {
-  this.visibleScreens.add("Morning News");
+  this.beginDay();
 });
 
 When("the player views the Market Briefing", function (this: MmsWorld) {
-  this.visibleScreens.add("Market Briefing");
+  this.showMarketBriefing();
 });
 
 Then("the briefing summarizes the news effect", function (this: MmsWorld) {
-  assert.ok(this.visibleScreens.has("Market Briefing"));
+  assert.ok(this.marketBriefing?.newsSummary);
 });
 
 Then("the briefing shows the target band", function (this: MmsWorld) {
-  assert.ok(this.visibleScreens.has("Market Briefing"));
+  assert.ok(this.marketBriefing?.targetBandLabel);
 });
 
 Then("the briefing shows major risk hints without revealing hidden asset profile values", function (this: MmsWorld) {
+  assert.ok(this.marketBriefing?.riskHints.length);
+  assert.equal(this.marketBriefing?.hiddenProfileValuesRevealed, false);
   assert.equal(this.hiddenProfilesVisible, false);
 });
 
 Given("the player has reviewed Morning News and the Market Briefing", function (this: MmsWorld) {
-  this.visibleScreens.add("Morning News");
-  this.visibleScreens.add("Market Briefing");
+  this.beginDay();
+  this.showMarketBriefing();
 });
 
 When("the Pre-open Card screen is shown", function (this: MmsWorld) {

@@ -35,8 +35,8 @@ Given("the player is in an active Run", function (this: MmsWorld) {
 });
 
 When("a Day begins", function (this: MmsWorld) {
-  this.visibleScreens.add("Morning News");
-  this.visibleScreens.add("Market Briefing");
+  this.beginDay();
+  this.showMarketBriefing();
   this.visibleOptions.add("Pre-open Card");
 });
 
@@ -137,8 +137,8 @@ Given("the player starts Day 1", function (this: MmsWorld) {
 });
 
 When("the Day begins", function (this: MmsWorld) {
-  this.visibleScreens.add("Morning News");
-  this.visibleScreens.add("Market Briefing");
+  this.beginDay();
+  this.showMarketBriefing();
 });
 
 Then("the player reads Morning News", function (this: MmsWorld) {

@@ -8,9 +8,10 @@ Current implemented scope:
 | --- | --- |
 | `assets/assetCatalog.ts` | Fictional 8-sector / 24-asset catalog from SRS v0.1.6 |
 | `balancing/runDefaults.ts` | First-playable Run defaults and MVP auto card IDs |
+| `day/` | Day start state, Morning News generation, Today Condition, Market Briefing summary |
 | `random/SeededRandom.ts` | Deterministic seeded random source for reproducible Run setup |
 | `run/runState.ts` | Core Run State creation, same-seed restart, hidden asset tendency assignment |
 
-The current domain layer supports the first implementation unit only. It does not yet include Day setup, Morning News, price ticks, actions, settlement, carryover, or persistence modules.
+The current domain layer supports early Run and Day setup. It does not yet include pre-open card effects, price ticks, actions, settlement, carryover, or persistence modules.
 
-BDD steps currently exercise this domain layer for Run start, same-seed restart, asset catalog completeness, and hidden profile assignment.
+BDD steps currently exercise this domain layer for Run start, same-seed restart, asset catalog completeness, hidden profile assignment, Morning News generation, and Market Briefing data.
