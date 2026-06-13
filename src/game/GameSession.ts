@@ -8,7 +8,8 @@ import {
   isIntradayComplete,
   pauseIntraday,
   resumeIntraday,
-  type IntradayState
+  type IntradayState,
+  type RetailSwarmState
 } from "../domain/intraday/intradayState";
 import {
   applyAutoCardChoice,
@@ -24,6 +25,7 @@ import {
   openDocumentEvent,
   type DocumentEventChoiceResult
 } from "../domain/intraday/documentEvents";
+import { applyRetailSwarmRiskEffects, type RetailSwarmEffectResult } from "../domain/intraday/retailSwarm";
 import { tickManualActionCooldowns, useManualAction, type ManualActionResult } from "../domain/intraday/manualActions";
 import { runPlayerPriceTick } from "../domain/intraday/priceTick";
 import { buildMarketBoard, type MarketBoardState } from "../domain/market/marketBoard";
@@ -58,6 +60,8 @@ export class GameSession {
   lastAutoCardRewardMessage: string | null = null;
   lastDocumentEventChoiceResult: DocumentEventChoiceResult | null = null;
   lastDocumentEventMessage: string | null = null;
+  lastRetailSwarmEffectResult: RetailSwarmEffectResult | null = null;
+  private lastRetailSwarmState: RetailSwarmState | null = null;
   private autoCardLastTriggeredAt: Partial<Record<AutoCardState["cardId"], number>> = {};
 
   setSelectedSector(sectorId: SectorId): void {
@@ -175,7 +179,8 @@ export class GameSession {
     });
     const cooldownState = tickManualActionCooldowns(tickedState, 1);
     const advancedState = advanceIntradayTime(cooldownState, 1);
-    this.intradayState = this.applyDueAutoCardEffects(advancedState);
+    const autoCardState = this.applyDueAutoCardEffects(advancedState);
+    this.intradayState = this.applyRetailSwarmTransitionRisk(autoCardState);
     this.openDueAutoCardReward();
 
     if (!this.intradayState.isPaused) {
@@ -343,6 +348,22 @@ export class GameSession {
     return nextState;
   }
 
+  private applyRetailSwarmTransitionRisk(state: IntradayState): IntradayState {
+    if (state.retailSwarmState === this.lastRetailSwarmState) {
+      return state;
+    }
+
+    this.lastRetailSwarmState = state.retailSwarmState;
+
+    if (state.retailSwarmState === "interest") {
+      this.lastRetailSwarmEffectResult = null;
+      return state;
+    }
+
+    this.lastRetailSwarmEffectResult = applyRetailSwarmRiskEffects(state);
+    return this.lastRetailSwarmEffectResult.state;
+  }
+
   private openDueAutoCardReward(): void {
     if (!this.intradayState || this.autoCardRewardChoices.length > 0) {
       return;
@@ -408,6 +429,8 @@ export class GameSession {
     this.lastAutoCardRewardMessage = null;
     this.lastDocumentEventChoiceResult = null;
     this.lastDocumentEventMessage = null;
+    this.lastRetailSwarmEffectResult = null;
+    this.lastRetailSwarmState = null;
     this.autoCardLastTriggeredAt = {};
   }
 }
