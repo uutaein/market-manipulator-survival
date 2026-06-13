@@ -1,15 +1,16 @@
 import { World, setWorldConstructor } from "@cucumber/cucumber";
 import type { DayState, MarketBriefing } from "../../src/domain/day/daySetup";
 import { createDayState, createMarketBriefing } from "../../src/domain/day/daySetup";
+import {
+  approveOpening,
+  canStartIntraday,
+  getPreOpenCardDisplayNames,
+  selectPreOpenCard
+} from "../../src/domain/preopen/preOpenCards";
 import type { RunAssetProfiles, RunState } from "../../src/domain/run/runState";
 import { createRunState, restartRunWithSameSeed } from "../../src/domain/run/runState";
 
-export const preOpenCards = new Set([
-  "시장 관찰",
-  "사전 포지션 구축",
-  "방어 자금 배정",
-  "관망"
-]);
+export const preOpenCards = new Set(getPreOpenCardDisplayNames());
 
 export const manualActions = new Set([
   "유동성 공급",
@@ -66,6 +67,7 @@ export class MmsWorld extends World {
   timerSeconds = 0;
   openingApproved = false;
   selectedPreOpenCard = "";
+  preOpenSelectionError = "";
   daySettlementComplete = false;
   finalSettlementComplete = false;
   documentEventOpen = false;
@@ -129,6 +131,33 @@ export class MmsWorld extends World {
 
     this.marketBriefing = createMarketBriefing(this.runState!, this.dayState!);
     this.visibleScreens.add("Market Briefing");
+  }
+
+  choosePreOpenCard(cardName: string): void {
+    if (!this.dayState) {
+      this.beginDay();
+    }
+
+    try {
+      this.dayState = selectPreOpenCard(this.dayState!, cardName);
+      this.selectedPreOpenCard = cardName;
+      this.preOpenSelectionError = "";
+    } catch (error) {
+      this.preOpenSelectionError = error instanceof Error ? error.message : String(error);
+    }
+  }
+
+  approveOpening(): void {
+    if (!this.dayState) {
+      this.beginDay();
+    }
+
+    this.dayState = approveOpening(this.dayState!);
+    this.openingApproved = this.dayState.openingApproved;
+  }
+
+  canStartIntraday(): boolean {
+    return Boolean(this.dayState && canStartIntraday(this.dayState));
   }
 
   restartWithSameSeed(): void {

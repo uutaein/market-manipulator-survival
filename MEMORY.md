@@ -19,7 +19,8 @@ Current baseline:
 5. Cucumber step definitions exist for accepted MVP Gherkin coverage.
 6. Core Run State domain module exists for seed, asset catalog, hidden profile assignment, and same-seed restart.
 7. Day Setup / Morning News domain module exists for Day state, sector-default news, Today Condition, and Market Briefing data.
-8. Gameplay simulation systems are not implemented yet.
+8. Pre-open Card domain module exists for 4 card values, one-card-per-Day selection, no-effect `관망`, and Opening Approval guard.
+9. Gameplay simulation systems are not implemented yet.
 
 ---
 
@@ -125,6 +126,7 @@ MVP shape:
 12. Added Cucumber configuration, shared in-memory world, and domain step definitions.
 13. Added Core Run State domain module for seeded Run creation, fictional asset catalog, hidden asset tendency assignment, and same-seed restart.
 14. Added Day Setup / Morning News domain module for seeded Morning News, Today Condition, Day State, and Market Briefing data.
+15. Added Pre-open Card domain module for MVP card values, selection rules, and Opening Approval.
 
 ---
 
@@ -177,4 +179,5 @@ Current branch baseline includes:
 4. Cucumber step definitions for accepted MVP Gherkin scenarios,
 5. Core Run State domain module,
 6. Day Setup / Morning News domain module,
-7. README, docs index, feature index, traceability, and MEMORY updates.
+7. Pre-open Card domain module,
+8. README, docs index, feature index, traceability, and MEMORY updates.

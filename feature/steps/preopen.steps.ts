@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import type { MmsWorld } from "../support/world";
 import { preOpenCards } from "../support/world";
 import { isMorningNewsTemplateId, morningNewsTemplates } from "../../src/domain/day/morningNews";
+import { canStartIntraday, hasStatEffect } from "../../src/domain/preopen/preOpenCards";
 
 Given("a new Day begins", function (this: MmsWorld) {
   this.beginDay();
@@ -78,28 +79,32 @@ Then("the player can choose {string}", function (this: MmsWorld, cardName: strin
 });
 
 Then("no more than one Pre-open Card can be selected for the Day", function (this: MmsWorld) {
-  this.selectedPreOpenCard = "관망";
-  assert.ok(this.selectedPreOpenCard);
+  this.choosePreOpenCard("관망");
+  this.choosePreOpenCard("시장 관찰");
+  assert.ok(this.preOpenSelectionError);
 });
 
 Given("the player does not want to spend budget before opening", function (this: MmsWorld) {
+  this.beginDay();
   this.selectedPreOpenCard = "";
 });
 
 When("the player chooses {string}", function (this: MmsWorld, cardName: string) {
-  this.selectedPreOpenCard = cardName;
+  this.choosePreOpenCard(cardName);
 });
 
 Then("no pre-open stat effect is applied", function (this: MmsWorld) {
-  assert.equal(this.selectedPreOpenCard, "관망");
+  assert.equal(this.dayState?.preOpenCardId, "wait_and_see");
+  assert.equal(hasStatEffect(this.dayState.preOpenCardEffect), false);
 });
 
 Then("the player's budget is preserved", function (this: MmsWorld) {
-  assert.equal(this.selectedPreOpenCard, "관망");
+  assert.equal(this.dayState?.preOpenCardEffect?.budgetDelta, 0);
 });
 
 Given("the player has selected a Pre-open Card or {string}", function (this: MmsWorld, fallbackChoice: string) {
-  this.selectedPreOpenCard = fallbackChoice;
+  this.beginDay();
+  this.choosePreOpenCard(fallbackChoice);
   this.openingApproved = false;
 });
 
@@ -108,11 +113,12 @@ When("the player has not approved the opening", function (this: MmsWorld) {
 });
 
 Then("intraday operation cannot start", function (this: MmsWorld) {
-  assert.equal(this.openingApproved, false);
+  assert.equal(this.dayState?.openingApproved, false);
+  assert.equal(canStartIntraday(this.dayState!), false);
   assert.equal(this.intradayActive, false);
 });
 
 When("the player performs Opening Approval", function (this: MmsWorld) {
-  this.openingApproved = true;
+  this.approveOpening();
   this.openIntraday();
 });

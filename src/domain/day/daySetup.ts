@@ -1,8 +1,21 @@
 import { getAssetById, getSectorById } from "../assets/assetCatalog";
 import { runDefaults } from "../balancing/runDefaults";
+import type { PreOpenCardId } from "../balancing/preOpenCardValues";
 import type { RunState } from "../run/runState";
 import { describeMorningNewsTarget, generateMorningNews, type MorningNews } from "./morningNews";
 import { generateTodayCondition, type TodayCondition } from "./todayCondition";
+
+export interface PreOpenCardEffect {
+  readonly sourceCardId: PreOpenCardId;
+  readonly budgetDelta: number;
+  readonly holdingRatioDelta: number;
+  readonly marketPressureDelta: number;
+  readonly surveillanceDelta: number;
+  readonly volatilityDelta: number;
+  readonly defenseReserve: number;
+  readonly effectDurationSec: number | null;
+  readonly revealsExtraBriefing: boolean;
+}
 
 export interface DayState {
   readonly dayIndex: number;
@@ -12,7 +25,8 @@ export interface DayState {
   readonly targetBandMax: number;
   readonly crashLine: number;
   readonly startingBudgetForDay: number;
-  readonly preOpenCardId: string | null;
+  readonly preOpenCardId: PreOpenCardId | null;
+  readonly preOpenCardEffect: PreOpenCardEffect | null;
   readonly openingApproved: boolean;
 }
 
@@ -36,6 +50,7 @@ export function createDayState(runState: RunState, dayIndex = runState.currentDa
     crashLine: runDefaults.crashLine,
     startingBudgetForDay: runState.budget,
     preOpenCardId: null,
+    preOpenCardEffect: null,
     openingApproved: false
   };
 }

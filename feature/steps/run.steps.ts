@@ -150,8 +150,8 @@ Then("the player reviews the Market Briefing", function (this: MmsWorld) {
 });
 
 Then("the player chooses one Pre-open Card or {string}", function (this: MmsWorld, fallbackChoice: string) {
-  this.selectedPreOpenCard = fallbackChoice;
-  assert.ok(this.selectedPreOpenCard);
+  this.choosePreOpenCard(fallbackChoice);
+  assert.equal(this.selectedPreOpenCard, fallbackChoice);
 });
 
 Then("the player approves the opening", function (this: MmsWorld) {
