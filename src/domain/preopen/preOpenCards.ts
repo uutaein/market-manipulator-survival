@@ -12,6 +12,7 @@ import {
 
 export const preOpenCards = Object.values(preOpenCardValues);
 export const earlyPositioningBudgetPercentMin = 10;
+export const earlyPositioningBudgetPercentCarryoverMin = 0;
 export const earlyPositioningBudgetPercentMax = 50;
 export const earlyPositioningBudgetPercentStep = 5;
 
@@ -37,13 +38,21 @@ export function getPreOpenCardDisplayNames(): readonly string[] {
 }
 
 export function getAvailablePreOpenCards(
-  runState?: Pick<RunState, "holdingRatio" | "selectedAssetId"> | null
+  runState?: Pick<RunState, "currentDay" | "holdingRatio" | "selectedAssetId"> | null
 ): readonly PreOpenCardValue[] {
-  if (!hasPreOpenPositionContext(runState)) {
+  if (isInitialPreOpenDay(runState) || !hasPreOpenPositionContext(runState)) {
     return preOpenCards.filter((card) => card.id === "early_positioning");
   }
 
   return preOpenCards;
+}
+
+export function getEarlyPositioningBudgetPercentMin(
+  runState?: Pick<RunState, "currentDay" | "holdingRatio" | "selectedAssetId"> | null
+): number {
+  return !isInitialPreOpenDay(runState) && hasPreOpenPositionContext(runState)
+    ? earlyPositioningBudgetPercentCarryoverMin
+    : earlyPositioningBudgetPercentMin;
 }
 
 export function isPreOpenCardId(value: string): value is PreOpenCardId {
@@ -73,7 +82,7 @@ export function resolvePreOpenCardId(cardIdOrDisplayName: string): PreOpenCardId
 export function selectPreOpenCard(
   dayState: DayState,
   cardIdOrDisplayName: string,
-  runState?: Pick<RunState, "selectedSectorId" | "selectedAssetId" | "holdingRatio">,
+  runState?: Pick<RunState, "currentDay" | "selectedSectorId" | "selectedAssetId" | "holdingRatio">,
   options: PreOpenCardSelectionOptions = {}
 ): DayState {
   if (dayState.preOpenCardId) {
@@ -84,7 +93,7 @@ export function selectPreOpenCard(
   const card = getPreOpenCard(selection?.cardId ?? resolvePreOpenCardId(cardIdOrDisplayName));
 
   if (!getAvailablePreOpenCards(runState).some((candidate) => candidate.id === card.id)) {
-    throw new Error("Pre-open choice requires 사전 포지션 확보 when no carried position is available");
+    throw new Error("Pre-open choice requires 선취매 when no carried position is available");
   }
 
   const newsAssignmentDirection = selection?.newsAssignmentDirection ?? null;
@@ -97,7 +106,13 @@ export function selectPreOpenCard(
     morningNewsItems,
     morningNews: morningNewsItems[0],
     preOpenCardId: card.id,
-    preOpenCardEffect: createPreOpenCardEffect(dayState, card, newsAssignmentDirection, earlyPositioningBudgetPercent)
+    preOpenCardEffect: createPreOpenCardEffect(
+      dayState,
+      card,
+      newsAssignmentDirection,
+      earlyPositioningBudgetPercent,
+      runState
+    )
   };
 }
 
@@ -105,6 +120,12 @@ function hasPreOpenPositionContext(
   runState?: Pick<RunState, "holdingRatio" | "selectedAssetId"> | null
 ): boolean {
   return Boolean(runState?.selectedAssetId && runState.holdingRatio > 0);
+}
+
+function isInitialPreOpenDay(
+  runState?: Pick<RunState, "currentDay"> | null
+): boolean {
+  return runState?.currentDay === 1;
 }
 
 export function approveOpening(dayState: DayState): DayState {
@@ -141,12 +162,17 @@ function createPreOpenCardEffect(
   dayState: DayState,
   card: PreOpenCardValue,
   newsAssignmentDirection: NewsAssignmentDirection | null,
-  earlyPositioningBudgetPercent: number | null
+  earlyPositioningBudgetPercent: number | null,
+  runState?: Pick<RunState, "currentDay" | "holdingRatio" | "selectedAssetId"> | null
 ): PreOpenCardEffect {
   const newsAssignmentEffect = getNewsAssignmentEffect(newsAssignmentDirection);
   const earlyPositioningEffect =
     card.id === "early_positioning"
-      ? previewEarlyPositioningEffect(dayState.startingBudgetForDay, earlyPositioningBudgetPercent)
+      ? previewEarlyPositioningEffect(
+          dayState.startingBudgetForDay,
+          earlyPositioningBudgetPercent,
+          getEarlyPositioningBudgetPercentMin(runState)
+        )
       : null;
 
   return {
@@ -174,11 +200,15 @@ function createPreOpenCardEffect(
 
 export function previewEarlyPositioningEffect(
   currentBudget: number,
-  requestedPercent: number | null | undefined
+  requestedPercent: number | null | undefined,
+  minimumPercent = earlyPositioningBudgetPercentMin
 ): EarlyPositioningPreviewEffect {
-  const earlyPositioningBudgetPercent = normalizeEarlyPositioningBudgetPercent(requestedPercent ?? 20);
+  const earlyPositioningBudgetPercent = normalizeEarlyPositioningBudgetPercent(
+    requestedPercent ?? minimumPercent,
+    minimumPercent
+  );
   const budgetSpend = round1((Math.max(0, currentBudget) * earlyPositioningBudgetPercent) / 100);
-  const holdingRatioDelta = round1(Math.max(1, (budgetSpend / 100) * 100));
+  const holdingRatioDelta = budgetSpend <= 0 ? 0 : round1(Math.max(1, (budgetSpend / 100) * 100));
   const scale = holdingRatioDelta / 10;
 
   return {
@@ -191,8 +221,11 @@ export function previewEarlyPositioningEffect(
   };
 }
 
-export function normalizeEarlyPositioningBudgetPercent(value: number): number {
-  const clamped = Math.min(earlyPositioningBudgetPercentMax, Math.max(earlyPositioningBudgetPercentMin, value));
+export function normalizeEarlyPositioningBudgetPercent(
+  value: number,
+  minimumPercent = earlyPositioningBudgetPercentMin
+): number {
+  const clamped = Math.min(earlyPositioningBudgetPercentMax, Math.max(minimumPercent, value));
   return Math.round(clamped / earlyPositioningBudgetPercentStep) * earlyPositioningBudgetPercentStep;
 }
 
@@ -235,7 +268,9 @@ function parsePreOpenCardSelection(cardIdOrDisplayName: string): {
   readonly newsAssignmentDirection: NewsAssignmentDirection | null;
   readonly earlyPositioningBudgetPercent: number | null;
 } | null {
-  const earlyPositioningMatch = /^(?:사전 포지션 확보|early_positioning)\s*:?\s*(\d{1,3})%?$/.exec(cardIdOrDisplayName);
+  const earlyPositioningMatch = /^(?:선취매|사전 포지션 확보|early_positioning)\s*:?\s*(\d{1,3})%?$/.exec(
+    cardIdOrDisplayName
+  );
 
   if (earlyPositioningMatch) {
     return {

@@ -166,15 +166,16 @@ export function tickManualActionCooldowns(state: IntradayState, seconds: number 
     const remainingSec = Math.max(0, effect.remainingSec - seconds);
     const cardMultiplier = getActionEffectMultiplier(state, effect.actionId);
     const surveillanceMultiplier = getActionSurveillanceMultiplier(state, effect.actionId);
+    const impactMultiplier = getActionImpactMultiplier(state, effect.actionId);
 
     const pressureBonus = effect.actionId === "liquidity_supply" ? state.liquiditySupplyPressureBonus : 0;
 
-    effectDelta.marketPressure += (action.marketPressureDelta + pressureBonus) * cardMultiplier * fraction;
+    effectDelta.marketPressure += (action.marketPressureDelta + pressureBonus) * cardMultiplier * impactMultiplier * fraction;
     effectDelta.marketLiquidity += action.marketLiquidityDelta * cardMultiplier * fraction;
-    effectDelta.personalParticipation += action.personalParticipationDelta * cardMultiplier * fraction;
+    effectDelta.personalParticipation += action.personalParticipationDelta * cardMultiplier * impactMultiplier * fraction;
     effectDelta.holdingRatio += action.holdingRatioDelta * fraction;
     effectDelta.surveillance += action.surveillanceDelta * surveillanceMultiplier * fraction;
-    effectDelta.volatility += action.volatilityDelta * cardMultiplier * fraction;
+    effectDelta.volatility += action.volatilityDelta * cardMultiplier * impactMultiplier * fraction;
 
     return remainingSec > 0 ? [{ ...effect, remainingSec }] : [];
   });
@@ -204,8 +205,9 @@ export function getManualActionBudgetDelta(state: IntradayState, actionId: Manua
     return action.budgetDelta;
   }
 
-  const positionMarketValue = (state.currentPrice * state.heldUnits) / runDefaults.fictionalLedgerScale;
-  return round1(clamp(positionMarketValue * 0.78, 6, 42));
+  const positionMarketValue = getNormalizedPositionMarketValue(state);
+  const settlementRatio = getPositionSettlementRatio(state, action);
+  return round1(clamp(positionMarketValue * settlementRatio * 0.72, 0, 18));
 }
 
 function getActionEffectMultiplier(state: IntradayState, actionId: ManualActionId): number {
@@ -230,6 +232,30 @@ function getActionSurveillanceMultiplier(state: IntradayState, actionId: ManualA
   }
 
   return 1;
+}
+
+function getActionImpactMultiplier(state: IntradayState, actionId: ManualActionId): number {
+  if (actionId === "position_settlement") {
+    return state.positionSettlementImpactMultiplier;
+  }
+
+  return 1;
+}
+
+function getPositionSettlementRatio(state: IntradayState, action: { readonly holdingRatioDelta: number }): number {
+  if (state.holdingRatio <= 0 || action.holdingRatioDelta >= 0) {
+    return 0;
+  }
+
+  return clamp(Math.abs(action.holdingRatioDelta) / state.holdingRatio, 0, 1);
+}
+
+function getNormalizedPositionMarketValue(state: IntradayState): number {
+  if (state.averageEntryPrice <= 0 || state.holdingRatio <= 0) {
+    return 0;
+  }
+
+  return state.holdingRatio * (state.currentPrice / state.averageEntryPrice);
 }
 
 function updatePositionAccountingForActionProgress(previousState: IntradayState, nextState: IntradayState): IntradayState {

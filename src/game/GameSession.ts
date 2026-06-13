@@ -21,6 +21,7 @@ import {
   type AutoCardChoice,
   type AutoCardEffectResult
 } from "../domain/intraday/autoCards";
+import { applyChartPatternInfluence, type ChartPatternInfluenceResult } from "../domain/intraday/chartPatternInfluence";
 import {
   applyDocumentEventChoice,
   evaluateDocumentEvent,
@@ -39,7 +40,12 @@ import {
   saveCurrentRun,
   saveFinalSettlement
 } from "../domain/persistence/localPersistence";
-import { approveOpening, selectPreOpenCard, type PreOpenCardSelectionOptions } from "../domain/preopen/preOpenCards";
+import {
+  approveOpening,
+  getAvailablePreOpenCards,
+  selectPreOpenCard,
+  type PreOpenCardSelectionOptions
+} from "../domain/preopen/preOpenCards";
 import { runDefaults } from "../domain/balancing/runDefaults";
 import { createRunState, restartRunWithSameSeed, type AutoCardState, type RunState } from "../domain/run/runState";
 import { prepareNextDayCarryover } from "../domain/settlement/carryover";
@@ -68,6 +74,7 @@ export interface IntradayMoneyLedger {
   readonly heldUnits: number;
   readonly fictionalFloatUnits: number;
   readonly positionMarketValue: number;
+  readonly totalAccountValue: number;
   readonly unrealizedPositionProfitLoss: number;
   readonly spentBudget: number;
   readonly recoveredBudget: number;
@@ -92,6 +99,14 @@ interface ManualActionChartResponse {
     readonly priceDelta: number;
     readonly volumeMultiplier: number;
   }[];
+}
+
+interface BreakoutImpulseResult {
+  readonly state: IntradayState;
+  readonly applied: boolean;
+  readonly previousHighPercent: number;
+  readonly breakoutClosePercent: number;
+  readonly volumeMultiplier: number;
 }
 
 export class GameSession {
@@ -274,7 +289,7 @@ export class GameSession {
 
   approveOpening(): DayState {
     if (!this.ensureDay().preOpenCardId) {
-      this.selectPreOpenCard("관망");
+      this.selectPreOpenCard(getDefaultPreOpenChoice(this.ensureRun()));
     }
 
     this.dayState = approveOpening(this.ensureDay());
@@ -315,9 +330,20 @@ export class GameSession {
       runSeed: runState.runSeed,
       dayIndex: runState.currentDay
     });
-    const advancedState = advanceIntradayTime(tickedState, 1);
+    const patternResult = applyChartPatternInfluence(tickedState, this.priceHistory, {
+      runSeed: runState.runSeed,
+      dayIndex: runState.currentDay
+    });
+    const breakoutResult = this.applyBreakoutImpulse(patternResult.state);
+    const advancedState = advanceIntradayTime(breakoutResult.state, 1);
     const autoCardState = this.applyDueAutoCardEffects(advancedState);
     this.intradayState = this.applyRetailSwarmTransitionRisk(autoCardState);
+    if (patternResult.applied) {
+      this.recordChartPatternHistory(this.intradayState, patternResult);
+    }
+    if (breakoutResult.applied) {
+      this.recordBreakoutHistory(this.intradayState, breakoutResult);
+    }
     this.recordPriceHistory(this.intradayState);
     this.advanceMarketBoard();
 
@@ -547,11 +573,11 @@ export class GameSession {
       return null;
     }
 
-    const assessedProfitLoss = round1((state.priceChangePercent * state.holdingRatio) / 12);
-    const positionMarketValue = round1((state.currentPrice * state.heldUnits) / runDefaults.fictionalLedgerScale);
-    const unrealizedPositionProfitLoss = round1(
-      ((state.currentPrice - state.averageEntryPrice) * state.heldUnits) / runDefaults.fictionalLedgerScale
-    );
+    const positionMarketValue = getNormalizedPositionMarketValue(state);
+    const positionCostBasis = getNormalizedPositionCostBasis(state);
+    const unrealizedPositionProfitLoss = round1(positionMarketValue - positionCostBasis);
+    const totalAccountValue = round1(state.budget + positionMarketValue);
+    const assessedProfitLoss = round1(totalAccountValue - this.intradayStartingBudget);
     const netBudgetUsed = round1(this.intradaySpentBudget - this.intradayRecoveredBudget);
 
     return {
@@ -563,13 +589,14 @@ export class GameSession {
       heldUnits: state.heldUnits,
       fictionalFloatUnits: state.fictionalFloatUnits,
       positionMarketValue,
+      totalAccountValue,
       unrealizedPositionProfitLoss,
       spentBudget: round1(this.intradaySpentBudget),
       recoveredBudget: round1(this.intradayRecoveredBudget),
       netBudgetUsed,
       budgetChange: round1(state.budget - this.intradayStartingBudget),
       assessedProfitLoss,
-      estimatedNetProfitLoss: round1(assessedProfitLoss - netBudgetUsed)
+      estimatedNetProfitLoss: assessedProfitLoss
     };
   }
 
@@ -613,6 +640,77 @@ export class GameSession {
     }
 
     this.priceHistory = [...this.priceHistory, point].slice(-runDefaults.intradayDurationSec - 1);
+  }
+
+  private applyBreakoutImpulse(state: IntradayState): BreakoutImpulseResult {
+    const previousHighPercent = getRecentPriceHighPercent(this.priceHistory, 45);
+    const crossedPreviousHigh =
+      previousHighPercent > 0 &&
+      state.priceChangePercent > previousHighPercent + 0.08 &&
+      state.priceChangePercent - state.priceDeltaPerTick <= previousHighPercent + 0.03;
+    const pressureScore =
+      Math.max(0, state.marketPressure) * 0.45 +
+      Math.max(0, state.personalParticipation - 35) * 0.28 +
+      Math.max(0, state.marketLiquidity - 45) * 0.18 +
+      Math.max(0, state.activeNewsPricePressure) * 120;
+
+    if (!crossedPreviousHigh || pressureScore < 14) {
+      return {
+        state,
+        applied: false,
+        previousHighPercent,
+        breakoutClosePercent: state.priceChangePercent,
+        volumeMultiplier: 1
+      };
+    }
+
+    const impulsePercent = round1(Math.min(2.4, Math.max(0.6, 0.45 + pressureScore / 34)));
+    const breakoutClosePercent = state.priceChangePercent + impulsePercent;
+    const volumeMultiplier = round1(Math.min(4.2, 1.8 + pressureScore / 28));
+
+    return {
+      state: clampIntradayState({
+        ...state,
+        priceChangePercent: breakoutClosePercent,
+        priceDeltaPerTick: state.priceDeltaPerTick + impulsePercent
+      }),
+      applied: true,
+      previousHighPercent,
+      breakoutClosePercent,
+      volumeMultiplier
+    };
+  }
+
+  private recordBreakoutHistory(state: IntradayState, breakout: BreakoutImpulseResult): void {
+    const preBreakoutPrice = Math.max(
+      breakout.previousHighPercent - 0.08,
+      state.priceChangePercent - state.priceDeltaPerTick
+    );
+    this.recordPriceHistory(state, {
+      elapsedOffsetSec: -0.72,
+      priceChangePercent: preBreakoutPrice,
+      volumeMultiplier: 0.9
+    });
+    this.recordPriceHistory(state, {
+      elapsedOffsetSec: -0.28,
+      priceChangePercent: breakout.previousHighPercent + 0.12,
+      volumeMultiplier: breakout.volumeMultiplier
+    });
+    this.recordPriceHistory(state, {
+      elapsedOffsetSec: -0.05,
+      priceChangePercent: breakout.breakoutClosePercent,
+      volumeMultiplier: breakout.volumeMultiplier * 1.25
+    });
+  }
+
+  private recordChartPatternHistory(state: IntradayState, pattern: ChartPatternInfluenceResult): void {
+    for (const point of pattern.points) {
+      this.recordPriceHistory(state, {
+        elapsedOffsetSec: point.elapsedOffsetSec,
+        priceChangePercent: point.priceChangePercent,
+        volumeMultiplier: point.volumeMultiplier
+      });
+    }
   }
 
   private applyManualActionChartResponse(result: ManualActionResult): void {
@@ -791,6 +889,22 @@ function round1(value: number): number {
   return Math.round(value * 10) / 10;
 }
 
+function getNormalizedPositionMarketValue(state: IntradayState): number {
+  if (state.averageEntryPrice <= 0 || state.holdingRatio <= 0) {
+    return 0;
+  }
+
+  return round1(state.holdingRatio * (state.currentPrice / state.averageEntryPrice));
+}
+
+function getNormalizedPositionCostBasis(state: IntradayState): number {
+  if (state.holdingRatio <= 0) {
+    return 0;
+  }
+
+  return round1(state.holdingRatio);
+}
+
 function getIntradayElapsedSec(state: IntradayState): number {
   return runDefaults.intradayDurationSec - state.timeRemainingSec;
 }
@@ -798,7 +912,7 @@ function getIntradayElapsedSec(state: IntradayState): number {
 function createPriceHistoryPoint(state: IntradayState, adjustment: PriceHistoryAdjustment = {}): PriceHistoryPoint {
   const elapsedSec = Math.min(
     runDefaults.intradayDurationSec,
-    getIntradayElapsedSec(state) + (adjustment.elapsedOffsetSec ?? 0)
+    Math.max(0, getIntradayElapsedSec(state) + (adjustment.elapsedOffsetSec ?? 0))
   );
   const volumeMultiplier = adjustment.volumeMultiplier ?? 1;
 
@@ -818,6 +932,27 @@ function calculateFictionalVolume(state: IntradayState): number {
   const simulatorVolumeFactor = state.latestPriceComponents?.externalSimulatorVolumeFactor ?? 1;
 
   return Math.round((80 + participation + liquidity + volatility + pressure + tickImpulse) * simulatorVolumeFactor);
+}
+
+function getRecentPriceHighPercent(history: readonly PriceHistoryPoint[], lookbackSec: number): number {
+  const latestElapsedSec = history[history.length - 1]?.elapsedSec ?? 0;
+  const recentPoints = history.filter((point) => latestElapsedSec - point.elapsedSec <= lookbackSec);
+
+  if (recentPoints.length === 0) {
+    return 0;
+  }
+
+  return Math.max(...recentPoints.map((point) => point.priceChangePercent));
+}
+
+function getDefaultPreOpenChoice(runState: RunState): string {
+  const availableCards = getAvailablePreOpenCards(runState);
+
+  if (availableCards.length === 1 && availableCards[0]?.id === "early_positioning") {
+    return "선취매";
+  }
+
+  return "관망";
 }
 
 function getImmediateFailureReason(state: IntradayState): string | null {

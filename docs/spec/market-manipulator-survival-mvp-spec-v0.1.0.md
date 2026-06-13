@@ -211,7 +211,7 @@ Asset news can target the player asset or another fictional asset. Non-player as
 
 ### 7.2 Pre-open Cards
 
-1. 사전 포지션 확보
+1. 선취매
 2. 뉴스 배정
 3. 종목 분석
 4. 관망
@@ -225,7 +225,7 @@ The player can choose at most 1 per Day before Morning News is revealed.
 
 Both directions target the player-selected fictional asset for the current Day. Positive assignment improves attention and upward-action legitimacy. Negative assignment increases downside context and reduces surveillance burden for position settlement.
 
-`사전 포지션 확보` uses a drag-style investment ratio control instead of a fixed budget cost. The player chooses 10~50% of the current Day budget; the chosen ratio determines budget spent and position acquired. The resulting average entry price starts roughly 5~20% above the opening price using deterministic Run/asset randomness.
+`선취매` uses a drag-style investment ratio control instead of a fixed budget cost. On Day 1 or when no position carries over, the player chooses 10~50% of the current Day budget. From Day 2 onward, if a position carries over, the player chooses 0~50% because additional accumulation is optional. The chosen ratio determines budget spent and position acquired. The resulting average entry price starts roughly 2~7% above the opening price using deterministic Run/asset randomness, so the initial valuation can show a loss before intraday pressure changes the price.
 
 The Intraday chart must include a fictional order-book/depth panel for the player asset. Thin sell-side depth should make upward pressure more responsive; thin buy-side depth should make downward pressure more responsive. This is an abstract game model, not real order-book data.
 
@@ -234,7 +234,7 @@ The Intraday chart must include a fictional order-book/depth panel for the playe
 1. 유동성 공급
 2. 가격 추진
 3. 과열 해소
-4. 포지션 정리
+4. 포지션 일부 정리
 
 Manual actions are unavailable while a document event or auto card reward choice is open.
 

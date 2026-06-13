@@ -141,7 +141,7 @@ export const documentEventValues = {
     })
   ]),
   internal_risk_memo: createEvent("internal_risk_memo", "내부 리스크 메모", 5, [
-    choice("stable", "포지션 정리", {
+    choice("stable", "포지션 일부 정리", {
       ...noEffect,
       holdingRatioDelta: -12,
       budgetDelta: 8,

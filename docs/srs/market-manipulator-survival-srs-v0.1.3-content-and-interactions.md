@@ -66,7 +66,7 @@ MVP Pre-open Card는 4개다.
 
 | Card ID | 표시명 | 역할 |
 | --- | --- | --- |
-| `early_positioning` | 사전 포지션 확보 | 현재 예산의 10~50% 투입 비율을 조절해 보유 비중을 늘리지만 평균단가가 불리해지는 카드 |
+| `early_positioning` | 선취매 | Day 1 또는 보유 포지션이 없을 때는 현재 예산의 10~50%, Day 2 이후 보유 포지션이 있으면 0~50% 투입 비율을 조절해 보유 비중을 늘리거나 유지하는 카드 |
 | `news_assignment` | 뉴스 배정 | 아침 뉴스 공개 전에 내 종목 호재 또는 악재 방향을 배정하는 카드 |
 | `asset_analysis` | 종목 분석 | 가격 추진과 과열 해소 효과를 강화하는 카드 |
 | `wait_and_see` | 관망 | 아무 카드도 쓰지 않고 예산을 보전한 채 개장 |
@@ -79,7 +79,7 @@ MVP Pre-open Card는 4개다.
 | SRS-CONTENT-PREOPEN-004 | 개장 전 카드 선택은 Morning News 공개 전에 이뤄져야 한다. |
 | SRS-CONTENT-PREOPEN-005 | 카드 선택 후 Morning News / Market Briefing을 확인하고 개장 승인 액션을 통해 장중 단계로 진입해야 한다. |
 | SRS-CONTENT-PREOPEN-006 | `뉴스 배정`은 하나의 MVP 카드지만 `호재`와 `악재` 방향 버튼을 제공해야 한다. |
-| SRS-CONTENT-PREOPEN-007 | `사전 포지션 확보`는 고정 비용이 아니라 드래그형 투입 비율 UI로 현재 예산의 10~50%를 선택해야 한다. |
+| SRS-CONTENT-PREOPEN-007 | `선취매`는 고정 비용이 아니라 드래그형 투입 비율 UI를 사용해야 한다. Day 1 또는 보유 포지션이 없을 때는 10~50%, Day 2 이후 보유 포지션이 있으면 0~50%를 선택할 수 있어야 한다. |
 
 ---
 
@@ -92,7 +92,7 @@ MVP 장중 수동 액션은 4개다.
 | `liquidity_supply` | 유동성 공급 | 시장 유동성과 가격 반응성을 높인다. 예산을 소모하고 감시/변동성 리스크를 올릴 수 있다. |
 | `price_push` | 가격 추진 | 가격을 목표 밴드 방향으로 밀어준다. 강하지만 위험하다. |
 | `overheat_cooldown` | 과열 해소 | 가격, 개인 참여도, 변동성, 감시 리스크를 안정화한다. 상승 압력을 낮출 수 있다. |
-| `position_settlement` | 포지션 정리 | 보유 비중을 낮추고 예산을 회복한다. 가격 지지력이 약해질 수 있다. |
+| `position_settlement` | 포지션 일부 정리 | 보유 비중을 조금씩 낮추고 예산을 회복한다. 가격 지지력이 약해질 수 있다. |
 
 | ID | Requirement |
 | --- | --- |
@@ -115,7 +115,7 @@ MVP 장중 자동 카드는 8개다.
 | `news_amplifier` | 뉴스 증폭 | 현재 Morning News 효과 강화 |
 | `surveillance_buffer` | 감시 완충 | 감시도 증가량 완화 |
 | `competition_check` | 경쟁 견제 | 경쟁 압박 감소 |
-| `settlement_routine` | 정리 루틴 | 보유 비중과 예산 회수 보조 |
+| `settlement_routine` | 정리 루틴 | 포지션 일부 정리 시 시장 충격과 변동성 부담 완화 |
 
 | ID | Requirement |
 | --- | --- |

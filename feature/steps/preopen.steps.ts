@@ -4,6 +4,7 @@ import type { MmsWorld } from "../support/world";
 import { getAssetsBySector } from "../../src/domain/assets/assetCatalog";
 import { createDayState } from "../../src/domain/day/daySetup";
 import { isMorningNewsTemplateId, morningNewsTemplates } from "../../src/domain/day/morningNews";
+import { getEarlyPositioningEntryPremiumPercent } from "../../src/domain/intraday/intradayState";
 import { getActiveNewsPricePressure } from "../../src/domain/intraday/newsPressure";
 import { canStartIntraday, getAvailablePreOpenCards, hasStatEffect } from "../../src/domain/preopen/preOpenCards";
 
@@ -13,6 +14,23 @@ Given("a new Day begins", function (this: MmsWorld) {
 
 Given("a new Day begins before Morning News is revealed", function (this: MmsWorld) {
   this.beginDay();
+  this.visibleScreens.delete("Morning News");
+  this.visibleScreens.delete("Market Briefing");
+});
+
+Given("Day 2 begins before Morning News is revealed with a carried position", function (this: MmsWorld) {
+  if (!this.runState) {
+    this.startNewRun();
+  }
+
+  this.runState = {
+    ...this.runState!,
+    currentDay: 2,
+    holdingRatio: 18
+  };
+  this.dayState = createDayState(this.runState);
+  this.currentDay = this.dayState.dayIndex;
+  this.visibleScreens.add("Pre-open Card");
   this.visibleScreens.delete("Morning News");
   this.visibleScreens.delete("Market Briefing");
 });
@@ -178,7 +196,16 @@ Then("Morning News and the Market Briefing are shown", function (this: MmsWorld)
 });
 
 Given("the player does not want to spend budget before opening", function (this: MmsWorld) {
-  this.beginDay();
+  if (!this.runState) {
+    this.startNewRun();
+  }
+
+  this.runState = {
+    ...this.runState!,
+    currentDay: 2,
+    holdingRatio: 18
+  };
+  this.dayState = createDayState(this.runState);
   this.selectedPreOpenCard = "";
 });
 
@@ -190,7 +217,7 @@ When("the player chooses early positioning with {int} percent of current budget"
   this: MmsWorld,
   percent: number
 ) {
-  this.choosePreOpenCard("사전 포지션 확보", {
+  this.choosePreOpenCard("선취매", {
     earlyPositioningBudgetPercent: percent
   });
 });
@@ -205,6 +232,48 @@ Then("the early positioning effect stores the chosen budget ratio", function (th
   assert.equal(this.dayState?.preOpenCardEffect?.earlyPositioningBudgetPercent, 35);
 });
 
+Then("the early positioning effect stores {int} percent as the chosen budget ratio", function (
+  this: MmsWorld,
+  percent: number
+) {
+  assert.equal(this.dayState?.preOpenCardEffect?.earlyPositioningBudgetPercent, percent);
+});
+
+Then("the early positioning premium is between 2 and 7 percent", function (this: MmsWorld) {
+  assert.ok(this.runState);
+  const premium = getEarlyPositioningEntryPremiumPercent(this.runState);
+
+  assert.ok(premium >= 2);
+  assert.ok(premium <= 7);
+});
+
+Then("the average entry price is above the opening price", function (this: MmsWorld) {
+  assert.ok(this.intradayState);
+  assert.ok(this.intradayState.averageEntryPrice > this.intradayState.openingPrice);
+});
+
+Then("the initial position valuation is below its cost basis", function (this: MmsWorld) {
+  assert.ok(this.intradayState);
+  const positionValue = this.intradayState.holdingRatio * (this.intradayState.currentPrice / this.intradayState.averageEntryPrice);
+  const costBasis = this.intradayState.holdingRatio;
+
+  assert.ok(positionValue < costBasis);
+});
+
+Then("the initial total valuation is below the Day starting budget", function (this: MmsWorld) {
+  assert.ok(this.dayState);
+  assert.ok(this.intradayState);
+  const positionValue = this.intradayState.holdingRatio * (this.intradayState.currentPrice / this.intradayState.averageEntryPrice);
+  const totalValuation = this.intradayState.budget + positionValue;
+
+  assert.ok(totalValuation < this.dayState.startingBudgetForDay);
+});
+
+Then("no pre-open stat effect is applied for the early positioning choice", function (this: MmsWorld) {
+  assert.equal(this.dayState?.preOpenCardId, "early_positioning");
+  assert.equal(hasStatEffect(this.dayState!.preOpenCardEffect), false);
+});
+
 Then("no pre-open stat effect is applied", function (this: MmsWorld) {
   assert.equal(this.dayState?.preOpenCardId, "wait_and_see");
   assert.equal(hasStatEffect(this.dayState.preOpenCardEffect), false);
@@ -215,7 +284,16 @@ Then("the player's budget is preserved", function (this: MmsWorld) {
 });
 
 Given("the player has selected a Pre-open Card or {string}", function (this: MmsWorld, fallbackChoice: string) {
-  this.beginDay();
+  if (!this.runState) {
+    this.startNewRun();
+  }
+
+  this.runState = {
+    ...this.runState!,
+    currentDay: 2,
+    holdingRatio: 18
+  };
+  this.dayState = createDayState(this.runState);
   this.choosePreOpenCard(fallbackChoice);
   this.openingApproved = false;
 });

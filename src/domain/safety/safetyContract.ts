@@ -16,6 +16,7 @@ export const approvedSafeTerms = [
   "과열 해소",
   "가격 안정화",
   "포지션 정리",
+  "포지션 일부 정리",
   "신호 주문",
   "관심 신호"
 ] as const;
@@ -106,6 +107,7 @@ export function collectTerminologyContent(): readonly string[] {
     "개인 참여도",
     "시장 압력",
     "포지션 정리",
+    "포지션 일부 정리",
     "과열 해소"
   ];
 }

@@ -69,6 +69,7 @@ export interface IntradayState {
   readonly liquiditySupplyPressureBonus: number;
   readonly upwardActionSurveillanceMultiplier: number;
   readonly positionSettlementSurveillanceMultiplier: number;
+  readonly positionSettlementImpactMultiplier: number;
   readonly retailSwarmState: RetailSwarmState;
   readonly manualActionCooldowns: Readonly<Record<ManualActionId, number>>;
   readonly activeManualActionEffects: readonly ActiveManualActionEffect[];
@@ -129,6 +130,7 @@ export function createIntradayState(runState: RunState, dayState: DayState): Int
     liquiditySupplyPressureBonus: effect?.liquiditySupplyPressureBonus ?? 0,
     upwardActionSurveillanceMultiplier: effect?.upwardActionSurveillanceMultiplier ?? 1,
     positionSettlementSurveillanceMultiplier: effect?.positionSettlementSurveillanceMultiplier ?? 1,
+    positionSettlementImpactMultiplier: 1,
     retailSwarmState: "interest",
     manualActionCooldowns: createEmptyManualActionCooldowns(),
     activeManualActionEffects: [],
@@ -182,7 +184,8 @@ export function clampIntradayState(state: IntradayState): IntradayState {
     marketLiquidity: clamp01To100(state.marketLiquidity),
     surveillance: clamp01To100(state.surveillance),
     volatility: clamp01To100(state.volatility),
-    competitionPressure: clamp01To100(state.competitionPressure)
+    competitionPressure: clamp01To100(state.competitionPressure),
+    positionSettlementImpactMultiplier: clamp(state.positionSettlementImpactMultiplier, 0.4, 1)
   };
   const currentPrice = calculateCurrentPrice(clamped.openingPrice, clamped.priceChangePercent);
   const fictionalFloatUnits = Math.max(1, Math.round(clamped.fictionalFloatUnits));

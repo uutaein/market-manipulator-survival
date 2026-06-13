@@ -80,7 +80,7 @@ Recommended baseline:
 | --- | ---: |
 | starting budget | 100 |
 | minimum budget threshold | 10 |
-| initial holding ratio | 15 |
+| initial holding ratio | 0 |
 | initial personal participation | 30 |
 | initial market liquidity | 50 |
 | initial surveillance | 10 |
@@ -115,7 +115,7 @@ Pre-open card names and baseline roles are fixed in SRS v0.1.6.
 
 Current baseline:
 
-1. `사전 포지션 확보` increases holding ratio with a slightly worse average entry price,
+1. `선취매` increases holding ratio with a slightly worse average entry price,
 2. `뉴스 배정` lets the player choose a positive or negative news direction for the selected fictional asset,
 3. `종목 분석` strengthens price-push and overheat-cooldown effects,
 4. `관망` no-effect behavior.

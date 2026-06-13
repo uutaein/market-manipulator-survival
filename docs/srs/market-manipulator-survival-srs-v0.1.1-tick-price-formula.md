@@ -217,14 +217,14 @@ MVP 권장 수치는 다음이다.
 | 유동성 공급 | `marketLiquidity +18`, `volatility +4`, `surveillance +3`, `budget -6` | 즉시 반영, 유동성은 20초에 걸쳐 감소 |
 | 가격 추진 | `marketPressure +35`, `volatility +6`, `surveillance +5`, `budget -8` | 12초 |
 | 과열 해소 | `marketPressure -18`, `personalParticipation -12`, `volatility -10`, `surveillance -4`, `budget -4` | 즉시 반영 |
-| 포지션 정리 | `holdingRatio -10`, `budget +7`, `marketPressure -12`, `volatility +3` | 즉시 반영 |
+| 포지션 일부 정리 | `holdingRatio -10`, current-price-based partial `budget` recovery, `marketPressure` 감소, `volatility` 증가 | 점진 적용 |
 
 | ID | Requirement |
 | --- | --- |
 | SRS-PRICE-ACTION-001 | 수동 액션은 가격을 직접 고정값으로 이동시키지 않고, 상태 변수를 통해 Tick 공식에 영향을 줘야 한다. |
 | SRS-PRICE-ACTION-002 | `가격 추진`은 가장 강한 단기 상승 압력 액션이어야 한다. |
 | SRS-PRICE-ACTION-003 | `과열 해소`는 상승 압력을 줄일 수 있지만 감시도와 변동성 안정에 기여해야 한다. |
-| SRS-PRICE-ACTION-004 | `포지션 정리`는 보유 비중과 정산 리스크를 낮추지만 가격 지지력을 약화시켜야 한다. |
+| SRS-PRICE-ACTION-004 | `포지션 일부 정리`는 보유 비중과 정산 리스크를 낮추지만 가격 지지력을 약화시켜야 한다. |
 
 ---
 
@@ -243,7 +243,7 @@ MVP 권장 수치는 Lv.1 기준이며, Lv.2~Lv.3은 효과량 또는 발동 주
 | 뉴스 증폭 | 15초 | `activeNewsPricePressure` 20% 강화 |
 | 감시 완충 | 16초 | 다음 감시도 증가량 20% 감소 |
 | 경쟁 견제 | 14초 | `competitionPressure -5`, `surveillance +1` |
-| 정리 루틴 | 18초 | `holdingRatio -3`, `budget +2`, `marketPressure -2` |
+| 정리 루틴 | 18초 | `포지션 일부 정리`의 시장 충격과 변동성 부담 완화. 자동 매도 없음 |
 
 | 레벨 | 개선 규칙 |
 | --- | --- |

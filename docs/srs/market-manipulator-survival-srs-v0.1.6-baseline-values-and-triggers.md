@@ -165,7 +165,7 @@ The Market Dashboard should update through a stable DOM row pool or equivalent r
 
 | Card | Baseline Effect |
 | --- | --- |
-| 사전 포지션 확보 | Player chooses 10~50% of current Day budget with a drag-style investment ratio. Budget spent is `currentBudget * selectedPercent`; holding, pressure, surveillance, and volatility scale from the invested amount. Average entry price starts roughly 5~20% above opening price using deterministic Run/asset randomness. Does not increase attention directly. |
+| 선취매 | On Day 1 or when no carried position exists, player chooses 10~50% of current Day budget with a drag-style investment ratio. From Day 2 onward, if a position carries over, the player may choose 0~50% because additional accumulation is optional. Budget spent is `currentBudget * selectedPercent`; holding, pressure, surveillance, and volatility scale from the invested amount. Average entry price starts roughly 2~7% above opening price using deterministic Run/asset randomness, so the initial position valuation may show a loss. Does not increase attention directly. |
 | 뉴스 배정 | `budget -8`. Player chooses `호재` or `악재` before Morning News is revealed. The generated Morning News targets the player asset. |
 | 뉴스 배정: 호재 | Player asset positive news. Adds attention/upward context, lets liquidity supply add meaningful upward pressure, improves price-push effect, and reduces upward-action surveillance burden. |
 | 뉴스 배정: 악재 | Player asset negative news. Adds downside context and volatility, reduces position-settlement surveillance burden, but weakens price-push context. |
@@ -179,8 +179,8 @@ The Market Dashboard should update through a stable DOM row pool or equivalent r
 | SRS-BASE-PREOPEN-003 | `뉴스 배정` must target the player-selected fictional asset, not the whole market. |
 | SRS-BASE-PREOPEN-004 | `관망` must be a valid explicit choice. |
 | SRS-BASE-PREOPEN-005 | `뉴스 배정` is counted as one MVP card even though it exposes `호재` and `악재` direction buttons. |
-| SRS-BASE-PREOPEN-006 | `사전 포지션 확보` must not use a fixed budget cost. |
-| SRS-BASE-PREOPEN-007 | If no carried position context exists at Pre-open, only `사전 포지션 확보` may be selected. |
+| SRS-BASE-PREOPEN-006 | `선취매` must not use a fixed budget cost. |
+| SRS-BASE-PREOPEN-007 | On Day 1, only `선취매` may be selected. From Day 2 onward, other Pre-open Cards become available only when a carried position context exists. |
 | SRS-BASE-PREOPEN-008 | The Pre-open Card screen may show budget spend, remaining budget, and integer budget spend rate, but must not preview non-budget stat deltas. |
 
 ---
@@ -194,19 +194,19 @@ Manual actions are unavailable while a document event or auto card reward choice
 | 유동성 공급 | `budget -4` | 8 sec | Low-cost attention and liquidity setup. Gradually applies `marketPressure +5`, `marketLiquidity +22`, `personalParticipation +10`, `volatility +6`, `surveillance +2`. |
 | 가격 추진 | `budget -14` | 10 sec | High-cost upward pressure and position acquisition. Gradually applies `holdingRatio +4`, `marketPressure +58`, `marketLiquidity +8`, `personalParticipation +12`, `volatility +11`, `surveillance +7`, with average entry price rising when held units increase. |
 | 과열 해소 | `budget -3` | 12 sec | Low-cost downward stabilization while keeping activity visible. Gradually applies `marketPressure -46`, `marketLiquidity +6`, `personalParticipation +4`, `volatility -8`, `surveillance -2`. |
-| 포지션 정리 | current-price-based recovery | 14 sec | Full position cleanup with sharp exit shock. Budget recovery is based on current fictional position value. Gradually applies `holdingRatio -100`, `marketPressure -110`, `marketLiquidity +10`, `personalParticipation +16`, `surveillance +7`, `volatility +30`. |
+| 포지션 일부 정리 | current-price-based partial recovery | 10 sec | Partial position cleanup with visible exit shock. Budget recovery is based on the normalized current fictional position value. Gradually applies `holdingRatio -10`, `marketPressure -34`, `marketLiquidity +6`, `personalParticipation +8`, `surveillance +4`, `volatility +12`. |
 
 | ID | Requirement |
 | --- | --- |
 | SRS-BASE-ACTION-001 | Manual action buttons must show disabled state when the player cannot pay the cost, the action is executing, or the action is on cooldown. |
-| SRS-BASE-ACTION-002 | Budget recovery from `포지션 정리` must not raise budget above a future configurable Run budget cap if one is added. MVP may omit that cap. |
+| SRS-BASE-ACTION-002 | Budget recovery from `포지션 일부 정리` must not raise budget above a future configurable Run budget cap if one is added. MVP may omit that cap. |
 | SRS-BASE-ACTION-003 | Manual action values must live in `manualActionValues` or an equivalent balancing group. |
 | SRS-BASE-ACTION-004 | Manual action budget cost/recovery is committed immediately, but non-budget stat effects are applied gradually over the action execution duration. |
 | SRS-BASE-ACTION-005 | An executing manual action button must blink and show remaining seconds; the player cannot cancel or re-trigger that action while it is executing. |
-| SRS-BASE-ACTION-006 | If `포지션 정리` reduces holding ratio to 0 and no manual action is still executing, the player may use an intraday desk-reposition flow to choose a new fictional sector/asset while preserving Run/Day risk state. |
-| SRS-BASE-ACTION-007 | The intended MVP action rhythm is `사전 포지션 확보` followed by liquidity/attention setup, high-cost price pressure, overheat stabilization, and full position cleanup. |
+| SRS-BASE-ACTION-006 | If repeated `포지션 일부 정리` actions reduce holding ratio to 0 and no manual action is still executing, the player may use an intraday desk-reposition flow to choose a new fictional sector/asset while preserving Run/Day risk state. |
+| SRS-BASE-ACTION-007 | The intended MVP action rhythm is `선취매` followed by liquidity/attention setup, high-cost price pressure, overheat stabilization, and repeated partial position cleanup. |
 | SRS-BASE-ACTION-008 | `가격 추진` must increase held units and average entry price while spending budget. |
-| SRS-BASE-ACTION-009 | `포지션 정리` must reduce held units and recover budget based on current fictional price context. |
+| SRS-BASE-ACTION-009 | `포지션 일부 정리` must reduce held units and recover budget based on current fictional price context. |
 
 ### 6.1 Intraday Money Flow Display
 
@@ -219,6 +219,8 @@ The Intraday screen must expose simple fictional budget-flow feedback:
 | 투입 | `사용 - 회수` |
 | 현재가 / 시초가 / 평균단가 | Fictional quote context for the player asset |
 | 보유 / 매물 / 비중 | Held fictional units, fictional float units, and holding ratio |
+| 총 평가 | Current budget plus normalized fictional position market value |
+| 총 손익 | Total account value minus the Day starting budget |
 | 포지션 평가 | Fictional position market value |
 | 평가손익 | Unrealized fictional position gain/loss from current price versus average entry |
 
@@ -257,7 +259,7 @@ If fewer than 3 eligible choices exist, show all eligible choices.
 | 뉴스 증폭 | 15 sec | Current Morning News pressure +20% while active | period |
 | 감시 완충 | 16 sec | Next surveillance increase reduced by 20% | effect |
 | 경쟁 견제 | 14 sec | `competitionPressure -5`, `surveillance +1` | effect |
-| 정리 루틴 | 18 sec | `holdingRatio -3`, `budget +2`, `marketPressure -2` | period |
+| 정리 루틴 | 18 sec | Reduces market impact and volatility burden when `포지션 일부 정리` is used; does not sell automatically | period |
 
 Level scaling:
 

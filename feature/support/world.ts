@@ -36,6 +36,7 @@ import type { CalculationSafetyReport, SafetyValidationReport } from "../../src/
 import {
   approveOpening,
   canStartIntraday,
+  getAvailablePreOpenCards,
   getPreOpenCardDisplayNames,
   selectPreOpenCard,
   type PreOpenCardSelectionOptions
@@ -52,6 +53,16 @@ export const excludedManualActions = new Set([
   "군중 진정",
   "관심 신호"
 ]);
+
+function getDefaultPreOpenChoice(runState: RunState | undefined): string {
+  const availableCards = getAvailablePreOpenCards(runState);
+
+  if (availableCards.length === 1 && availableCards[0]?.id === "early_positioning") {
+    return "선취매";
+  }
+
+  return "관망";
+}
 
 export const dayResultCategories = new Set([
   "완전 성공",
@@ -247,7 +258,7 @@ export class MmsWorld extends World {
     }
 
     if (!this.dayState!.preOpenCardId) {
-      this.choosePreOpenCard("관망");
+      this.choosePreOpenCard(getDefaultPreOpenChoice(this.runState));
     }
 
     if (!this.dayState!.openingApproved) {

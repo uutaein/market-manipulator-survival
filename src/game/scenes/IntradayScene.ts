@@ -321,6 +321,7 @@ export class IntradayScene extends BaseDocumentScene {
           `보유 ${formatUnits(ledger.heldUnits)} / 매물 ${formatUnits(ledger.fictionalFloatUnits)} / 비중 ${formatNumber(
             state.holdingRatio
           )}%`,
+          `총 평가 ${formatBudget(ledger.totalAccountValue)} / 총 손익 ${formatSignedBudget(ledger.estimatedNetProfitLoss)}`,
           `포지션 평가 ${formatBudget(ledger.positionMarketValue)} / 평가손익 ${formatSignedBudget(
             ledger.unrealizedPositionProfitLoss
           )}`,
@@ -356,10 +357,9 @@ export class IntradayScene extends BaseDocumentScene {
     }
 
     const pnl = ledger.estimatedNetProfitLoss;
-    const unrealized = ledger.unrealizedPositionProfitLoss;
     const isProfit = pnl >= 0;
 
-    this.pnlBadgeText.setText(`손익 ${formatSignedBudget(pnl)}   평가 ${formatSignedBudget(unrealized)}`);
+    this.pnlBadgeText.setText(`손익 ${formatSignedBudget(pnl)}   총 평가 ${formatBudget(ledger.totalAccountValue)}`);
     this.pnlBadgeText.setStyle({
       color: isProfit ? "#00c087" : "#f6465d",
       backgroundColor: isProfit ? "#0b1f19" : "#241316",
@@ -443,9 +443,9 @@ export class IntradayScene extends BaseDocumentScene {
     const shell = this.createModalShell({
       eyebrow: "AUTO CARD REWARD",
       title: "자동 카드 선택",
-      body: "새 자동 카드를 획득하거나 기존 자동 카드를 강화합니다.\n선택 전까지 장중 운용은 보류됩니다.",
+      body: "자동 카드는 직접 누르지 않아도 장중에 주기적으로 발동됩니다.\n새 카드를 얻거나 기존 카드를 Lv.3까지 강화합니다.\n선택 전까지 장중 운용은 보류됩니다.",
       panelWidth: 650,
-      panelHeight: 370,
+      panelHeight: 420,
       accentColor: 0xd9c58b
     });
     this.autoChoiceObjects.push(...shell.objects);
@@ -456,11 +456,16 @@ export class IntradayScene extends BaseDocumentScene {
       const prefix = choice.type === "new" ? "NEW CARD" : "LEVEL UP";
       const currentLevel = runState.autoCards.find((card) => card.cardId === choice.cardId)?.level ?? 0;
       const nextLevel = currentLevel >= 2 ? 3 : currentLevel === 1 ? 2 : 1;
-      const objects = this.addModalChoice(
+      const objects = this.addAutoCardChoice(
         shell,
         index,
         `${prefix}: ${value.displayName}`,
-        `Lv.${nextLevel} / 주기 ${formatNumber(getAutoCardPeriodSec({ cardId: choice.cardId, level: nextLevel }))}s`,
+        value.description,
+        [
+          `Lv.${nextLevel}`,
+          `${formatNumber(getAutoCardPeriodSec({ cardId: choice.cardId, level: nextLevel }))}s마다 발동`,
+          getAutoCardGrowthLabel(value.growthType)
+        ].join(" · "),
         () => {
           const message = gameSession.chooseAutoCardReward(index);
           this.actionStatusText?.setText(`자동 카드: ${message}`);
@@ -470,6 +475,65 @@ export class IntradayScene extends BaseDocumentScene {
 
       this.autoChoiceObjects.push(...objects);
     });
+  }
+
+  private addAutoCardChoice(
+    shell: ModalShell,
+    index: number,
+    primaryLabel: string,
+    description: string,
+    metaLabel: string,
+    onClick: () => void
+  ): Phaser.GameObjects.GameObject[] {
+    const x = shell.panelX + 34;
+    const y = shell.choiceStartY + index * 74;
+    const width = shell.choiceWidth;
+    const height = 64;
+    const card = this.add
+      .rectangle(x, y, width, height, 0x222a2e, 1)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, 0x6f6a5b, 0.85)
+      .setDepth(32)
+      .setInteractive({ useHandCursor: true });
+    const primary = this.add
+      .text(x + 16, y + 8, primaryLabel, {
+        color: "#f3e8ca",
+        fontFamily: this.fontFamily,
+        fontSize: "16px",
+        wordWrap: { width: width - 32 }
+      })
+      .setOrigin(0, 0)
+      .setDepth(33);
+    const body = this.add
+      .text(x + 16, y + 29, description, {
+        color: "#c9c1ad",
+        fontFamily: this.fontFamily,
+        fontSize: "12px",
+        wordWrap: { width: width - 32 }
+      })
+      .setOrigin(0, 0)
+      .setDepth(33);
+    const meta = this.add
+      .text(x + 16, y + 47, metaLabel, {
+        color: "#8fa2a6",
+        fontFamily: this.fontFamily,
+        fontSize: "11px",
+        wordWrap: { width: width - 32 }
+      })
+      .setOrigin(0, 0)
+      .setDepth(33);
+
+    card.on("pointerover", () => {
+      card.setFillStyle(0x2f393d, 1);
+      card.setStrokeStyle(1, 0xd9c58b, 1);
+    });
+    card.on("pointerout", () => {
+      card.setFillStyle(0x222a2e, 1);
+      card.setStrokeStyle(1, 0x6f6a5b, 0.85);
+    });
+    card.on("pointerup", onClick);
+
+    return [card, primary, body, meta];
   }
 
   private renderRetailSwarm(): void {
@@ -521,13 +585,6 @@ export class IntradayScene extends BaseDocumentScene {
       .setOrigin(0, 0);
 
     this.retailSwarmObjects.push(panel, label, participantText);
-
-    const visibleTokenCount = getPepeTokenCount(model, mood);
-    for (let index = 0; index < visibleTokenCount; index += 1) {
-      const position = getSwarmTokenPosition(model, state.priceTickIndex, index, panelX, panelY, panelWidth, panelHeight);
-      const dot = this.add.circle(position.x, position.y, Math.max(1.6, position.radius * 0.55), 0x91bf73, position.alpha * 0.42);
-      this.retailSwarmObjects.push(dot);
-    }
 
     this.retailSwarmObjects.push(
       ...this.drawPepeMascot(panelX + panelWidth - 58, panelY + 27, mood, participantMood.profitLossPercent)
@@ -987,6 +1044,10 @@ function formatNumber(value: number): string {
   return Number.isInteger(value) ? `${value}` : value.toFixed(1);
 }
 
+function getAutoCardGrowthLabel(growthType: "effect" | "period"): string {
+  return growthType === "period" ? "강화: 발동 주기 단축" : "강화: 효과량 증가";
+}
+
 function formatBudget(value: number): string {
   return `${formatNumber(Math.max(0, value))}B`;
 }
@@ -1269,19 +1330,28 @@ function estimateParticipantMood(
         ];
   const latestElapsedSec = usableHistory[usableHistory.length - 1]?.elapsedSec ?? 0;
   const lookbackSec = 60;
+  const pointsInLookback = usableHistory.filter((point) => latestElapsedSec - point.elapsedSec <= lookbackSec);
+  const averageVolume =
+    pointsInLookback.length > 0
+      ? Math.max(
+          1,
+          pointsInLookback.reduce((total, point) => total + Math.max(1, point.fictionalVolume), 0) /
+            pointsInLookback.length
+        )
+      : 1;
   let weightedPriceTotal = 0;
   let weightTotal = 0;
 
-  for (const point of usableHistory) {
+  // Fictional VWAP-style estimate: volume spikes pull the participant average entry more strongly.
+  for (const point of pointsInLookback) {
     const ageSec = Math.max(0, latestElapsedSec - point.elapsedSec);
-
-    if (ageSec > lookbackSec) {
-      continue;
-    }
-
+    const pointVolume = Math.max(1, point.fictionalVolume);
+    const volumeRatio = pointVolume / averageVolume;
+    const volumeSpikeBoost = 1 + Math.min(4, Math.max(0, volumeRatio - 1)) * (0.45 + state.personalParticipation / 180);
+    const recencyPosition = (lookbackSec - ageSec) / lookbackSec;
     const price = state.openingPrice * (1 + point.priceChangePercent / 100);
-    const recency = 1 + ((lookbackSec - ageSec) / lookbackSec) * (0.8 + state.personalParticipation / 55);
-    const weight = Math.max(1, point.fictionalVolume) * recency;
+    const recency = 0.75 + recencyPosition * (0.65 + state.personalParticipation / 80);
+    const weight = Math.pow(pointVolume, 1.04) * volumeSpikeBoost * recency;
     weightedPriceTotal += price * weight;
     weightTotal += weight;
   }
@@ -1337,18 +1407,6 @@ function getPepeSwarmLabel(mood: PepeSwarmMood): string {
   return "열광";
 }
 
-function getPepeTokenCount(model: RetailSwarmModel, mood: PepeSwarmMood): number {
-  if (mood === "sleeping") {
-    return Math.max(4, Math.round(model.tokenCount * 0.48));
-  }
-
-  if (mood === "curious") {
-    return Math.max(8, Math.round(model.tokenCount * 0.74));
-  }
-
-  return Math.min(46, model.tokenCount);
-}
-
 function getPepeMascotFrameIndex(mood: PepeSwarmMood, participantProfitLossPercent: number): number {
   if (participantProfitLossPercent > 0.15) {
     return 2;
@@ -1367,30 +1425,4 @@ function getPepeMascotFrameIndex(mood: PepeSwarmMood, participantProfitLossPerce
   }
 
   return 2;
-}
-
-function getSwarmTokenPosition(
-  model: RetailSwarmModel,
-  tickIndex: number,
-  tokenIndex: number,
-  panelX: number,
-  panelY: number,
-  panelWidth: number,
-  panelHeight: number
-): { readonly x: number; readonly y: number; readonly radius: number; readonly alpha: number } {
-  const centerBias = model.movement === "reverse" ? 0.7 : model.movement === "surging" ? 0.58 : 0.46;
-  const centerX = panelX + panelWidth * centerBias;
-  const centerY = panelY + panelHeight * 0.58;
-  const phase = tickIndex * model.speed * 0.12;
-  const angle = tokenIndex * 2.399 + phase;
-  const ring = 10 + ((tokenIndex % 9) / 8) * 52 * model.density;
-  const reverseBoost = model.movement === "reverse" ? 1.35 : 1;
-  const surgeOffset = model.movement === "surging" ? Math.sin(phase + tokenIndex) * 8 : 0;
-
-  return {
-    x: centerX + Math.cos(angle) * ring * reverseBoost + surgeOffset,
-    y: centerY + Math.sin(angle) * ring * 0.52 * reverseBoost,
-    radius: 2.2 + model.density * 1.8,
-    alpha: 0.52 + model.density * 0.4
-  };
 }

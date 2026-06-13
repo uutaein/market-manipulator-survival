@@ -59,18 +59,22 @@ export const manualActionValues = {
   },
   position_settlement: {
     id: "position_settlement",
-    displayName: "포지션 정리",
-    budgetDelta: 14,
-    cooldownSec: 14,
-    marketPressureDelta: -110,
-    marketLiquidityDelta: 10,
-    personalParticipationDelta: 16,
-    holdingRatioDelta: -100,
-    surveillanceDelta: 7,
-    volatilityDelta: 30
+    displayName: "포지션 일부 정리",
+    budgetDelta: 0,
+    cooldownSec: 10,
+    marketPressureDelta: -34,
+    marketLiquidityDelta: 6,
+    personalParticipationDelta: 8,
+    holdingRatioDelta: -10,
+    surveillanceDelta: 4,
+    volatilityDelta: 12
   }
 } as const satisfies Record<ManualActionId, ManualActionValue>;
 
 export function getManualActionByDisplayName(displayName: string): ManualActionValue | undefined {
+  if (displayName === "포지션 정리") {
+    return manualActionValues.position_settlement;
+  }
+
   return Object.values(manualActionValues).find((action) => action.displayName === displayName);
 }

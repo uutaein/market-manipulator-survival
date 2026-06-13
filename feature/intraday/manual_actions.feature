@@ -7,7 +7,7 @@ Feature: Manual intraday actions
     Then the player can see "유동성 공급"
     And the player can see "가격 추진"
     And the player can see "과열 해소"
-    And the player can see "포지션 정리"
+    And the player can see "포지션 일부 정리"
 
   Scenario: Disable manual actions during modal decisions
     Given a document event or auto card reward choice is open

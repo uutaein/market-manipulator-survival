@@ -136,6 +136,7 @@ Run State는 5-Day Run 전체에 유지된다.
 | SRS-STATE-RUN-006 | `budget`, `cumulativeProfit`, `holdingRatio`, `socialCost`, `autoCards`는 Day 간 이월되어야 한다. |
 | SRS-STATE-RUN-007 | `surveillance`는 Day 간 일부 이월되어야 하며, 정확한 감소율은 밸런싱 값으로 분리해야 한다. |
 | SRS-STATE-RUN-008 | `failedReason`이 설정되면 `runStatus`는 `failed`가 되어야 한다. |
+| SRS-STATE-RUN-009 | 신규 Run의 `holdingRatio`는 0에서 시작해야 한다. Day 1의 첫 보유 비중은 `선취매`를 통해 생성된다. |
 
 ---
 
@@ -221,7 +222,7 @@ MVP는 마감 보유 비중을 4구간으로 분류한다.
 | ID | Requirement |
 | --- | --- |
 | SRS-STATE-HOLD-001 | 시스템은 Day Settlement 시 `holdingRatio`를 위 4구간 중 하나로 분류해야 한다. |
-| SRS-STATE-HOLD-002 | `포지션 정리` 액션은 `holdingRatio`를 낮추고 예산 회수를 보조하는 주요 수단이어야 한다. |
+| SRS-STATE-HOLD-002 | `포지션 일부 정리` 액션은 `holdingRatio`를 조금씩 낮추고 예산 회수를 보조하는 주요 수단이어야 한다. |
 | SRS-STATE-HOLD-003 | 높은 `holdingRatio`는 장중에는 가격 추진/방어 효율에 유리할 수 있지만, 정산에서는 리스크로 평가되어야 한다. |
 
 ---
@@ -258,7 +259,7 @@ MVP 수동 액션은 다음 4개로 고정한다.
 | `liquidity_supply` | 유동성 공급 | 예산, 시장 유동성, 가격 반응성, 감시도, 변동성 |
 | `price_push` | 가격 추진 | 예산, 가격, 시장 압력, 감시도, 변동성 |
 | `overheat_cooldown` | 과열 해소 | 가격 압력, 개인 참여도, 변동성, 감시도 |
-| `position_settlement` | 포지션 정리 | 보유 비중, 예산, 가격 지지 |
+| `position_settlement` | 포지션 일부 정리 | 보유 비중, 예산, 가격 지지 |
 
 | 변수 | 범위/형태 | 설명 |
 | --- | --- | --- |
@@ -280,7 +281,7 @@ MVP 자동 카드는 다음 8개로 고정한다.
 | `news_amplifier` | 뉴스 증폭 | Morning News 효과 |
 | `surveillance_buffer` | 감시 완충 | 감시도 증가량 |
 | `competition_check` | 경쟁 견제 | 경쟁 압박 |
-| `settlement_routine` | 정리 루틴 | 보유 비중, 예산 회수 |
+| `settlement_routine` | 정리 루틴 | 포지션 일부 정리 충격 완화 |
 
 | 변수 | 범위/형태 | 설명 |
 | --- | --- | --- |

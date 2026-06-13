@@ -3,7 +3,7 @@ import { SceneKeys } from "./SceneKeys";
 import type { DayState } from "../../domain/day/daySetup";
 import {
   earlyPositioningBudgetPercentMax,
-  earlyPositioningBudgetPercentMin,
+  getEarlyPositioningBudgetPercentMin,
   getAvailablePreOpenCards,
   normalizeEarlyPositioningBudgetPercent,
   preOpenCards,
@@ -24,8 +24,9 @@ export class PreOpenCardScene extends BaseDocumentScene {
     const dayState = gameSession.ensureDay();
     const selectedCardId = dayState.preOpenCardId;
     const availableCards = getAvailablePreOpenCards(runState);
+    const earlyPositioningMinimumPercent = getEarlyPositioningBudgetPercentMin(runState);
     this.earlyPositioningBudgetPercent =
-      dayState.preOpenCardEffect?.earlyPositioningBudgetPercent ?? this.earlyPositioningBudgetPercent;
+      dayState.preOpenCardEffect?.earlyPositioningBudgetPercent ?? earlyPositioningMinimumPercent;
 
     this.drawDocumentShell("개장 전 카드 선택", []);
 
@@ -41,7 +42,8 @@ export class PreOpenCardScene extends BaseDocumentScene {
           dayState,
           y,
           selected,
-          getEarlyPositioningEntryPremiumPercent(runState)
+          getEarlyPositioningEntryPremiumPercent(runState),
+          earlyPositioningMinimumPercent
         );
       } else if (card.id === "news_assignment") {
         this.addChoiceCard(
@@ -107,7 +109,7 @@ export class PreOpenCardScene extends BaseDocumentScene {
       });
     } else {
       this.add
-        .text(96, this.scale.height - 124, "사전 포지션 확보를 먼저 선택해야 아침 뉴스를 확인할 수 있습니다.", {
+        .text(96, this.scale.height - 124, "선취매를 먼저 선택해야 아침 뉴스를 확인할 수 있습니다.", {
           color: "#d9c58b",
           fontFamily: this.fontFamily,
           fontSize: "18px"
@@ -129,7 +131,7 @@ export class PreOpenCardScene extends BaseDocumentScene {
         96,
         166,
         earlyPositioningOnly
-          ? "보유 포지션이 없으면 사전 포지션 확보만 선택할 수 있다."
+          ? "Day 1 또는 보유 포지션이 없는 경우에는 선취매만 선택할 수 있다."
           : "아침 뉴스 공개 전 최대 1장을 선택한다.",
         {
           color: "#8f9f7a",
@@ -173,7 +175,8 @@ export class PreOpenCardScene extends BaseDocumentScene {
     dayState: DayState,
     y: number,
     selected: boolean,
-    entryPremiumPercent: number
+    entryPremiumPercent: number,
+    minimumPercent: number
   ): void {
     const currentBudget = dayState.startingBudgetForDay;
     const panelX = 96;
@@ -184,27 +187,28 @@ export class PreOpenCardScene extends BaseDocumentScene {
     const trackWidth = 340;
     const percentToX = (percent: number) =>
       trackX +
-      ((percent - earlyPositioningBudgetPercentMin) /
-        (earlyPositioningBudgetPercentMax - earlyPositioningBudgetPercentMin)) *
+      ((percent - minimumPercent) /
+        (earlyPositioningBudgetPercentMax - minimumPercent)) *
         trackWidth;
-    const effect = previewEarlyPositioningEffect(currentBudget, this.earlyPositioningBudgetPercent);
+    const effect = previewEarlyPositioningEffect(currentBudget, this.earlyPositioningBudgetPercent, minimumPercent);
 
     const panel = this.add
       .rectangle(panelX, y, panelWidth, panelHeight, selected ? 0x273e2f : 0x151b1f, selected ? 0.98 : 0.96)
       .setOrigin(0, 0)
       .setStrokeStyle(1, selected ? 0xd9c58b : 0x263038);
     this.add
-      .text(panelX + 22, y + 14, "사전 포지션 확보", {
+      .text(panelX + 22, y + 14, "선취매", {
         color: selected ? "#f3e8ca" : "#d9c58b",
         fontFamily: this.fontFamily,
         fontSize: "22px"
       })
       .setOrigin(0, 0);
     this.add
-      .text(panelX + 22, y + 50, "현재 예산 투입 비율을 조절한다.", {
+      .text(panelX + 22, y + 50, "개장 전 미리 확보한다. 평균단가가 장가격보다 불리해 시작 손실이 날 수 있다.", {
         color: "#c9c1ad",
         fontFamily: this.fontFamily,
-        fontSize: "15px"
+        fontSize: "15px",
+        wordWrap: { width: 360 }
       })
       .setOrigin(0, 0);
 
@@ -230,10 +234,11 @@ export class PreOpenCardScene extends BaseDocumentScene {
 
       const ratio = (Math.max(trackX, Math.min(trackX + trackWidth, x)) - trackX) / trackWidth;
       this.earlyPositioningBudgetPercent = normalizeEarlyPositioningBudgetPercent(
-        earlyPositioningBudgetPercentMin +
-          ratio * (earlyPositioningBudgetPercentMax - earlyPositioningBudgetPercentMin)
+        minimumPercent +
+          ratio * (earlyPositioningBudgetPercentMax - minimumPercent),
+        minimumPercent
       );
-      const nextEffect = previewEarlyPositioningEffect(currentBudget, this.earlyPositioningBudgetPercent);
+      const nextEffect = previewEarlyPositioningEffect(currentBudget, this.earlyPositioningBudgetPercent, minimumPercent);
       const knobX = percentToX(nextEffect.earlyPositioningBudgetPercent);
       knob.setPosition(knobX, trackY);
       fill.width = knobX - trackX;
@@ -247,7 +252,7 @@ export class PreOpenCardScene extends BaseDocumentScene {
       this.input.setDraggable(knob);
       panel.on("pointerup", () => {
         if (!gameSession.dayState?.preOpenCardId) {
-          gameSession.selectPreOpenCard("사전 포지션 확보", {
+          gameSession.selectPreOpenCard("선취매", {
             earlyPositioningBudgetPercent: this.earlyPositioningBudgetPercent
           });
         }
@@ -260,10 +265,10 @@ export class PreOpenCardScene extends BaseDocumentScene {
     this.addDocumentButton(
       884,
       y + 40,
-      selected ? "선택됨" : "확보 실행",
+      selected ? "선택됨" : "선취매 실행",
       () => {
         if (!gameSession.dayState?.preOpenCardId) {
-          gameSession.selectPreOpenCard("사전 포지션 확보", {
+          gameSession.selectPreOpenCard("선취매", {
             earlyPositioningBudgetPercent: this.earlyPositioningBudgetPercent
           });
         }
@@ -272,7 +277,7 @@ export class PreOpenCardScene extends BaseDocumentScene {
       selected
     );
     this.add
-      .text(884, y + 18, `원가 대비 +${formatPercent(entryPremiumPercent)}`, {
+      .text(884, y + 18, `원가 대비 ${formatPercent(entryPremiumPercent)}`, {
         color: selected ? "#f3e8ca" : "#d9c58b",
         fontFamily: this.fontFamily,
         fontSize: "14px"
@@ -362,7 +367,7 @@ function formatSelectedCard(dayState: DayState): string {
   }
 
   if (dayState.preOpenCardId === "early_positioning") {
-    return `사전 포지션 확보 ${dayState.preOpenCardEffect?.earlyPositioningBudgetPercent ?? 20}%`;
+    return `선취매 ${dayState.preOpenCardEffect?.earlyPositioningBudgetPercent ?? 20}%`;
   }
 
   return card?.displayName ?? dayState.preOpenCardId;
@@ -379,7 +384,7 @@ function formatEarlyPositioningPreview(
   return [
     `투입 비율 ${formatPercent(effect.earlyPositioningBudgetPercent)}`,
     `예산 사용 ${formatBudget(budgetSpend)}`,
-    `매입 프리미엄 +${formatPercent(entryPremiumPercent)}`,
+    `매입 프리미엄 ${formatPercent(entryPremiumPercent)}`,
     `잔여 예산 ${formatBudget(remainingBudget)} · 예산 소모율 ${formatBudgetSpendRate(currentBudget, budgetSpend)}`
   ].join("\n");
 }
