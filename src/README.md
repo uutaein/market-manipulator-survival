@@ -24,4 +24,4 @@ The scaffold exists so the next implementation work can attach SPEC/Gherkin-driv
 | `DaySettlementScene` | Day Settlement shell |
 | `FinalSettlementScene` | Final Settlement summary and failure variant shell |
 
-Document Event remains an intraday modal concept and is not a standalone scene in the MVP SPEC.
+Document Event is wired as an intraday modal and is not a standalone scene in the MVP SPEC.
