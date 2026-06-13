@@ -24,50 +24,50 @@ export const manualActionValues = {
   liquidity_supply: {
     id: "liquidity_supply",
     displayName: "유동성 공급",
-    budgetDelta: -6,
+    budgetDelta: -4,
     cooldownSec: 8,
-    marketPressureDelta: 0,
-    marketLiquidityDelta: 18,
-    personalParticipationDelta: 0,
+    marketPressureDelta: 5,
+    marketLiquidityDelta: 22,
+    personalParticipationDelta: 10,
     holdingRatioDelta: 0,
-    surveillanceDelta: 3,
-    volatilityDelta: 4
+    surveillanceDelta: 2,
+    volatilityDelta: 6
   },
   price_push: {
     id: "price_push",
     displayName: "가격 추진",
-    budgetDelta: -8,
-    cooldownSec: 10,
-    marketPressureDelta: 35,
-    marketLiquidityDelta: 0,
-    personalParticipationDelta: 0,
-    holdingRatioDelta: 0,
-    surveillanceDelta: 5,
-    volatilityDelta: 6
+    budgetDelta: -14,
+    cooldownSec: 16,
+    marketPressureDelta: 52,
+    marketLiquidityDelta: 12,
+    personalParticipationDelta: 14,
+    holdingRatioDelta: 5,
+    surveillanceDelta: 7,
+    volatilityDelta: 10
   },
   overheat_cooldown: {
     id: "overheat_cooldown",
     displayName: "과열 해소",
-    budgetDelta: -4,
+    budgetDelta: -3,
     cooldownSec: 12,
-    marketPressureDelta: -18,
-    marketLiquidityDelta: 0,
-    personalParticipationDelta: -12,
+    marketPressureDelta: -46,
+    marketLiquidityDelta: 6,
+    personalParticipationDelta: 4,
     holdingRatioDelta: 0,
-    surveillanceDelta: -4,
-    volatilityDelta: -10
+    surveillanceDelta: -2,
+    volatilityDelta: -8
   },
   position_settlement: {
     id: "position_settlement",
     displayName: "포지션 정리",
-    budgetDelta: 7,
+    budgetDelta: 14,
     cooldownSec: 14,
-    marketPressureDelta: -12,
-    marketLiquidityDelta: 0,
-    personalParticipationDelta: 0,
-    holdingRatioDelta: -10,
-    surveillanceDelta: 0,
-    volatilityDelta: 3
+    marketPressureDelta: -110,
+    marketLiquidityDelta: 10,
+    personalParticipationDelta: 16,
+    holdingRatioDelta: -100,
+    surveillanceDelta: 7,
+    volatilityDelta: 30
   }
 } as const satisfies Record<ManualActionId, ManualActionValue>;
 

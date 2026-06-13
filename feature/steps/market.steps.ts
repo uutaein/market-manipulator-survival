@@ -1,7 +1,7 @@
 import { Given, Then, When } from "@cucumber/cucumber";
 import assert from "node:assert/strict";
 import type { MmsWorld } from "../support/world";
-import { getAssetsBySector, sectors } from "../../src/domain/assets/assetCatalog";
+import { assets, getAssetsBySector, sectors } from "../../src/domain/assets/assetCatalog";
 import { buildMarketBoard } from "../../src/domain/market/marketBoard";
 import { assignRunAssetProfiles, getSectorTendencies, isValidRunAssetProfiles } from "../../src/domain/run/runState";
 
@@ -88,7 +88,17 @@ Then("exactly 8 assets are displayed", function (this: MmsWorld) {
   assert.equal(this.displayedAssets, 8);
 });
 
+Then("exactly 10 market board rows are displayed", function (this: MmsWorld) {
+  assert.equal(this.displayedAssets, 10);
+});
+
 Then("one displayed asset is the player's selected asset", function (this: MmsWorld) {
+  assert.ok(this.marketBoardState);
+  assert.equal(this.marketBoardState.entries.filter((entry) => entry.role === "player").length, 1);
+  assert.equal(this.marketBoardState.playerAssetId, this.runState?.selectedAssetId);
+});
+
+Then("one row is the player's selected asset", function (this: MmsWorld) {
   assert.ok(this.marketBoardState);
   assert.equal(this.marketBoardState.entries.filter((entry) => entry.role === "player").length, 1);
   assert.equal(this.marketBoardState.playerAssetId, this.runState?.selectedAssetId);
@@ -96,6 +106,23 @@ Then("one displayed asset is the player's selected asset", function (this: MmsWo
 
 Then("seven displayed assets are non-player assets", function (this: MmsWorld) {
   assert.equal(this.nonPlayerAssets, 7);
+});
+
+Then("two rows are same-sector competitor assets", function (this: MmsWorld) {
+  assert.ok(this.marketBoardState);
+  assert.equal(this.marketBoardState.sameSectorPeerSummaries.length, 2);
+});
+
+Then("seven rows are other-sector averages", function (this: MmsWorld) {
+  assert.ok(this.marketBoardState);
+  assert.equal(this.marketBoardState.sectorAverageSummaries.length, 7);
+});
+
+Then("the market dashboard ranks all 24 fictional assets around the player's asset", function (this: MmsWorld) {
+  assert.equal(assets.length, 24);
+  assert.ok(this.marketBoardState);
+  assert.equal(this.marketBoardState.displayedAssetIds.length, 3);
+  assert.equal(this.marketBoardState.displayedAssetIds.includes(this.marketBoardState.playerAssetId), true);
 });
 
 Given("the player's selected asset belongs to a sector with two peer assets", function (this: MmsWorld) {
@@ -135,19 +162,25 @@ Given("Morning News affects a non-player sector", function (this: MmsWorld) {
   const targetSector = sectors.find((sector) => sector.id !== this.runState!.selectedSectorId);
   assert.ok(targetSector);
   this.newsAffectedSectorId = targetSector.id;
+  const morningNews = {
+    ...this.dayState!.morningNews,
+    target: {
+      type: "sector" as const,
+      sectorId: targetSector.id
+    }
+  };
   this.dayState = {
     ...this.dayState!,
-    morningNews: {
-      ...this.dayState!.morningNews,
-      target: {
-        type: "sector",
-        sectorId: targetSector.id
-      }
-    }
+    morningNews,
+    morningNewsItems: [morningNews, ...this.dayState!.morningNewsItems.slice(1)]
   };
 });
 
 When("representative other-sector assets are selected", function (this: MmsWorld) {
+  this.marketBoardState = buildMarketBoard(this.runState!, this.dayState!);
+});
+
+When("other-sector average rows are selected", function (this: MmsWorld) {
   this.marketBoardState = buildMarketBoard(this.runState!, this.dayState!);
 });
 
@@ -156,8 +189,16 @@ Then("at least one asset from the affected sector should be displayed", function
   assert.ok(this.newsAffectedSectorId);
   assert.ok(
     this.marketBoardState.entries.some(
-      (entry) => entry.role === "representative" && entry.sectorId === this.newsAffectedSectorId
+      (entry) => entry.role === "sector_average" && entry.sectorId === this.newsAffectedSectorId
     )
+  );
+});
+
+Then("the affected sector average should be displayed", function (this: MmsWorld) {
+  assert.ok(this.marketBoardState);
+  assert.ok(this.newsAffectedSectorId);
+  assert.ok(
+    this.marketBoardState.sectorAverageSummaries.some((entry) => entry.sectorId === this.newsAffectedSectorId)
   );
 });
 
@@ -168,18 +209,57 @@ Given("non-player assets are displayed on the Market Board", function (this: Mms
   this.nonPlayerAssets = this.marketBoardState.nonPlayerAssetSummaries.length;
 });
 
+Given("non-player market rows are displayed on the Market Board", function (this: MmsWorld) {
+  this.startNewRun();
+  this.beginDay();
+  this.marketBoardState = buildMarketBoard(this.runState!, this.dayState!);
+  this.nonPlayerAssets = this.marketBoardState.nonPlayerAssetSummaries.length;
+});
+
 Then("each non-player asset shows simplified movement", function (this: MmsWorld) {
-  assert.equal(this.nonPlayerAssets, 7);
+  assert.equal(this.nonPlayerAssets, 9);
   assert.ok(this.marketBoardState);
   assert.ok(
-    this.marketBoardState.nonPlayerAssetSummaries.every(
-      (entry) => entry.calculationMode === "simplified" && entry.simplifiedMovement
+    this.marketBoardState.nonPlayerAssetSummaries.every((entry) => entry.simplifiedMovement)
+  );
+});
+
+Then("each non-player market row shows simplified movement", function (this: MmsWorld) {
+  assert.equal(this.nonPlayerAssets, 9);
+  assert.ok(this.marketBoardState);
+  assert.ok(this.marketBoardState.nonPlayerAssetSummaries.every((entry) => entry.simplifiedMovement));
+});
+
+Then("each same-sector competitor row has a fictional current price and average price", function (this: MmsWorld) {
+  assert.ok(this.marketBoardState);
+  assert.ok(
+    this.marketBoardState.sameSectorPeerSummaries.every(
+      (entry) => entry.currentPrice > 0 && entry.averageEntryPrice > 0 && entry.referencePrice > 0
+    )
+  );
+});
+
+Then("each other-sector average row has a fictional current price and average price", function (this: MmsWorld) {
+  assert.ok(this.marketBoardState);
+  assert.ok(
+    this.marketBoardState.sectorAverageSummaries.every(
+      (entry) => entry.currentPrice > 0 && entry.averageEntryPrice > 0 && entry.referencePrice > 0
     )
   );
 });
 
 Then("non-player assets do not use detailed budget, holding ratio, or surveillance state", function (this: MmsWorld) {
-  assert.equal(this.nonPlayerAssets, 7);
+  assert.equal(this.nonPlayerAssets, 9);
+  assert.ok(this.marketBoardState);
+  assert.ok(
+    this.marketBoardState.nonPlayerAssetSummaries.every(
+      (entry) => !("budget" in entry) && !("holdingRatio" in entry) && !("surveillance" in entry)
+    )
+  );
+});
+
+Then("non-player market rows do not use detailed budget, holding ratio, or surveillance state", function (this: MmsWorld) {
+  assert.equal(this.nonPlayerAssets, 9);
   assert.ok(this.marketBoardState);
   assert.ok(
     this.marketBoardState.nonPlayerAssetSummaries.every(

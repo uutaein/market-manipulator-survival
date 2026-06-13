@@ -10,7 +10,12 @@ export type SceneAction = {
 export abstract class BaseDocumentScene extends Phaser.Scene {
   protected readonly fontFamily = "Consolas, Courier New, monospace";
 
-  protected drawDocumentShell(title: string, lines: string[], action?: SceneAction): void {
+  protected drawDocumentShell(
+    title: string,
+    lines: string[],
+    action?: SceneAction,
+    footerLabel = "SURVEILLANCE TERMINAL"
+  ): void {
     const { width, height } = this.scale;
 
     this.cameras.main.setBackgroundColor("#111417");
@@ -37,13 +42,15 @@ export abstract class BaseDocumentScene extends Phaser.Scene {
       })
       .setOrigin(0, 0);
 
-    this.add
-      .text(width - 260, height - 104, "SPEC ACCEPTED", {
-        color: "#8f9f7a",
-        fontFamily: this.fontFamily,
-        fontSize: "14px"
-      })
-      .setOrigin(0, 0.5);
+    if (footerLabel) {
+      this.add
+        .text(width - 286, height - 104, footerLabel, {
+          color: "#8f9f7a",
+          fontFamily: this.fontFamily,
+          fontSize: "14px"
+        })
+        .setOrigin(0, 0.5);
+    }
 
     if (action) {
       this.addActionButton(action);

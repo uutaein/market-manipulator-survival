@@ -16,9 +16,10 @@ Feature: Run lifecycle
   Scenario: Progress through the required Day phases
     Given the player is in an active Run
     When a Day begins
+    Then the player can choose a Pre-open Card
+    When the pre-open choice is confirmed
     Then the player sees Morning News
     And the player sees the Market Briefing
-    And the player can choose a Pre-open Card
     And the player must perform Opening Approval before intraday operation starts
     And the Day ends with Day Settlement after intraday operation
 

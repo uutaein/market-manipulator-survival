@@ -1,88 +1,115 @@
 import {
-  assets,
   getAssetById,
   getAssetsBySector,
   getSectorById,
   sectors,
   type AssetDefinition,
   type AssetId,
+  type SectorDefinition,
   type SectorId
 } from "../assets/assetCatalog";
 import { newsPricePressure } from "../balancing/priceTickValues";
+import { runDefaults } from "../balancing/runDefaults";
 import type { DayState } from "../day/daySetup";
-import type { MorningNewsTarget } from "../day/morningNews";
+import type { MorningNews } from "../day/morningNews";
 import { createSeededRandom } from "../random/SeededRandom";
 import type { RunState } from "../run/runState";
 import { clamp } from "../intraday/intradayState";
 
-export type MarketBoardRole = "player" | "same_sector_peer" | "representative";
-export type MarketBoardCalculationMode = "detailed" | "simplified";
+export type MarketBoardRole = "player" | "same_sector_peer" | "sector_average";
+export type MarketBoardCalculationMode = "detailed" | "simplified" | "sector_average";
 export type MarketBoardTrend = "up" | "down" | "flat";
 export type MarketBoardStatus = "normal" | "overheated" | "panic";
 export type MarketBoardNewsBadge = "market" | "sector" | "asset" | null;
+export type MarketBoardNewsTone = "positive" | "negative" | null;
 
 export interface MarketBoardEntryBase {
-  readonly assetId: AssetId;
   readonly displayName: string;
   readonly sectorId: SectorId;
   readonly sectorName: string;
   readonly role: MarketBoardRole;
   readonly calculationMode: MarketBoardCalculationMode;
   readonly newsBadge: MarketBoardNewsBadge;
+  readonly newsTone: MarketBoardNewsTone;
 }
 
 export interface PlayerMarketBoardEntry extends MarketBoardEntryBase {
+  readonly assetId: AssetId;
   readonly role: "player";
   readonly calculationMode: "detailed";
   readonly usesDetailedPlayerState: true;
 }
 
-export interface NonPlayerMarketBoardEntry extends MarketBoardEntryBase {
-  readonly role: "same_sector_peer" | "representative";
+export interface SameSectorPeerMarketBoardEntry extends MarketBoardEntryBase {
+  readonly assetId: AssetId;
+  readonly role: "same_sector_peer";
   readonly calculationMode: "simplified";
   readonly usesDetailedPlayerState: false;
   readonly simplifiedMovement: true;
+  readonly referencePrice: number;
+  readonly averageEntryPrice: number;
+  readonly currentPrice: number;
   readonly priceChangePercent: number;
   readonly trend: MarketBoardTrend;
   readonly status: MarketBoardStatus;
 }
 
+export interface SectorAverageMarketBoardEntry extends MarketBoardEntryBase {
+  readonly role: "sector_average";
+  readonly calculationMode: "sector_average";
+  readonly usesDetailedPlayerState: false;
+  readonly simplifiedMovement: true;
+  readonly sectorAverage: true;
+  readonly referencePrice: number;
+  readonly averageEntryPrice: number;
+  readonly currentPrice: number;
+  readonly priceChangePercent: number;
+  readonly trend: MarketBoardTrend;
+  readonly status: MarketBoardStatus;
+}
+
+export type NonPlayerMarketBoardEntry = SameSectorPeerMarketBoardEntry | SectorAverageMarketBoardEntry;
 export type MarketBoardEntry = PlayerMarketBoardEntry | NonPlayerMarketBoardEntry;
 
 export interface MarketBoardState {
   readonly entries: readonly MarketBoardEntry[];
   readonly displayedAssetIds: readonly AssetId[];
+  readonly displayedSectorIds: readonly SectorId[];
   readonly playerAssetId: AssetId;
+  readonly sameSectorPeerSummaries: readonly SameSectorPeerMarketBoardEntry[];
+  readonly sectorAverageSummaries: readonly SectorAverageMarketBoardEntry[];
   readonly nonPlayerAssetSummaries: readonly NonPlayerMarketBoardEntry[];
 }
 
 export function buildMarketBoard(runState: RunState, dayState: DayState): MarketBoardState {
   const selectedAsset = getAssetById(runState.selectedAssetId);
   const selectedSectorAssets = getAssetsBySector(runState.selectedSectorId);
-  const selectedIds = new Set<AssetId>([selectedAsset.id]);
-  const entries: MarketBoardEntry[] = [createPlayerEntry(selectedAsset, dayState.morningNews.target)];
+  const entries: MarketBoardEntry[] = [createPlayerEntry(selectedAsset, dayState.morningNewsItems)];
 
   for (const peer of selectedSectorAssets) {
     if (peer.id === selectedAsset.id) {
       continue;
     }
 
-    selectedIds.add(peer.id);
-    entries.push(createNonPlayerEntry(peer, "same_sector_peer", runState, dayState, entries.length));
+    entries.push(createSameSectorPeerEntry(peer, runState, dayState, entries.length));
   }
 
-  for (const representative of selectRepresentativeAssets(runState, dayState, selectedIds)) {
-    selectedIds.add(representative.id);
-    entries.push(createNonPlayerEntry(representative, "representative", runState, dayState, entries.length));
-  }
+  for (const sector of sectors) {
+    if (sector.id === runState.selectedSectorId) {
+      continue;
+    }
 
-  const slicedEntries = entries.slice(0, 8);
+    entries.push(createSectorAverageEntry(sector, runState, dayState, entries.length));
+  }
 
   return {
-    entries: slicedEntries,
-    displayedAssetIds: slicedEntries.map((entry) => entry.assetId),
+    entries,
+    displayedAssetIds: entries.filter(hasAssetId).map((entry) => entry.assetId),
+    displayedSectorIds: entries.map((entry) => entry.sectorId),
     playerAssetId: selectedAsset.id,
-    nonPlayerAssetSummaries: slicedEntries.filter(isNonPlayerEntry)
+    sameSectorPeerSummaries: entries.filter(isSameSectorPeerEntry),
+    sectorAverageSummaries: entries.filter(isSectorAverageEntry),
+    nonPlayerAssetSummaries: entries.filter(isNonPlayerEntry)
   };
 }
 
@@ -97,12 +124,15 @@ export function advanceMarketBoard(
       return entry;
     }
 
-    const asset = getAssetById(entry.assetId);
-    const delta = calculateSimplifiedPriceDelta(asset, runState, dayState, index, tickIndex);
+    const delta =
+      entry.role === "same_sector_peer"
+        ? calculateSimplifiedPriceDelta(getAssetById(entry.assetId), runState, dayState, index, tickIndex)
+        : calculateSectorAverageDelta(entry.sectorId, runState, dayState, index, tickIndex);
     const priceChangePercent = round2(clamp(entry.priceChangePercent + delta, -30, 30));
 
     return {
       ...entry,
+      currentPrice: calculateCurrentBoardPrice(entry.referencePrice, priceChangePercent),
       priceChangePercent,
       trend: getTrend(priceChangePercent),
       status: getStatus(priceChangePercent)
@@ -111,93 +141,32 @@ export function advanceMarketBoard(
 
   return {
     entries,
-    displayedAssetIds: entries.map((entry) => entry.assetId),
+    displayedAssetIds: entries.filter(hasAssetId).map((entry) => entry.assetId),
+    displayedSectorIds: entries.map((entry) => entry.sectorId),
     playerAssetId: state.playerAssetId,
+    sameSectorPeerSummaries: entries.filter(isSameSectorPeerEntry),
+    sectorAverageSummaries: entries.filter(isSectorAverageEntry),
     nonPlayerAssetSummaries: entries.filter(isNonPlayerEntry)
   };
 }
 
 export function isNonPlayerEntry(entry: MarketBoardEntry): entry is NonPlayerMarketBoardEntry {
-  return entry.calculationMode === "simplified";
+  return entry.role === "same_sector_peer" || entry.role === "sector_average";
 }
 
-function selectRepresentativeAssets(
-  runState: RunState,
-  dayState: DayState,
-  selectedIds: ReadonlySet<AssetId>
-): readonly AssetDefinition[] {
-  const random = createSeededRandom(`${runState.runSeed}:day:${dayState.dayIndex}:market-board`);
-  const representatives: AssetDefinition[] = [];
-
-  addNewsAffectedRepresentative(representatives, selectedIds, runState, dayState, random);
-
-  const candidateSectors = random.shuffle(
-    sectors.filter((sector) => sector.id !== runState.selectedSectorId)
-  );
-
-  for (const sector of candidateSectors) {
-    if (representatives.length >= 5) {
-      break;
-    }
-
-    if (representatives.some((asset) => asset.sectorId === sector.id)) {
-      continue;
-    }
-
-    const sectorCandidates = getAssetsBySector(sector.id).filter(
-      (asset) => !selectedIds.has(asset.id) && !representatives.some((representative) => representative.id === asset.id)
-    );
-
-    if (sectorCandidates.length > 0) {
-      representatives.push(random.pick(sectorCandidates));
-    }
-  }
-
-  if (representatives.length < 5) {
-    const remainingAssets = random.shuffle(
-      assets.filter(
-        (asset) => !selectedIds.has(asset.id) && !representatives.some((representative) => representative.id === asset.id)
-      )
-    );
-
-    representatives.push(...remainingAssets.slice(0, 5 - representatives.length));
-  }
-
-  return representatives.slice(0, 5);
+export function isSameSectorPeerEntry(entry: MarketBoardEntry): entry is SameSectorPeerMarketBoardEntry {
+  return entry.role === "same_sector_peer";
 }
 
-function addNewsAffectedRepresentative(
-  representatives: AssetDefinition[],
-  selectedIds: ReadonlySet<AssetId>,
-  runState: RunState,
-  dayState: DayState,
-  random: ReturnType<typeof createSeededRandom>
-): void {
-  const target = dayState.morningNews.target;
-
-  if (target.type === "market") {
-    return;
-  }
-
-  if (target.type === "asset") {
-    if (target.assetId !== runState.selectedAssetId && !selectedIds.has(target.assetId)) {
-      representatives.push(getAssetById(target.assetId));
-    }
-    return;
-  }
-
-  if (target.sectorId === runState.selectedSectorId) {
-    return;
-  }
-
-  const candidates = getAssetsBySector(target.sectorId).filter((asset) => !selectedIds.has(asset.id));
-
-  if (candidates.length > 0) {
-    representatives.push(random.pick(candidates));
-  }
+export function isSectorAverageEntry(entry: MarketBoardEntry): entry is SectorAverageMarketBoardEntry {
+  return entry.role === "sector_average";
 }
 
-function createPlayerEntry(asset: AssetDefinition, target: MorningNewsTarget): PlayerMarketBoardEntry {
+function hasAssetId(entry: MarketBoardEntry): entry is PlayerMarketBoardEntry | SameSectorPeerMarketBoardEntry {
+  return "assetId" in entry;
+}
+
+function createPlayerEntry(asset: AssetDefinition, morningNewsItems: readonly MorningNews[]): PlayerMarketBoardEntry {
   return {
     assetId: asset.id,
     displayName: asset.displayName,
@@ -205,30 +174,64 @@ function createPlayerEntry(asset: AssetDefinition, target: MorningNewsTarget): P
     sectorName: getSectorById(asset.sectorId).displayName,
     role: "player",
     calculationMode: "detailed",
-    newsBadge: getNewsBadge(asset, target),
+    newsBadge: getNewsBadge(asset, morningNewsItems),
+    newsTone: getNewsTone(asset, morningNewsItems),
     usesDetailedPlayerState: true
   };
 }
 
-function createNonPlayerEntry(
+function createSameSectorPeerEntry(
   asset: AssetDefinition,
-  role: "same_sector_peer" | "representative",
   runState: RunState,
   dayState: DayState,
   slotIndex: number
-): NonPlayerMarketBoardEntry {
+): SameSectorPeerMarketBoardEntry {
   const priceChangePercent = calculateSimplifiedPriceChange(asset, runState, dayState, slotIndex);
+  const quote = createAssetBoardQuote(asset, runState, dayState, slotIndex, priceChangePercent);
 
   return {
     assetId: asset.id,
     displayName: asset.displayName,
     sectorId: asset.sectorId,
     sectorName: getSectorById(asset.sectorId).displayName,
-    role,
+    role: "same_sector_peer",
     calculationMode: "simplified",
-    newsBadge: getNewsBadge(asset, dayState.morningNews.target),
+    newsBadge: getNewsBadge(asset, dayState.morningNewsItems),
+    newsTone: getNewsTone(asset, dayState.morningNewsItems),
     usesDetailedPlayerState: false,
     simplifiedMovement: true,
+    referencePrice: quote.referencePrice,
+    averageEntryPrice: quote.averageEntryPrice,
+    currentPrice: quote.currentPrice,
+    priceChangePercent,
+    trend: getTrend(priceChangePercent),
+    status: getStatus(priceChangePercent)
+  };
+}
+
+function createSectorAverageEntry(
+  sector: SectorDefinition,
+  runState: RunState,
+  dayState: DayState,
+  slotIndex: number
+): SectorAverageMarketBoardEntry {
+  const priceChangePercent = calculateSectorAveragePriceChange(sector.id, runState, dayState, slotIndex);
+  const quote = createSectorAverageBoardQuote(sector.id, runState, dayState, slotIndex, priceChangePercent);
+
+  return {
+    displayName: `${sector.displayName} 평균`,
+    sectorId: sector.id,
+    sectorName: sector.displayName,
+    role: "sector_average",
+    calculationMode: "sector_average",
+    newsBadge: getSectorAverageNewsBadge(sector.id, dayState.morningNewsItems),
+    newsTone: getSectorAverageNewsTone(sector.id, dayState.morningNewsItems),
+    usesDetailedPlayerState: false,
+    simplifiedMovement: true,
+    sectorAverage: true,
+    referencePrice: quote.referencePrice,
+    averageEntryPrice: quote.averageEntryPrice,
+    currentPrice: quote.currentPrice,
     priceChangePercent,
     trend: getTrend(priceChangePercent),
     status: getStatus(priceChangePercent)
@@ -244,12 +247,12 @@ function calculateSimplifiedPriceChange(
   const random = createSeededRandom(`${runState.runSeed}:day:${dayState.dayIndex}:market-board:${asset.id}:${slotIndex}`);
   const sectorNewsPressure = getSectorNewsPressure(asset, dayState);
   const marketNewsPressure = getMarketNewsPressure(dayState);
-  const trendBias = random.next() * 0.02 - 0.01;
+  const trendBias = random.next() * 1.8 - 0.9;
   const simplifiedVolatility = 35 + dayState.todayCondition.volatilityShiftPercent;
-  const randomNoise = (random.next() * 2 - 1) * (0.02 + simplifiedVolatility * 0.0008);
-  const rawDelta = sectorNewsPressure + marketNewsPressure + trendBias + randomNoise;
+  const randomNoise = (random.next() * 2 - 1) * (0.5 + simplifiedVolatility * 0.025);
+  const rawDelta = (sectorNewsPressure + marketNewsPressure) * 95 + trendBias + randomNoise;
 
-  return round2(clamp(rawDelta, -0.25, 0.25));
+  return round2(clamp(rawDelta, -8.5, 8.5));
 }
 
 function calculateSimplifiedPriceDelta(
@@ -264,50 +267,143 @@ function calculateSimplifiedPriceDelta(
   );
   const sectorNewsPressure = getSectorNewsPressure(asset, dayState) * 0.3;
   const marketNewsPressure = getMarketNewsPressure(dayState) * 0.3;
-  const trendBias = random.next() * 0.02 - 0.01;
+  const trendBias = random.next() * 0.16 - 0.08;
   const simplifiedVolatility = 35 + dayState.todayCondition.volatilityShiftPercent;
-  const randomNoise = (random.next() * 2 - 1) * (0.02 + simplifiedVolatility * 0.0008);
-  const rawDelta = sectorNewsPressure + marketNewsPressure + trendBias + randomNoise;
+  const randomNoise = (random.next() * 2 - 1) * (0.04 + simplifiedVolatility * 0.002);
+  const rawDelta = (sectorNewsPressure + marketNewsPressure) * 12 + trendBias + randomNoise;
 
-  return round2(clamp(rawDelta, -0.25, 0.25));
+  return round2(clamp(rawDelta, -0.9, 0.9));
+}
+
+function calculateSectorAveragePriceChange(
+  sectorId: SectorId,
+  runState: RunState,
+  dayState: DayState,
+  slotIndex: number
+): number {
+  const sectorAssets = getAssetsBySector(sectorId);
+  const total = sectorAssets.reduce(
+    (sum, asset, index) => sum + calculateSimplifiedPriceChange(asset, runState, dayState, slotIndex + index),
+    0
+  );
+
+  return round2(total / sectorAssets.length);
+}
+
+function calculateSectorAverageDelta(
+  sectorId: SectorId,
+  runState: RunState,
+  dayState: DayState,
+  slotIndex: number,
+  tickIndex: number
+): number {
+  const sectorAssets = getAssetsBySector(sectorId);
+  const total = sectorAssets.reduce(
+    (sum, asset, index) => sum + calculateSimplifiedPriceDelta(asset, runState, dayState, slotIndex + index, tickIndex),
+    0
+  );
+
+  return round2(total / sectorAssets.length);
 }
 
 function getSectorNewsPressure(asset: AssetDefinition, dayState: DayState): number {
-  const target = dayState.morningNews.target;
+  return dayState.morningNewsItems.reduce((total, news) => {
+    const target = news.target;
+    const pressure = newsPricePressure[news.templateId];
 
-  if (target.type === "sector" && target.sectorId === asset.sectorId) {
-    return newsPricePressure[dayState.morningNews.templateId];
-  }
+    if (target.type === "sector" && target.sectorId === asset.sectorId) {
+      return total + pressure;
+    }
 
-  if (target.type === "asset" && target.assetId === asset.id) {
-    return newsPricePressure[dayState.morningNews.templateId];
-  }
+    if (target.type === "asset" && target.assetId === asset.id) {
+      return total + pressure;
+    }
 
-  return 0;
+    return total;
+  }, 0);
 }
 
 function getMarketNewsPressure(dayState: DayState): number {
-  if (dayState.morningNews.target.type !== "market") {
-    return 0;
-  }
-
-  return newsPricePressure[dayState.morningNews.templateId] * 0.6;
+  return dayState.morningNewsItems.reduce(
+    (total, news) => (news.target.type === "market" ? total + newsPricePressure[news.templateId] * 0.6 : total),
+    0
+  );
 }
 
-function getNewsBadge(asset: AssetDefinition, target: MorningNewsTarget): MarketBoardNewsBadge {
-  if (target.type === "market") {
-    return "market";
-  }
-
-  if (target.type === "asset" && target.assetId === asset.id) {
+function getNewsBadge(asset: AssetDefinition, morningNewsItems: readonly MorningNews[]): MarketBoardNewsBadge {
+  if (morningNewsItems.some((news) => news.target.type === "asset" && news.target.assetId === asset.id)) {
     return "asset";
   }
 
-  if (target.type === "sector" && target.sectorId === asset.sectorId) {
+  if (morningNewsItems.some((news) => news.target.type === "sector" && news.target.sectorId === asset.sectorId)) {
     return "sector";
   }
 
+  if (morningNewsItems.some((news) => news.target.type === "market")) {
+    return "market";
+  }
+
   return null;
+}
+
+function getNewsTone(asset: AssetDefinition, morningNewsItems: readonly MorningNews[]): MarketBoardNewsTone {
+  const assetNews = morningNewsItems.find((news) => news.target.type === "asset" && news.target.assetId === asset.id);
+
+  if (assetNews) {
+    return getNewsToneByTemplate(assetNews.templateId);
+  }
+
+  const sectorNews = morningNewsItems.find((news) => news.target.type === "sector" && news.target.sectorId === asset.sectorId);
+
+  if (sectorNews) {
+    return getNewsToneByTemplate(sectorNews.templateId);
+  }
+
+  const marketNews = morningNewsItems.find((news) => news.target.type === "market");
+
+  return marketNews ? getNewsToneByTemplate(marketNews.templateId) : null;
+}
+
+function getSectorAverageNewsBadge(sectorId: SectorId, morningNewsItems: readonly MorningNews[]): MarketBoardNewsBadge {
+  if (morningNewsItems.some((news) => news.target.type === "asset" && news.target.sectorId === sectorId)) {
+    return "asset";
+  }
+
+  if (morningNewsItems.some((news) => news.target.type === "sector" && news.target.sectorId === sectorId)) {
+    return "sector";
+  }
+
+  if (morningNewsItems.some((news) => news.target.type === "market")) {
+    return "market";
+  }
+
+  return null;
+}
+
+function getSectorAverageNewsTone(sectorId: SectorId, morningNewsItems: readonly MorningNews[]): MarketBoardNewsTone {
+  const sectorNews = morningNewsItems.find((news) => news.target.type === "sector" && news.target.sectorId === sectorId);
+
+  if (sectorNews) {
+    return getNewsToneByTemplate(sectorNews.templateId);
+  }
+
+  const assetNews = morningNewsItems.find((news) => news.target.type === "asset" && news.target.sectorId === sectorId);
+
+  if (assetNews) {
+    return getNewsToneByTemplate(assetNews.templateId);
+  }
+
+  const marketNews = morningNewsItems.find((news) => news.target.type === "market");
+
+  return marketNews ? getNewsToneByTemplate(marketNews.templateId) : null;
+}
+
+function getNewsToneByTemplate(templateId: MorningNews["templateId"]): MarketBoardNewsTone {
+  if (templateId === "sector_positive_catalyst" || templateId === "overheat_spread") {
+    return "positive";
+  }
+
+  return "negative";
 }
 
 function getTrend(priceChangePercent: number): MarketBoardTrend {
@@ -332,6 +428,63 @@ function getStatus(priceChangePercent: number): MarketBoardStatus {
   }
 
   return "normal";
+}
+
+function createAssetBoardQuote(
+  asset: AssetDefinition,
+  runState: RunState,
+  dayState: DayState,
+  slotIndex: number,
+  priceChangePercent: number
+): { readonly referencePrice: number; readonly averageEntryPrice: number; readonly currentPrice: number } {
+  const random = createSeededRandom(`${runState.runSeed}:day:${dayState.dayIndex}:market-board-quote:${asset.id}:${slotIndex}`);
+  const referencePrice = roundedToTick(
+    random.nextInt(runDefaults.openingPriceMin, runDefaults.openingPriceMax + runDefaults.openingPriceTick),
+    runDefaults.openingPriceTick
+  );
+  const averageEntryPrice = roundedToTick(referencePrice * (0.98 + random.next() * 0.04), runDefaults.openingPriceTick);
+
+  return {
+    referencePrice,
+    averageEntryPrice,
+    currentPrice: calculateCurrentBoardPrice(referencePrice, priceChangePercent)
+  };
+}
+
+function createSectorAverageBoardQuote(
+  sectorId: SectorId,
+  runState: RunState,
+  dayState: DayState,
+  slotIndex: number,
+  priceChangePercent: number
+): { readonly referencePrice: number; readonly averageEntryPrice: number; readonly currentPrice: number } {
+  const sectorAssets = getAssetsBySector(sectorId);
+  const quotes = sectorAssets.map((asset, index) =>
+    createAssetBoardQuote(asset, runState, dayState, slotIndex + index, priceChangePercent)
+  );
+  const referencePrice = roundedToTick(getAverage(quotes.map((quote) => quote.referencePrice)), runDefaults.openingPriceTick);
+  const averageEntryPrice = roundedToTick(
+    getAverage(quotes.map((quote) => quote.averageEntryPrice)),
+    runDefaults.openingPriceTick
+  );
+
+  return {
+    referencePrice,
+    averageEntryPrice,
+    currentPrice: calculateCurrentBoardPrice(referencePrice, priceChangePercent)
+  };
+}
+
+function calculateCurrentBoardPrice(referencePrice: number, priceChangePercent: number): number {
+  return roundedToTick(referencePrice * (1 + priceChangePercent / 100), runDefaults.openingPriceTick);
+}
+
+function getAverage(values: readonly number[]): number {
+  return values.reduce((total, value) => total + value, 0) / Math.max(1, values.length);
+}
+
+function roundedToTick(value: number, tick: number): number {
+  return Math.max(tick, Math.round(value / tick) * tick);
 }
 
 function round2(value: number): number {

@@ -2,7 +2,7 @@ import type { AutoCardId } from "./runDefaults";
 
 export type AutoCardGrowthType = "effect" | "period";
 
-export const autoCardRewardElapsedSeconds = [90, 180, 270] as const;
+export const autoCardRewardElapsedSeconds = [45, 90, 135] as const;
 
 export interface AutoCardValue {
   readonly id: AutoCardId;

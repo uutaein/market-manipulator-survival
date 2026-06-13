@@ -61,9 +61,9 @@ MVP의 Core Game State는 다음 계층으로 나눈다.
 | --- | --- | --- |
 | Run State | 5-Day Run 전체에 유지되는 상태 | Seed, 선택 종목, 예산, 누적 수익, 자동 카드 |
 | Day State | 하루 시장 세션에 적용되는 상태 | Morning News, Today Condition, 목표 밴드, 개장 전 카드 |
-| Intraday State | 6분 장중 운용 중 실시간으로 변하는 상태 | 가격, 감시도, 변동성, 개인 참여도 |
+| Intraday State | 3분 장중 운용 중 실시간으로 변하는 상태 | 가격, 감시도, 변동성, 개인 참여도 |
 | Event State | 문서 이벤트와 자동 카드 선택 등 일시적 상태 | 활성 문서 이벤트, 선택지, 일시정지 |
-| Market Board State | 표시되는 8개 종목의 상태 | 내 종목 상세, 비플레이어 7개 간략 상태 |
+| Market Board State | 장중 시장 보드와 대시보드 상태 | 내 종목 상세, 경쟁 종목, 타 섹터 평균, 24개 개별 종목 거래대금 순위 |
 | Settlement State | Day/Final 정산에 필요한 상태 | Day 결과, Final 등급, 사회적 비용 |
 | Persistence State | localStorage 저장 대상 상태 | 진행 중 Run, 최근 결과, 최고 기록 |
 
@@ -178,7 +178,7 @@ Intraday Core State는 장중 운용 중 실시간으로 변한다.
 
 | 변수 | 범위/형태 | 기본/제약 | 설명 |
 | --- | --- | --- | --- |
-| `timeRemainingSec` | 0~360 | Day 시작 시 360 | 장중 남은 시간 |
+| `timeRemainingSec` | 0~180 | Day 시작 시 180 | 장중 남은 시간 |
 | `isIntradayPaused` | boolean | 기본 false | 문서 이벤트 등으로 장중 시간이 멈췄는지 여부 |
 | `budget` | 0 이상 숫자 | MVP 시작 기준 100, 최소 유지 기준 10 | 핵심 생존 자원 |
 | `priceChangePercent` | 숫자 | 목표 밴드와 붕괴선 기준으로 평가 | 현재 가격 등락률 |
@@ -195,7 +195,7 @@ Intraday Core State는 장중 운용 중 실시간으로 변한다.
 
 | ID | Requirement |
 | --- | --- |
-| SRS-STATE-INTRA-001 | 장중 운용은 기본 360초의 `timeRemainingSec`로 시작해야 한다. |
+| SRS-STATE-INTRA-001 | 장중 운용은 기본 180초의 `timeRemainingSec`로 시작해야 한다. |
 | SRS-STATE-INTRA-002 | `timeRemainingSec`가 0에 도달하면 시스템은 `day_settlement`로 전환해야 한다. |
 | SRS-STATE-INTRA-003 | `isIntradayPaused`가 참이면 `timeRemainingSec`는 감소하지 않아야 한다. |
 | SRS-STATE-INTRA-004 | `budget`이 최소 유지 기준 미만이면 즉시 Run 실패가 발생해야 한다. |
@@ -317,13 +317,15 @@ MVP 자동 카드는 다음 8개로 고정한다.
 
 ## 11. Market Board State
 
-MVP 시장 보드는 총 8개 종목을 표시한다.
+MVP 시장 보드는 내 종목 상세, 같은 섹터 경쟁 종목 2개, 타 섹터 평균 7개, 24개 개별 종목 거래대금 순위를 관리한다.
 
 | 변수 | 범위/형태 | 설명 |
 | --- | --- | --- |
-| `displayedAssetIds` | 8개 종목 ID | 시장 보드 표시 종목 |
+| `displayedAssetIds` | 플레이어 종목 + 같은 섹터 경쟁 종목 ID | 종목 단위 표시 대상 |
+| `sectorAverageSummaries` | 7개 섹터 평균 | 타 섹터 평균 행 |
+| `marketDashboardRows` | 24개 개별 종목 중 표시 구간 | 거래대금 순위 대시보드 |
 | `playerAssetState` | 상세 상태 | 플레이어 대상 종목 |
-| `nonPlayerAssetSummaries` | 7개 간략 상태 | 비플레이어 종목 상태 |
+| `nonPlayerAssetSummaries` | 간략 상태 | 경쟁 종목과 타 섹터 평균 상태 |
 | `newsBadges` | 종목/섹터별 배지 | 뉴스 영향 표시 |
 
 ### 11.1 Player Asset State
@@ -355,10 +357,11 @@ MVP 시장 보드는 총 8개 종목을 표시한다.
 
 | ID | Requirement |
 | --- | --- |
-| SRS-STATE-MARKET-001 | `displayedAssetIds`는 항상 8개 종목으로 구성되어야 한다. |
-| SRS-STATE-MARKET-002 | 8개 중 1개는 `selectedAssetId`와 동일해야 한다. |
-| SRS-STATE-MARKET-003 | 비플레이어 7개 종목은 간략 계산만 사용해야 한다. |
+| SRS-STATE-MARKET-001 | `displayedAssetIds`는 플레이어 종목과 같은 섹터 경쟁 종목 2개를 포함해야 한다. |
+| SRS-STATE-MARKET-002 | `displayedAssetIds` 중 1개는 `selectedAssetId`와 동일해야 한다. |
+| SRS-STATE-MARKET-003 | 비플레이어 경쟁 종목과 타 섹터 평균은 간략 계산만 사용해야 한다. |
 | SRS-STATE-MARKET-004 | 뉴스 영향을 받는 섹터나 종목은 시장 보드에서 배지 또는 간단한 상태로 표시되어야 한다. |
+| SRS-STATE-MARKET-005 | 마켓 대시보드는 24개 개별 종목 거래대금 순위를 사용하되, 24개 전체 상세 시뮬레이션을 수행하지 않아야 한다. |
 
 ---
 

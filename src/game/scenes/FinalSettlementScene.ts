@@ -36,7 +36,7 @@ export class FinalSettlementScene extends BaseDocumentScene {
     this.addActionButton(
       {
         label: "같은 조건 재시작",
-        target: SceneKeys.MorningBriefing,
+        target: SceneKeys.PreOpenCard,
         onClick: () => {
           gameSession.restartWithSameSeed();
           gameSession.beginDay();

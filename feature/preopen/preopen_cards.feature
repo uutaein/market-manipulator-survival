@@ -3,13 +3,27 @@ Feature: Pre-open Card selection and Opening Approval
   The player makes one pre-open response before entering intraday operation.
 
   Scenario: Choose at most one Pre-open Card
-    Given the player has reviewed Morning News and the Market Briefing
+    Given a new Day begins before Morning News is revealed
     When the Pre-open Card screen is shown
-    Then the player can choose "시장 관찰"
-    And the player can choose "사전 포지션 구축"
-    And the player can choose "방어 자금 배정"
+    Then the player can choose "사전 포지션 확보"
+    And the player can choose "뉴스 배정: 호재"
+    And the player can choose "뉴스 배정: 악재"
+    And the player can choose "종목 분석"
     And the player can choose "관망"
     And no more than one Pre-open Card can be selected for the Day
+
+  Scenario: Reveal Morning News after the pre-open choice
+    Given a new Day begins before Morning News is revealed
+    When the player chooses "뉴스 배정: 호재"
+    Then Morning News has not been shown yet
+    When the player confirms the pre-open choice
+    Then Morning News and the Market Briefing are shown
+
+  Scenario: Adjust early positioning by current budget ratio
+    Given a new Day begins before Morning News is revealed
+    When the player chooses early positioning with 35 percent of current budget
+    Then the pre-open effect spends 35 percent of the current budget
+    And the early positioning effect stores the chosen budget ratio
 
   Scenario: Use "관망" as the explicit no-card choice
     Given the player does not want to spend budget before opening

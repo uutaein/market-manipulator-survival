@@ -57,30 +57,30 @@ The tendency is not shown directly to the player.
 
 | Sector ID | Sector | Asset ID | Display Name | Short Briefing |
 | --- | --- | --- | --- | --- |
-| `food_agri` | 식량·농업 | `food_agri_01` | 곡물회랑 | Regional supply desk with steady attention. |
-| `food_agri` | 식량·농업 | `food_agri_02` | 온실노드 | Controlled-growth operator with weather-sensitive demand. |
-| `food_agri` | 식량·농업 | `food_agri_03` | 수확셀 | Small seasonal desk with uneven participation. |
-| `energy_grid` | 에너지·전력망 | `energy_grid_01` | 그리드램프 | Utility-adjacent desk with broad sector visibility. |
-| `energy_grid` | 에너지·전력망 | `energy_grid_02` | 축전회랑 | Storage-themed desk with volatile attention bursts. |
-| `energy_grid` | 에너지·전력망 | `energy_grid_03` | 전력노드 | Infrastructure desk with slower but stronger moves. |
-| `bio_trial` | 바이오·임상 | `bio_trial_01` | 임상서랍 | Clinical-file desk with event-heavy sentiment. |
-| `bio_trial` | 바이오·임상 | `bio_trial_02` | 바이오램프 | Research-themed desk with sharp attention swings. |
-| `bio_trial` | 바이오·임상 | `bio_trial_03` | 세포문서 | Thin-flow desk with high uncertainty. |
-| `automation_ai` | 자동화·AI | `automation_ai_01` | 오토서기 | Automation desk with strong crowd recognition. |
-| `automation_ai` | 자동화·AI | `automation_ai_02` | 패턴엔진 | Pattern desk that reacts strongly to news. |
-| `automation_ai` | 자동화·AI | `automation_ai_03` | 공정노드 | Factory-flow desk with moderate liquidity. |
-| `chip_equipment` | 칩·장비 | `chip_equipment_01` | 웨이퍼문 | Component desk with sector-sensitive pressure. |
-| `chip_equipment` | 칩·장비 | `chip_equipment_02` | 장비서랍 | Equipment desk with slower attention buildup. |
-| `chip_equipment` | 칩·장비 | `chip_equipment_03` | 회로등대 | Signal-heavy desk with fast volatility changes. |
-| `payment_fintech` | 결제·핀테크 | `payment_fintech_01` | 결제도장 | Settlement-themed desk with stable baseline interest. |
-| `payment_fintech` | 결제·핀테크 | `payment_fintech_02` | 원장노드 | Ledger desk with medium liquidity and pressure. |
-| `payment_fintech` | 결제·핀테크 | `payment_fintech_03` | 정산서랍 | Budget-efficient desk with surveillance sensitivity. |
-| `media_game` | 미디어·게임 | `media_game_01` | 채널잉크 | Media desk with fast attention movement. |
-| `media_game` | 미디어·게임 | `media_game_02` | 플레이문 | Game-themed desk with high participation variance. |
-| `media_game` | 미디어·게임 | `media_game_03` | 방송노드 | Broadcast desk with broad but unstable interest. |
-| `community_token` | 커뮤니티 토큰 | `community_token_01` | 포럼칩 | Community desk with fast crowd buildup. |
-| `community_token` | 커뮤니티 토큰 | `community_token_02` | 밈원장 | Meme-led desk with high panic risk. |
-| `community_token` | 커뮤니티 토큰 | `community_token_03` | 토큰광장 | Token-square desk with strong swarm response. |
+| `food_agri` | 식량·농업 | `food_agri_01` | 밥심푸드 | 식량 테마가 붙으면 개인 참여도가 빠르게 붙는 허구 식품 데스크. |
+| `food_agri` | 식량·농업 | `food_agri_02` | 온실상사 | 날씨 문서와 공급 불안에 민감한 시설 농업 데스크. |
+| `food_agri` | 식량·농업 | `food_agri_03` | 작황컴퍼니 | 계절성 뉴스에 흔들리는 소형 농업 테마 데스크. |
+| `energy_grid` | 에너지·전력망 | `energy_grid_01` | 콘센트전력 | 전력망 이슈가 뜨면 시장 보드에서 눈에 잘 띄는 허구 전력사. |
+| `energy_grid` | 에너지·전력망 | `energy_grid_02` | 축전상회 | 저장 장치 테마로 관심이 짧고 강하게 붙는 에너지 데스크. |
+| `energy_grid` | 에너지·전력망 | `energy_grid_03` | 정전복구 | 급락 방어와 복구 기대감이 번갈아 나타나는 전력망 데스크. |
+| `bio_trial` | 바이오·임상 | `bio_trial_01` | 임상대기제약 | 승인 문구 하나에 기대와 경고가 같이 붙는 임상 데스크. |
+| `bio_trial` | 바이오·임상 | `bio_trial_02` | 캡슐바이오 | 작은 호재에도 참여도가 튀는 연구 테마 데스크. |
+| `bio_trial` | 바이오·임상 | `bio_trial_03` | 승인문턱랩스 | 확실한 정보보다 분위기에 더 크게 흔들리는 고변동 데스크. |
+| `automation_ai` | 자동화·AI | `automation_ai_01` | 자동서기 | 문서 자동화 테마로 초반 관심을 모으기 쉬운 AI 데스크. |
+| `automation_ai` | 자동화·AI | `automation_ai_02` | 프롬프트공업 | 뉴스 문구에 과민하게 반응하는 자동화 테마 데스크. |
+| `automation_ai` | 자동화·AI | `automation_ai_03` | 클릭봇시스템즈 | 관심은 빨리 붙지만 감시 문서도 빨리 따라오는 자동화 데스크. |
+| `chip_equipment` | 칩·장비 | `chip_equipment_01` | 웨이퍼상회 | 칩 공급 뉴스에 민감한 부품 테마 데스크. |
+| `chip_equipment` | 칩·장비 | `chip_equipment_02` | 회로전자 | 유동성이 붙으면 가격 반응이 선명해지는 허구 전자 데스크. |
+| `chip_equipment` | 칩·장비 | `chip_equipment_03` | 장비납품 | 수주 기대와 지연 경고가 번갈아 나오는 장비 테마 데스크. |
+| `payment_fintech` | 결제·핀테크 | `payment_fintech_01` | 도장페이 | 승인 도장 같은 UI와 잘 맞는 결제 테마 데스크. |
+| `payment_fintech` | 결제·핀테크 | `payment_fintech_02` | 원장테크 | 장부와 정산 뉴스에 따라 유동성이 움직이는 핀테크 데스크. |
+| `payment_fintech` | 결제·핀테크 | `payment_fintech_03` | 영수증핀테크 | 예산 효율은 좋지만 감시 문서에 민감한 결제 데스크. |
+| `media_game` | 미디어·게임 | `media_game_01` | 클릭방송 | 트래픽 소식에 개인 참여도가 빠르게 반응하는 미디어 데스크. |
+| `media_game` | 미디어·게임 | `media_game_02` | 패치노트게임즈 | 업데이트 문구 하나로 과열과 실망이 교차하는 게임 데스크. |
+| `media_game` | 미디어·게임 | `media_game_03` | 시즌패스미디어 | 관심은 넓지만 오래 유지하기 어려운 콘텐츠 테마 데스크. |
+| `meme_theme` | 밈·테마 | `meme_theme_01` | 밈광장 | 커뮤니티 분위기가 빠르게 모였다가 흩어지는 테마 데스크. |
+| `meme_theme` | 밈·테마 | `meme_theme_02` | 밈장부 | 웃음과 패닉이 같은 속도로 번지는 고위험 테마 데스크. |
+| `meme_theme` | 밈·테마 | `meme_theme_03` | 댓글연쇄 | 댓글 분위기가 Retail Swarm으로 바로 번지는 밈 테마 데스크. |
 
 ---
 
@@ -89,7 +89,7 @@ The tendency is not shown directly to the player.
 | State | Baseline |
 | --- | ---: |
 | Run length | 5 Days |
-| Intraday duration | 360 sec |
+| Intraday duration | 180 sec |
 | Starting budget | 100 |
 | Minimum budget failure threshold | 10 |
 | Initial `priceChangePercent` | 0 |
@@ -111,32 +111,53 @@ Each new Run starts with 1 random Lv.1 auto card from the 8 MVP auto cards.
 | SRS-BASE-RUN-001 | A new Run must initialize using the baseline values above unless modified by asset tendency, Today Condition, Morning News, or Day 1 onboarding rules. |
 | SRS-BASE-RUN-002 | Starting values must be generated from the Run Seed where randomness is involved. |
 | SRS-BASE-RUN-003 | The starting auto card must be reproducible from the Run Seed. |
+| SRS-BASE-RUN-004 | Morning News must affect more than price direction; relevant news should also adjust starting volatility, participation, liquidity, or surveillance enough for the player to feel that briefing information matters. |
 
 ---
 
 ## 4. Market Board Selection Rules
 
-MVP Market Board displays 8 assets.
+MVP Market Board uses three intraday panels:
+
+1. player-sector competitors,
+2. other-sector averages,
+3. a market dashboard ranked by fictional trade value.
+
+The visible market context rows are:
 
 | Slot | Rule |
 | --- | --- |
 | 1 | Player selected asset |
 | 2~3 | The other two assets in the selected sector |
-| 4~8 | Five representative assets from other sectors |
+| 4~10 | Seven other-sector average rows |
 
-Representative asset priority:
+The market dashboard is not a sector-average list. It ranks all 24 individual fictional assets by fictional trade value and displays a window around the player's current rank. If the player asset is near the top or bottom, the window clamps to the top or bottom of the 24-asset ranking.
 
-1. Morning News affected sector or asset,
-2. sectors with active market aftereffects,
-3. sectors not yet shown today,
-4. seeded random fill.
+Morning News affected sectors or assets must receive visible badges or stronger movement/volume signals in the relevant rows.
+
+The player chart includes a fictional order-book/depth panel. The price formula applies an `orderBookMultiplier` after directional pressure and liquidity are combined. Thin sell-side depth amplifies upward responsiveness; thin buy-side depth amplifies downward responsiveness. The values are fictional and seeded for gameplay readability.
+
+The price tick also uses a fictional price-motion simulator module. This module adds mean reversion, target-band resistance, overheat drag, occasional pullback shocks, crash-area rebound support, and a seeded fake OHLCV package impulse so prices do not simply drift upward whenever pressure is positive.
+
+The fake OHLCV package adapter may use `stock-market-gen` or an equivalent local generator. It must only generate fictional candles from the current game state and Run Seed. It must not fetch or embed real market data, real tickers, or real exchange data.
+
+The Intraday chart renderer may use `lightweight-charts` or an equivalent browser chart renderer. Phaser should not manually redraw candle and volume geometry every tick. The chart renderer receives fictional OHLCV data from the game session and stays replaceable.
+
+The Market Dashboard should update through a stable DOM row pool or equivalent retained renderer. It should not destroy and recreate every visible row every second.
 
 | ID | Requirement |
 | --- | --- |
 | SRS-BASE-MARKET-001 | The selected player asset must always be displayed. |
 | SRS-BASE-MARKET-002 | Same-sector peers must be displayed unless the sector has fewer than 3 assets, which MVP does not allow. |
-| SRS-BASE-MARKET-003 | If Morning News affects a non-player sector, at least one asset from that sector should appear in slots 4~8. |
-| SRS-BASE-MARKET-004 | Non-player asset selection must be reproducible from the Run Seed and Day index. |
+| SRS-BASE-MARKET-003 | All seven non-player sectors must be represented by simplified sector-average rows. |
+| SRS-BASE-MARKET-004 | The market dashboard must rank all 24 individual fictional assets by fictional trade value, not sector averages. |
+| SRS-BASE-MARKET-005 | Non-player movement must be reproducible from the Run Seed and Day index. |
+| SRS-BASE-MARKET-006 | The Intraday chart must display fictional sell-side and buy-side depth for the player asset. |
+| SRS-BASE-MARKET-007 | The price tick calculation must include an order-book/depth responsiveness multiplier. |
+| SRS-BASE-MARKET-008 | The price tick calculation must include a fictional price-motion simulator adjustment with pullback and mean-reversion components. |
+| SRS-BASE-MARKET-009 | The price-motion simulator may use a seeded fake OHLCV package adapter, but the adapter must remain replaceable and must not introduce real market data. |
+| SRS-BASE-MARKET-010 | The candle/volume chart renderer must be separated from the Phaser scene and receive data through an adapter or overlay boundary. |
+| SRS-BASE-MARKET-011 | The Market Dashboard renderer must use retained rows or an equivalent approach that avoids per-tick row object recreation. |
 
 ---
 
@@ -144,17 +165,21 @@ Representative asset priority:
 
 | Card | Baseline Effect |
 | --- | --- |
-| 시장 관찰 | Reveals Morning News target type, target band, crash line, and one major risk hint. No stat cost. |
-| 사전 포지션 구축 | `budget -10`, `holdingRatio +8`, `marketPressure +20` for first 30 sec, `surveillance +3`, `volatility +4`. |
-| 방어 자금 배정 | Reserve 8 budget for the Day. First panic or collapse-risk event consumes reserve to apply `marketPressure +15`, `volatility -8`, `surveillance -3`. If unused, 6 budget returns at Day Settlement. |
+| 사전 포지션 확보 | Player chooses 10~50% of current Day budget with a drag-style investment ratio. Budget spent is `currentBudget * selectedPercent`; holding, pressure, surveillance, and volatility scale from the invested amount. Average entry price starts roughly 5~20% above opening price using deterministic Run/asset randomness. Does not increase attention directly. |
+| 뉴스 배정 | `budget -8`. Player chooses `호재` or `악재` before Morning News is revealed. The generated Morning News targets the player asset. |
+| 뉴스 배정: 호재 | Player asset positive news. Adds attention/upward context, lets liquidity supply add meaningful upward pressure, improves price-push effect, and reduces upward-action surveillance burden. |
+| 뉴스 배정: 악재 | Player asset negative news. Adds downside context and volatility, reduces position-settlement surveillance burden, but weakens price-push context. |
+| 종목 분석 | `budget -4`. Strengthens `가격 추진` and `과열 해소` effect multipliers. Does not directly move price or attention. |
 | 관망 | No stat change. Preserves budget. |
 
 | ID | Requirement |
 | --- | --- |
 | SRS-BASE-PREOPEN-001 | Pre-open card effects must apply only to the current Day. |
-| SRS-BASE-PREOPEN-002 | `시장 관찰` must be informational and must not improve stats directly. |
-| SRS-BASE-PREOPEN-003 | `방어 자금 배정` reserve must not carry to the next Day. |
+| SRS-BASE-PREOPEN-002 | Pre-open card selection must occur before Morning News is revealed. |
+| SRS-BASE-PREOPEN-003 | `뉴스 배정` must target the player-selected fictional asset, not the whole market. |
 | SRS-BASE-PREOPEN-004 | `관망` must be a valid explicit choice. |
+| SRS-BASE-PREOPEN-005 | `뉴스 배정` is counted as one MVP card even though it exposes `호재` and `악재` direction buttons. |
+| SRS-BASE-PREOPEN-006 | `사전 포지션 확보` must not use a fixed budget cost. |
 
 ---
 
@@ -164,16 +189,38 @@ Manual actions are unavailable while a document event or auto card reward choice
 
 | Action | Cost / Recovery | Cooldown | Baseline Effect |
 | --- | ---: | ---: | --- |
-| 유동성 공급 | `budget -6` | 8 sec | `marketLiquidity +18`, `volatility +4`, `surveillance +3`; liquidity bonus decays over 20 sec. |
-| 가격 추진 | `budget -8` | 10 sec | `marketPressure +35` for 12 sec, `volatility +6`, `surveillance +5`. |
-| 과열 해소 | `budget -4` | 12 sec | `marketPressure -18`, `personalParticipation -12`, `volatility -10`, `surveillance -4`. |
-| 포지션 정리 | `budget +7` | 14 sec | `holdingRatio -10`, `marketPressure -12`, `volatility +3`. |
+| 유동성 공급 | `budget -4` | 8 sec | Low-cost attention and liquidity setup. Gradually applies `marketPressure +5`, `marketLiquidity +22`, `personalParticipation +10`, `volatility +6`, `surveillance +2`. |
+| 가격 추진 | `budget -14` | 10 sec | High-cost upward pressure and position acquisition. Gradually applies `holdingRatio +4`, `marketPressure +58`, `marketLiquidity +8`, `personalParticipation +12`, `volatility +11`, `surveillance +7`, with average entry price rising when held units increase. |
+| 과열 해소 | `budget -3` | 12 sec | Low-cost downward stabilization while keeping activity visible. Gradually applies `marketPressure -46`, `marketLiquidity +6`, `personalParticipation +4`, `volatility -8`, `surveillance -2`. |
+| 포지션 정리 | current-price-based recovery | 14 sec | Full position cleanup with sharp exit shock. Budget recovery is based on current fictional position value. Gradually applies `holdingRatio -100`, `marketPressure -110`, `marketLiquidity +10`, `personalParticipation +16`, `surveillance +7`, `volatility +30`. |
 
 | ID | Requirement |
 | --- | --- |
-| SRS-BASE-ACTION-001 | Manual action buttons must show disabled state when the player cannot pay the cost or the action is on cooldown. |
+| SRS-BASE-ACTION-001 | Manual action buttons must show disabled state when the player cannot pay the cost, the action is executing, or the action is on cooldown. |
 | SRS-BASE-ACTION-002 | Budget recovery from `포지션 정리` must not raise budget above a future configurable Run budget cap if one is added. MVP may omit that cap. |
 | SRS-BASE-ACTION-003 | Manual action values must live in `manualActionValues` or an equivalent balancing group. |
+| SRS-BASE-ACTION-004 | Manual action budget cost/recovery is committed immediately, but non-budget stat effects are applied gradually over the action execution duration. |
+| SRS-BASE-ACTION-005 | An executing manual action button must blink and show remaining seconds; the player cannot cancel or re-trigger that action while it is executing. |
+| SRS-BASE-ACTION-006 | If `포지션 정리` reduces holding ratio to 0 and no manual action is still executing, the player may use an intraday desk-reposition flow to choose a new fictional sector/asset while preserving Run/Day risk state. |
+| SRS-BASE-ACTION-007 | The intended MVP action rhythm is `사전 포지션 확보` followed by liquidity/attention setup, high-cost price pressure, overheat stabilization, and full position cleanup. |
+| SRS-BASE-ACTION-008 | `가격 추진` must increase held units and average entry price while spending budget. |
+| SRS-BASE-ACTION-009 | `포지션 정리` must reduce held units and recover budget based on current fictional price context. |
+
+### 6.1 Intraday Money Flow Display
+
+The Intraday screen must expose simple fictional budget-flow feedback:
+
+| Display Item | Meaning |
+| --- | --- |
+| 사용 | Total budget spent by committed actions and entry choices |
+| 회수 | Total budget recovered by settlement actions or effects |
+| 투입 | `사용 - 회수` |
+| 현재가 / 시초가 / 평균단가 | Fictional quote context for the player asset |
+| 보유 / 매물 / 비중 | Held fictional units, fictional float units, and holding ratio |
+| 포지션 평가 | Fictional position market value |
+| 평가손익 | Unrealized fictional position gain/loss from current price versus average entry |
+
+This is a game-budget display, not real accounting.
 
 ---
 
@@ -184,7 +231,7 @@ Manual actions are unavailable while a document event or auto card reward choice
 | Rule | Baseline |
 | --- | --- |
 | Starting auto card | 1 random Lv.1 card at Run start |
-| Reward timing | At 90, 180, and 270 sec elapsed per Day |
+| Reward timing | At 45, 90, and 135 sec elapsed per Day |
 | Choices | 3 choices |
 | Choice behavior | Pause intraday until selected |
 | Choice result | Gain a new Lv.1 card or level up an owned card |
@@ -233,10 +280,10 @@ Level scaling:
 | Rule | Baseline |
 | --- | ---: |
 | Max document events per Day | 2 |
-| Minimum gap between events | 90 sec intraday time |
-| Earliest event time | 45 sec elapsed |
-| Latest normal event time | 320 sec elapsed |
-| Day 1 behavior | 1 low-risk event between 120 and 180 sec elapsed if no event has appeared |
+| Minimum gap between events | 45 sec intraday time |
+| Earliest event time | 30 sec elapsed |
+| Latest normal event time | 165 sec elapsed |
+| Day 1 behavior | 1 low-risk event between 60 and 90 sec elapsed if no event has appeared |
 | Pause behavior | Pause until the player chooses |
 
 Only one document event can be active at a time.

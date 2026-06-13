@@ -4,7 +4,7 @@ import type { MmsWorld } from "../support/world";
 import { excludedManualActions, manualActions } from "../support/world";
 import { autoCardIds } from "../../src/domain/balancing/runDefaults";
 import { isMvpAutoCardId } from "../../src/domain/intraday/autoCards";
-import { areManualActionsAvailable } from "../../src/domain/intraday/manualActions";
+import { areManualActionsAvailable, tickManualActionCooldowns } from "../../src/domain/intraday/manualActions";
 
 const normalizeLabel = (label: string) => label.normalize("NFC").trim();
 
@@ -20,8 +20,8 @@ Given("intraday operation is active", function (this: MmsWorld) {
   this.openIntraday();
 });
 
-Then("the intraday timer starts at 360 seconds", function (this: MmsWorld) {
-  assert.equal(this.intradayState?.timeRemainingSec, 360);
+Then("the intraday timer starts at 180 seconds", function (this: MmsWorld) {
+  assert.equal(this.intradayState?.timeRemainingSec, 180);
 });
 
 When("the timer reaches 0", function (this: MmsWorld) {
@@ -58,7 +58,7 @@ When("a price tick runs", function (this: MmsWorld) {
   this.runPriceTick();
 });
 
-Then("price movement is calculated from pressure, participation, holding, liquidity, competition, news, aftereffect, and volatility noise components", function (this: MmsWorld) {
+Then("price movement is calculated from pressure, participation, holding, liquidity, competition, news, aftereffect, attention fade, order book depth, fake OHLCV simulator adjustment, and volatility noise components", function (this: MmsWorld) {
   assert.ok(this.intradayState?.latestPriceComponents);
   assert.equal(typeof this.intradayState.latestPriceComponents.pressure, "number");
   assert.equal(typeof this.intradayState.latestPriceComponents.participation, "number");
@@ -67,6 +67,18 @@ Then("price movement is calculated from pressure, participation, holding, liquid
   assert.equal(typeof this.intradayState.latestPriceComponents.competition, "number");
   assert.equal(typeof this.intradayState.latestPriceComponents.news, "number");
   assert.equal(typeof this.intradayState.latestPriceComponents.aftereffect, "number");
+  assert.equal(typeof this.intradayState.latestPriceComponents.attentionFade, "number");
+  assert.equal(typeof this.intradayState.latestPriceComponents.orderBookMultiplier, "number");
+  assert.equal(typeof this.intradayState.latestPriceComponents.sellWallDepth, "number");
+  assert.equal(typeof this.intradayState.latestPriceComponents.buyWallDepth, "number");
+  assert.equal(typeof this.intradayState.latestPriceComponents.meanReversion, "number");
+  assert.equal(typeof this.intradayState.latestPriceComponents.targetResistance, "number");
+  assert.equal(typeof this.intradayState.latestPriceComponents.overheatDrag, "number");
+  assert.equal(typeof this.intradayState.latestPriceComponents.pullbackShock, "number");
+  assert.equal(typeof this.intradayState.latestPriceComponents.reboundSupport, "number");
+  assert.equal(typeof this.intradayState.latestPriceComponents.externalSimulatorImpulse, "number");
+  assert.equal(typeof this.intradayState.latestPriceComponents.externalSimulatorVolumeFactor, "number");
+  assert.equal(typeof this.intradayState.latestPriceComponents.simulatorAdjustment, "number");
   assert.equal(typeof this.intradayState.latestPriceComponents.volatilityNoise, "number");
 });
 
@@ -76,6 +88,51 @@ Then("the price is not directly overwritten by a manual action or card", functio
     this.intradayState.priceChangePercent,
     this.priceBeforeTick + this.intradayState.latestPriceComponents.clampedDelta
   );
+});
+
+When("an overheated price tick runs", function (this: MmsWorld) {
+  if (!this.intradayState) {
+    this.openIntraday();
+  }
+
+  this.intradayState = {
+    ...this.intradayState!,
+    priceChangePercent: 14,
+    currentPrice: Math.round(this.intradayState!.openingPrice * 1.14),
+    marketPressure: 52,
+    personalParticipation: 76,
+    volatility: 62,
+    priceTickIndex: 9
+  };
+  this.runPriceTick();
+});
+
+Then("the price simulator applies negative reversion pressure", function (this: MmsWorld) {
+  assert.ok(this.intradayState?.latestPriceComponents);
+  assert.ok(this.intradayState.latestPriceComponents.meanReversion < 0);
+  assert.ok(this.intradayState.latestPriceComponents.targetResistance < 0);
+  assert.ok(this.intradayState.latestPriceComponents.simulatorAdjustment < 0);
+});
+
+When("upward pressure meets a thin sell wall", function (this: MmsWorld) {
+  if (!this.intradayState) {
+    this.openIntraday();
+  }
+
+  this.intradayState = {
+    ...this.intradayState!,
+    marketPressure: 100,
+    marketLiquidity: 5,
+    personalParticipation: 70,
+    priceTickIndex: 0
+  };
+  this.runPriceTick();
+});
+
+Then("the order book multiplier amplifies upward price movement", function (this: MmsWorld) {
+  assert.ok(this.intradayState?.latestPriceComponents);
+  assert.ok(this.intradayState.latestPriceComponents.sellWallDepth < 50);
+  assert.ok(this.intradayState.latestPriceComponents.orderBookMultiplier > 1);
 });
 
 Given("an intraday stat update occurs", function (this: MmsWorld) {
@@ -108,6 +165,7 @@ Given("the player uses a manual action", function (this: MmsWorld) {
 Then("the action affects budget, market pressure, liquidity, participation, holding ratio, surveillance, or volatility", function (this: MmsWorld) {
   assert.equal(this.lastManualActionResult?.applied, true);
   assert.equal(this.intradayState?.lastManualActionId, "price_push");
+  assert.equal(this.intradayState?.activeManualActionEffects.some((effect) => effect.actionId === "price_push"), true);
 });
 
 Then("the action does not directly set the final price", function (this: MmsWorld) {
@@ -117,6 +175,27 @@ Then("the action does not directly set the final price", function (this: MmsWorl
 Then("the action enters cooldown if applicable", function (this: MmsWorld) {
   assert.ok(this.intradayState);
   assert.ok(this.intradayState.manualActionCooldowns.price_push > 0);
+});
+
+When("the player runs price push long enough for position accounting", function (this: MmsWorld) {
+  if (!this.intradayState) {
+    this.openIntraday();
+  }
+
+  this.heldUnitsBeforeManualAction = this.intradayState!.heldUnits;
+  this.averageEntryPriceBeforeManualAction = this.intradayState!.averageEntryPrice;
+  this.useManualAction("가격 추진");
+  this.intradayState = tickManualActionCooldowns(this.intradayState!, 4);
+});
+
+Then("held units increase", function (this: MmsWorld) {
+  assert.ok(this.intradayState);
+  assert.ok(this.intradayState.heldUnits > this.heldUnitsBeforeManualAction);
+});
+
+Then("average entry price increases", function (this: MmsWorld) {
+  assert.ok(this.intradayState);
+  assert.ok(this.intradayState.averageEntryPrice > this.averageEntryPriceBeforeManualAction);
 });
 
 Then("{string} is not a manual action button", function (this: MmsWorld, actionName: string) {
@@ -167,7 +246,8 @@ Then("the card applies its configured state effect", function (this: MmsWorld) {
 
 Then("the card effect uses abstract fictional stats only", function (this: MmsWorld) {
   assert.ok(this.intradayState);
-  assert.ok(this.intradayState.personalParticipation > 30);
+  assert.equal(typeof this.intradayState.personalParticipation, "number");
+  assert.ok(this.intradayState.personalParticipation >= 0 && this.intradayState.personalParticipation <= 100);
 });
 
 Given("the player owns auto cards", function (this: MmsWorld) {

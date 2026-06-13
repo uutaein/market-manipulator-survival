@@ -1,11 +1,12 @@
 export const preOpenCardIds = [
-  "market_observation",
   "early_positioning",
-  "defense_budget",
+  "news_assignment",
+  "asset_analysis",
   "wait_and_see"
 ] as const;
 
 export type PreOpenCardId = (typeof preOpenCardIds)[number];
+export type NewsAssignmentDirection = "positive" | "negative";
 
 export interface PreOpenCardValue {
   readonly id: PreOpenCardId;
@@ -19,13 +20,19 @@ export interface PreOpenCardValue {
   readonly defenseReserve: number;
   readonly effectDurationSec: number | null;
   readonly revealsExtraBriefing: boolean;
+  readonly manualActionEffectMultiplier: number;
+  readonly pricePushEffectMultiplier: number;
+  readonly overheatCooldownEffectMultiplier: number;
+  readonly liquiditySupplyPressureBonus: number;
+  readonly upwardActionSurveillanceMultiplier: number;
+  readonly positionSettlementSurveillanceMultiplier: number;
 }
 
 export const preOpenCardValues = {
-  market_observation: {
-    id: "market_observation",
-    displayName: "시장 관찰",
-    role: "Reveals Morning News target type, target band, crash line, and one major risk hint.",
+  early_positioning: {
+    id: "early_positioning",
+    displayName: "사전 포지션 확보",
+    role: "현재 예산의 10~50%를 투입해 보유 비중을 늘린다. 관심은 오르지 않지만 평균단가가 조금 불리해진다.",
     budgetDelta: 0,
     holdingRatioDelta: 0,
     marketPressureDelta: 0,
@@ -33,33 +40,51 @@ export const preOpenCardValues = {
     volatilityDelta: 0,
     defenseReserve: 0,
     effectDurationSec: null,
-    revealsExtraBriefing: true
+    revealsExtraBriefing: false,
+    manualActionEffectMultiplier: 1,
+    pricePushEffectMultiplier: 1,
+    overheatCooldownEffectMultiplier: 1,
+    liquiditySupplyPressureBonus: 0,
+    upwardActionSurveillanceMultiplier: 1,
+    positionSettlementSurveillanceMultiplier: 1
   },
-  early_positioning: {
-    id: "early_positioning",
-    displayName: "사전 포지션 구축",
-    role: "Spends starting budget to gain opening pressure.",
-    budgetDelta: -10,
-    holdingRatioDelta: 8,
-    marketPressureDelta: 20,
-    surveillanceDelta: 3,
-    volatilityDelta: 4,
-    defenseReserve: 0,
-    effectDurationSec: 30,
-    revealsExtraBriefing: false
-  },
-  defense_budget: {
-    id: "defense_budget",
-    displayName: "방어 자금 배정",
-    role: "Reserves starting budget to reduce first panic or collapse-risk pressure.",
+  news_assignment: {
+    id: "news_assignment",
+    displayName: "뉴스 배정",
+    role: "아직 공개되지 않은 오늘 뉴스를 호재 또는 악재 중 하나로 배정한다.",
     budgetDelta: -8,
+    holdingRatioDelta: 0,
+    marketPressureDelta: 0,
+    surveillanceDelta: 2,
+    volatilityDelta: 8,
+    defenseReserve: 0,
+    effectDurationSec: null,
+    revealsExtraBriefing: true,
+    manualActionEffectMultiplier: 1,
+    pricePushEffectMultiplier: 1,
+    overheatCooldownEffectMultiplier: 1,
+    liquiditySupplyPressureBonus: 0,
+    upwardActionSurveillanceMultiplier: 1,
+    positionSettlementSurveillanceMultiplier: 1
+  },
+  asset_analysis: {
+    id: "asset_analysis",
+    displayName: "종목 분석",
+    role: "가격 추진과 과열 해소의 장중 효과를 강화한다. 즉시 가격이나 관심을 올리지는 않는다.",
+    budgetDelta: -4,
     holdingRatioDelta: 0,
     marketPressureDelta: 0,
     surveillanceDelta: 0,
     volatilityDelta: 0,
-    defenseReserve: 8,
+    defenseReserve: 0,
     effectDurationSec: null,
-    revealsExtraBriefing: false
+    revealsExtraBriefing: true,
+    manualActionEffectMultiplier: 1.25,
+    pricePushEffectMultiplier: 1,
+    overheatCooldownEffectMultiplier: 1,
+    liquiditySupplyPressureBonus: 0,
+    upwardActionSurveillanceMultiplier: 1,
+    positionSettlementSurveillanceMultiplier: 1
   },
   wait_and_see: {
     id: "wait_and_see",
@@ -72,7 +97,13 @@ export const preOpenCardValues = {
     volatilityDelta: 0,
     defenseReserve: 0,
     effectDurationSec: null,
-    revealsExtraBriefing: false
+    revealsExtraBriefing: false,
+    manualActionEffectMultiplier: 1,
+    pricePushEffectMultiplier: 1,
+    overheatCooldownEffectMultiplier: 1,
+    liquiditySupplyPressureBonus: 0,
+    upwardActionSurveillanceMultiplier: 1,
+    positionSettlementSurveillanceMultiplier: 1
   }
 } as const satisfies Record<PreOpenCardId, PreOpenCardValue>;
 

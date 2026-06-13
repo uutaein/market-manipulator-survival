@@ -16,7 +16,7 @@ Current implemented scope:
 | `balancing/retailSwarmValues.ts` | First-playable Retail Swarm thresholds, token scaling, and risk effects |
 | `day/` | Day start state, Morning News generation, Today Condition, Market Briefing summary |
 | `intraday/` | Intraday state, timer pause/resume, bounded stats, and player asset price tick |
-| `market/marketBoard.ts` | MVP 8-slot Market Board selection and simplified non-player summaries |
+| `market/marketBoard.ts` | MVP player/peer/sector-average Market Board context and simplified non-player summaries |
 | `persistence/localPersistence.ts` | Versioned local save envelopes, current Run save/load, recent Final, and best record updates |
 | `preopen/` | Pre-open Card selection and Opening Approval rules |
 | `random/SeededRandom.ts` | Deterministic seeded random source for reproducible Run setup |

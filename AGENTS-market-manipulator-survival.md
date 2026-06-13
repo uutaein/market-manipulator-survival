@@ -252,7 +252,7 @@ After Day 5:
 
 MVP defaults:
 
-- Intraday duration: 6 minutes per Day.
+- Intraday duration: 3 minutes per Day.
 - Pre-open stage: no time limit.
 - Pre-open Card: maximum 1 per Day.
 - No early success ending in MVP.
@@ -290,7 +290,7 @@ MVP sectors:
 5. 칩·장비
 6. 결제·핀테크
 7. 미디어·게임
-8. 커뮤니티 토큰
+8. 밈·테마
 
 MVP has 3 fictional assets per sector, for 24 total assets.
 
@@ -298,7 +298,7 @@ Do not use real asset names, real exchange names, real tickers, or real news.
 
 ### 5.7 Asset Profiles
 
-Each fictional asset has a fixed Asset Profile.
+Each fictional asset has a sector/name identity, while its hidden Run tendency is assigned from the Run Seed.
 
 Asset Profile includes:
 
@@ -313,7 +313,7 @@ Asset Profile includes:
 
 Each Day applies a Today Condition that changes some values by about ±10–15%.
 
-Do not use fully random profiles in MVP. The player should be able to learn asset personalities.
+Do not reveal hidden stable/standard/high-risk tendencies directly before play. The player should infer them through reactions, settlement notes, and repeat play.
 
 ### 5.8 Morning News
 
@@ -384,9 +384,10 @@ Market Board should show:
 
 - player asset in detail
 - same-sector peer assets
-- several representative assets from other sectors
+- other-sector average rows
+- a market dashboard ranking all 24 individual fictional assets by fictional trade value
 
-The exact number may be finalized in PRD, but avoid showing all 24 assets with equal detail in MVP.
+Avoid simulating all 24 assets with equal detail in MVP.
 
 The market should feel alive without requiring full simulation complexity.
 

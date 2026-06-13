@@ -19,6 +19,12 @@ Feature: Manual intraday actions
     And the action does not directly set the final price
     And the action enters cooldown if applicable
 
+  Scenario: Price push increases held units and average entry
+    Given intraday operation is active
+    When the player runs price push long enough for position accounting
+    Then held units increase
+    And average entry price increases
+
   Scenario: Exclude non-MVP manual buttons
     Given intraday operation is active
     Then "방어 자금 투입" is not a manual action button

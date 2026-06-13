@@ -5,9 +5,9 @@ Feature: Day 1 integrated onboarding
   Scenario: Experience the core Day 1 loop
     Given the player starts Day 1
     When the Day begins
-    Then the player reads Morning News
+    Then the player chooses one Pre-open Card or "관망"
+    And the player reads Morning News
     And the player reviews the Market Briefing
-    And the player chooses one Pre-open Card or "관망"
     And the player approves the opening
     And the player can use all four manual actions during intraday operation
     And the player sees Day Settlement feedback

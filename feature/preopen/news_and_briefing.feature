@@ -1,22 +1,22 @@
 @mvp @preopen @news @feat-007 @feat-008
 Feature: Morning News and Market Briefing
-  Each Day begins with one fictional Morning News item and a short Market Briefing.
+  Each Day generates fictional Morning News items and reveals them after the pre-open choice.
 
-  Scenario: Generate one Morning News item per Day
+  Scenario: Generate three Morning News items per Day
     Given a new Day begins
     When Morning News is generated
-    Then exactly one Morning News item is shown
-    And it is generated from one of the five MVP news templates
-    And it has a fictional target
+    Then exactly three Morning News items are shown
+    And one Morning News item targets a sector
+    And two Morning News items target fictional assets
+    And each Morning News item is generated from one of the five MVP news templates
 
-  Scenario: Use sector-level targeting as MVP default
+  Scenario: Ignore non-player asset news for player pressure
     Given Morning News is generated
-    When the target type is selected
-    Then sector-level targeting is preferred for MVP
-    And market-level or asset-level targeting may only appear within the accepted SPEC scope
+    When non-player asset news is evaluated for player pressure
+    Then the non-player asset news does not change player asset pressure
 
   Scenario: Show briefing information before opening
-    Given Morning News has been shown
+    Given a Pre-open Card has been selected
     When the player views the Market Briefing
     Then the briefing summarizes the news effect
     And the briefing shows the target band

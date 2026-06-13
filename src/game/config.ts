@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { DaySettlementScene } from "./scenes/DaySettlementScene";
 import { FinalSettlementScene } from "./scenes/FinalSettlementScene";
 import { IntradayScene } from "./scenes/IntradayScene";
+import { IntradayRepositionScene } from "./scenes/IntradayRepositionScene";
 import { MainMenuScene } from "./scenes/MainMenuScene";
 import { MorningBriefingScene } from "./scenes/MorningBriefingScene";
 import { PreOpenCardScene } from "./scenes/PreOpenCardScene";
@@ -23,6 +24,7 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     MorningBriefingScene,
     PreOpenCardScene,
     IntradayScene,
+    IntradayRepositionScene,
     DaySettlementScene,
     FinalSettlementScene
   ]

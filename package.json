@@ -11,7 +11,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "phaser": "^3.90.0"
+    "lightweight-charts": "^5.2.0",
+    "phaser": "^3.90.0",
+    "stock-market-gen": "^1.2.3"
   },
   "devDependencies": {
     "@cucumber/cucumber": "^13.0.0",

@@ -2,9 +2,9 @@
 Feature: Intraday tick simulation
   Intraday operation updates fictional pressure-management stats and price movement once per second.
 
-  Scenario: Run the 360-second intraday timer
+  Scenario: Run the 180-second intraday timer
     Given intraday operation starts
-    Then the intraday timer starts at 360 seconds
+    Then the intraday timer starts at 180 seconds
     When the timer reaches 0
     Then the Day transitions to Day Settlement
 
@@ -19,8 +19,18 @@ Feature: Intraday tick simulation
   Scenario: Calculate player asset price from components
     Given intraday operation is active
     When a price tick runs
-    Then price movement is calculated from pressure, participation, holding, liquidity, competition, news, aftereffect, and volatility noise components
+    Then price movement is calculated from pressure, participation, holding, liquidity, competition, news, aftereffect, attention fade, order book depth, fake OHLCV simulator adjustment, and volatility noise components
     And the price is not directly overwritten by a manual action or card
+
+  Scenario: Simulate pullback when price is overheated
+    Given intraday operation is active
+    When an overheated price tick runs
+    Then the price simulator applies negative reversion pressure
+
+  Scenario: Apply fictional order book responsiveness
+    Given intraday operation is active
+    When upward pressure meets a thin sell wall
+    Then the order book multiplier amplifies upward price movement
 
   Scenario: Clamp bounded stats after updates
     Given an intraday stat update occurs

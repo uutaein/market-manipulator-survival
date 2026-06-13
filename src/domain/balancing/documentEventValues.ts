@@ -44,11 +44,11 @@ export interface DocumentEventValue {
 
 export const documentEventRules = {
   maxEventsPerDay: 2,
-  minimumGapSec: 90,
-  earliestEventElapsedSec: 45,
-  latestNormalEventElapsedSec: 320,
-  day1FallbackMinElapsedSec: 120,
-  day1FallbackMaxElapsedSec: 180
+  minimumGapSec: 45,
+  earliestEventElapsedSec: 30,
+  latestNormalEventElapsedSec: 165,
+  day1FallbackMinElapsedSec: 60,
+  day1FallbackMaxElapsedSec: 90
 } as const;
 
 const noEffect: DocumentChoiceEffectValue = {

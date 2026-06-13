@@ -11,17 +11,19 @@ export class MorningBriefingScene extends BaseDocumentScene {
   create(): void {
     const dayState = gameSession.ensureDay();
     const briefing = gameSession.ensureMarketBriefing();
-    const newsTarget = describeMorningNewsTarget(dayState.morningNews.target);
     const todayCondition = dayState.todayCondition;
+    const newsLines = dayState.morningNewsItems.flatMap((news, index) => [
+      `${index + 1}. ${news.displayName}`,
+      `   TARGET: ${describeMorningNewsTarget(news.target)} / ${news.role}`
+    ]);
 
     this.drawDocumentShell(
       "아침 뉴스 / 시장 브리핑",
       [
         `DAY ${dayState.dayIndex}`,
         "",
-        `NEWS: ${dayState.morningNews.displayName}`,
-        `TARGET: ${newsTarget}`,
-        dayState.morningNews.role,
+        "MORNING NEWS",
+        ...newsLines,
         "",
         `ASSET: ${briefing.selectedSectorName} / ${briefing.selectedAssetName}`,
         `TARGET BAND: ${briefing.targetBandLabel}`,
@@ -35,7 +37,13 @@ export class MorningBriefingScene extends BaseDocumentScene {
         "",
         `RISK: ${briefing.riskHints.join(" / ")}`
       ],
-      { label: "개장 전 카드", target: SceneKeys.PreOpenCard }
+      {
+        label: "개장 승인",
+        target: SceneKeys.Intraday,
+        onClick: () => {
+          gameSession.startIntraday();
+        }
+      }
     );
   }
 }

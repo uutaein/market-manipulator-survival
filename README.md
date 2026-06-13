@@ -29,15 +29,18 @@ After Day 5, Final Settlement occurs.
 
 MVP defaults:
 
-- Intraday duration: 6 minutes per Day
+- Intraday duration: 3 minutes per Day
 - Morning News templates: 5
 - Pre-open Cards: 4
+- Pre-open flow: choose a card before Morning News is revealed, then approve opening after briefing
 - Manual Actions: 4
 - Auto Cards: 8
 - Document Events: 8
 - Sectors: 8 fictional sectors
 - Assets: 24 fictional assets
-- Market Board: 8 displayed assets
+- Market Board: player asset, 2 same-sector competitors, 7 other-sector averages
+- Market Dashboard: 24 individual fictional assets ranked by fictional trade value
+- Intraday quote readout: opening price, current price, average entry price, held units, and fictional position P/L
 - Storage: local only
 
 ---
@@ -73,6 +76,7 @@ Current implementation status:
 - Local Persistence domain module: present
 - Safety Contract domain module: present
 - Run/Day scene wiring: partial
+- Intraday candle/volume chart and money-flow panel: partial
 - Market Board scene wiring: partial
 - Intraday tick/action scene wiring: partial
 - Auto Card scene wiring: partial

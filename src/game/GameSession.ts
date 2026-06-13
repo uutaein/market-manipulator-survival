@@ -4,6 +4,8 @@ import { autoCardRewardElapsedSeconds, autoCardValues } from "../domain/balancin
 import { documentEventRules } from "../domain/balancing/documentEventValues";
 import {
   advanceIntradayTime,
+  clampIntradayState,
+  createFictionalQuoteState,
   createIntradayState,
   isIntradayComplete,
   pauseIntraday,
@@ -28,6 +30,7 @@ import {
 import { applyRetailSwarmRiskEffects, type RetailSwarmEffectResult } from "../domain/intraday/retailSwarm";
 import { tickManualActionCooldowns, useManualAction, type ManualActionResult } from "../domain/intraday/manualActions";
 import { runPlayerPriceTick } from "../domain/intraday/priceTick";
+import type { ManualActionId } from "../domain/balancing/manualActionValues";
 import { advanceMarketBoard, buildMarketBoard, type MarketBoardState } from "../domain/market/marketBoard";
 import {
   canContinueSavedRun,
@@ -36,7 +39,7 @@ import {
   saveCurrentRun,
   saveFinalSettlement
 } from "../domain/persistence/localPersistence";
-import { approveOpening, selectPreOpenCard } from "../domain/preopen/preOpenCards";
+import { approveOpening, selectPreOpenCard, type PreOpenCardSelectionOptions } from "../domain/preopen/preOpenCards";
 import { runDefaults } from "../domain/balancing/runDefaults";
 import { createRunState, restartRunWithSameSeed, type AutoCardState, type RunState } from "../domain/run/runState";
 import { prepareNextDayCarryover } from "../domain/settlement/carryover";
@@ -49,6 +52,47 @@ import {
 } from "../domain/settlement/settlement";
 import type { DayResultCategory } from "../domain/balancing/settlementValues";
 import { getBrowserStorage } from "./browserStorage";
+
+export interface PriceHistoryPoint {
+  readonly elapsedSec: number;
+  readonly priceChangePercent: number;
+  readonly fictionalVolume: number;
+}
+
+export interface IntradayMoneyLedger {
+  readonly startingBudget: number;
+  readonly currentBudget: number;
+  readonly openingPrice: number;
+  readonly currentPrice: number;
+  readonly averageEntryPrice: number;
+  readonly heldUnits: number;
+  readonly fictionalFloatUnits: number;
+  readonly positionMarketValue: number;
+  readonly unrealizedPositionProfitLoss: number;
+  readonly spentBudget: number;
+  readonly recoveredBudget: number;
+  readonly netBudgetUsed: number;
+  readonly budgetChange: number;
+  readonly assessedProfitLoss: number;
+  readonly estimatedNetProfitLoss: number;
+}
+
+interface PriceHistoryAdjustment {
+  readonly elapsedOffsetSec?: number;
+  readonly priceChangePercent?: number;
+  readonly volumeMultiplier?: number;
+}
+
+interface ManualActionChartResponse {
+  readonly finalPriceDelta: number;
+  readonly finalElapsedOffsetSec: number;
+  readonly finalVolumeMultiplier: number;
+  readonly points: readonly {
+    readonly elapsedOffsetSec: number;
+    readonly priceDelta: number;
+    readonly volumeMultiplier: number;
+  }[];
+}
 
 export class GameSession {
   selectedSectorId: SectorId = sectors[0].id;
@@ -70,6 +114,10 @@ export class GameSession {
   lastDocumentEventMessage: string | null = null;
   lastRetailSwarmEffectResult: RetailSwarmEffectResult | null = null;
   lastFinalSaveUpdatedBest = false;
+  priceHistory: PriceHistoryPoint[] = [];
+  private intradayStartingBudget = 0;
+  private intradaySpentBudget = 0;
+  private intradayRecoveredBudget = 0;
   private lastRetailSwarmState: RetailSwarmState | null = null;
   private autoCardLastTriggeredAt: Partial<Record<AutoCardState["cardId"], number>> = {};
 
@@ -97,6 +145,8 @@ export class GameSession {
     this.daySettlementResult = null;
     this.finalSettlementResult = null;
     this.surveillanceHistory = [];
+    this.priceHistory = [];
+    this.resetIntradayMoneyLedger(0);
     this.lastFinalSaveUpdatedBest = false;
     this.resetDayAutoCardSession();
     this.saveCurrentRunProgress();
@@ -116,6 +166,8 @@ export class GameSession {
     this.daySettlementResult = null;
     this.finalSettlementResult = null;
     this.surveillanceHistory = [];
+    this.priceHistory = [];
+    this.resetIntradayMoneyLedger(0);
     this.lastFinalSaveUpdatedBest = false;
     this.resetDayAutoCardSession();
     this.saveCurrentRunProgress();
@@ -151,6 +203,8 @@ export class GameSession {
     this.daySettlementResult = null;
     this.finalSettlementResult = null;
     this.surveillanceHistory = [];
+    this.priceHistory = [];
+    this.resetIntradayMoneyLedger(0);
     this.lastFinalSaveUpdatedBest = false;
     this.resetDayAutoCardSession();
     return true;
@@ -195,6 +249,8 @@ export class GameSession {
     this.lastManualActionResult = null;
     this.daySettlementResult = null;
     this.finalSettlementResult = null;
+    this.priceHistory = [];
+    this.resetIntradayMoneyLedger(0);
     this.resetDayAutoCardSession();
     return this.dayState;
   }
@@ -210,8 +266,9 @@ export class GameSession {
     return this.marketBriefing;
   }
 
-  selectPreOpenCard(cardIdOrDisplayName: string): DayState {
-    this.dayState = selectPreOpenCard(this.ensureDay(), cardIdOrDisplayName);
+  selectPreOpenCard(cardIdOrDisplayName: string, options: PreOpenCardSelectionOptions = {}): DayState {
+    this.dayState = selectPreOpenCard(this.ensureDay(), cardIdOrDisplayName, this.ensureRun(), options);
+    this.marketBriefing = createMarketBriefing(this.ensureRun(), this.dayState);
     return this.dayState;
   }
 
@@ -227,10 +284,13 @@ export class GameSession {
   startIntraday(): IntradayState {
     const runState = this.ensureRun();
     const dayState = this.approveOpening();
+    this.resetIntradayMoneyLedger(dayState.startingBudgetForDay);
+    this.recordBudgetLedgerDelta(dayState.preOpenCardEffect?.budgetDelta ?? 0);
     this.intradayState = createIntradayState(runState, dayState);
     this.marketBoardState = buildMarketBoard(runState, dayState);
     this.lastAutoCardEffects = [];
     this.lastAutoCardRewardMessage = null;
+    this.priceHistory = [createPriceHistoryPoint(this.intradayState)];
     return this.intradayState;
   }
 
@@ -250,14 +310,15 @@ export class GameSession {
       return currentState;
     }
 
-    const tickedState = runPlayerPriceTick(currentState, {
+    const actionProgressState = tickManualActionCooldowns(currentState, 1);
+    const tickedState = runPlayerPriceTick(actionProgressState, {
       runSeed: runState.runSeed,
       dayIndex: runState.currentDay
     });
-    const cooldownState = tickManualActionCooldowns(tickedState, 1);
-    const advancedState = advanceIntradayTime(cooldownState, 1);
+    const advancedState = advanceIntradayTime(tickedState, 1);
     const autoCardState = this.applyDueAutoCardEffects(advancedState);
     this.intradayState = this.applyRetailSwarmTransitionRisk(autoCardState);
+    this.recordPriceHistory(this.intradayState);
     this.advanceMarketBoard();
 
     if (this.checkImmediateRunFailure(this.intradayState)) {
@@ -277,8 +338,77 @@ export class GameSession {
     const currentState = this.intradayState ?? this.startIntraday();
     this.lastManualActionResult = useManualAction(currentState, actionIdOrDisplayName);
     this.intradayState = this.lastManualActionResult.state;
+    if (this.lastManualActionResult.applied && this.lastManualActionResult.action) {
+      this.recordBudgetLedgerDelta(this.lastManualActionResult.budgetDelta);
+    }
+    this.applyManualActionChartResponse(this.lastManualActionResult);
     this.checkImmediateRunFailure(this.intradayState);
     return this.lastManualActionResult;
+  }
+
+  canRepositionIntradayAsset(): boolean {
+    const runState = this.runState;
+    const state = this.intradayState;
+
+    return Boolean(
+      runState?.runStatus === "active" &&
+        state &&
+        !state.isPaused &&
+        state.holdingRatio <= 0 &&
+        state.activeManualActionEffects.length === 0 &&
+        state.budget >= intradayRepositionEntryCost
+    );
+  }
+
+  repositionIntradayAsset(assetId: AssetId): IntradayState {
+    const asset = getAssetById(assetId);
+    const runState = this.ensureRun();
+    const dayState = this.ensureDay();
+    const state = this.intradayState ?? this.startIntraday();
+
+    if (!this.canRepositionIntradayAsset()) {
+      throw new Error("Intraday reposition is available only after the position is fully settled.");
+    }
+
+    this.selectedSectorId = asset.sectorId;
+    this.selectedAssetId = asset.id;
+    this.runState = {
+      ...runState,
+      selectedSectorId: asset.sectorId,
+      selectedAssetId: asset.id,
+      holdingRatio: intradayRepositionStartingHolding
+    };
+    const quote = createFictionalQuoteState(
+      this.runState,
+      dayState,
+      intradayRepositionStartingHolding,
+      runDefaults.initialPriceChangePercent
+    );
+    this.marketBriefing = createMarketBriefing(this.runState, dayState);
+    this.intradayState = clampIntradayState({
+      ...state,
+      budget: state.budget - intradayRepositionEntryCost,
+      openingPrice: quote.openingPrice,
+      currentPrice: quote.currentPrice,
+      averageEntryPrice: quote.averageEntryPrice,
+      heldUnits: quote.heldUnits,
+      fictionalFloatUnits: quote.fictionalFloatUnits,
+      priceChangePercent: runDefaults.initialPriceChangePercent,
+      priceDeltaPerTick: 0,
+      holdingRatio: intradayRepositionStartingHolding,
+      marketPressure: Math.max(4, state.marketPressure + 8),
+      marketLiquidity: Math.max(35, state.marketLiquidity - 4),
+      personalParticipation: Math.max(20, state.personalParticipation - 12),
+      volatility: Math.min(100, state.volatility + 4),
+      activeManualActionEffects: [],
+      lastManualActionId: null,
+      latestPriceComponents: null
+    });
+    this.marketBoardState = buildMarketBoard(this.runState, dayState);
+    this.priceHistory = [createPriceHistoryPoint(this.intradayState)];
+    this.recordBudgetLedgerDelta(-intradayRepositionEntryCost);
+    this.saveCurrentRunProgress();
+    return this.intradayState;
   }
 
   chooseAutoCardReward(choiceIndex: number): string {
@@ -317,6 +447,7 @@ export class GameSession {
     const result = applyDocumentEventChoice(currentState, choiceType);
     const choice = result.event.choices.find((candidate) => candidate.type === result.choiceType);
     this.intradayState = result.state;
+    this.recordBudgetLedgerDelta(result.state.budget - currentState.budget);
     this.lastDocumentEventChoiceResult = result;
     this.lastDocumentEventMessage = `${result.event.displayName}: ${choice?.label ?? result.choiceType}`;
     this.checkImmediateRunFailure(this.intradayState);
@@ -375,6 +506,8 @@ export class GameSession {
     this.marketBoardState = null;
     this.lastManualActionResult = null;
     this.daySettlementResult = null;
+    this.priceHistory = [];
+    this.resetIntradayMoneyLedger(0);
     this.beginDay();
     this.saveCurrentRunProgress();
   }
@@ -407,6 +540,39 @@ export class GameSession {
     return `${sector.displayName} / ${asset.displayName}`;
   }
 
+  getIntradayMoneyLedger(): IntradayMoneyLedger | null {
+    const state = this.intradayState;
+
+    if (!state) {
+      return null;
+    }
+
+    const assessedProfitLoss = round1((state.priceChangePercent * state.holdingRatio) / 12);
+    const positionMarketValue = round1((state.currentPrice * state.heldUnits) / runDefaults.fictionalLedgerScale);
+    const unrealizedPositionProfitLoss = round1(
+      ((state.currentPrice - state.averageEntryPrice) * state.heldUnits) / runDefaults.fictionalLedgerScale
+    );
+    const netBudgetUsed = round1(this.intradaySpentBudget - this.intradayRecoveredBudget);
+
+    return {
+      startingBudget: this.intradayStartingBudget,
+      currentBudget: state.budget,
+      openingPrice: state.openingPrice,
+      currentPrice: state.currentPrice,
+      averageEntryPrice: state.averageEntryPrice,
+      heldUnits: state.heldUnits,
+      fictionalFloatUnits: state.fictionalFloatUnits,
+      positionMarketValue,
+      unrealizedPositionProfitLoss,
+      spentBudget: round1(this.intradaySpentBudget),
+      recoveredBudget: round1(this.intradayRecoveredBudget),
+      netBudgetUsed,
+      budgetChange: round1(state.budget - this.intradayStartingBudget),
+      assessedProfitLoss,
+      estimatedNetProfitLoss: round1(assessedProfitLoss - netBudgetUsed)
+    };
+  }
+
   private applyDueAutoCardEffects(state: IntradayState): IntradayState {
     const runState = this.ensureRun();
     const elapsedSec = getIntradayElapsedSec(state);
@@ -418,8 +584,10 @@ export class GameSession {
       const lastTriggeredAt = this.autoCardLastTriggeredAt[cardState.cardId] ?? 0;
 
       if (elapsedSec >= periodSec && elapsedSec - lastTriggeredAt >= periodSec) {
+        const budgetBefore = nextState.budget;
         const result = applyAutoCardEffect(nextState, cardState);
         nextState = result.state;
+        this.recordBudgetLedgerDelta(nextState.budget - budgetBefore);
         effects.push(result);
         this.autoCardLastTriggeredAt = {
           ...this.autoCardLastTriggeredAt,
@@ -433,6 +601,41 @@ export class GameSession {
     }
 
     return nextState;
+  }
+
+  private recordPriceHistory(state: IntradayState, adjustment: PriceHistoryAdjustment = {}): void {
+    const point = createPriceHistoryPoint(state, adjustment);
+    const lastPoint = this.priceHistory[this.priceHistory.length - 1];
+
+    if (lastPoint?.elapsedSec === point.elapsedSec) {
+      this.priceHistory = [...this.priceHistory.slice(0, -1), point];
+      return;
+    }
+
+    this.priceHistory = [...this.priceHistory, point].slice(-runDefaults.intradayDurationSec - 1);
+  }
+
+  private applyManualActionChartResponse(result: ManualActionResult): void {
+    if (!result.applied || !result.action || !this.intradayState) {
+      return;
+    }
+
+    const response = getManualActionChartResponse(result.action.id);
+    const basePrice = this.intradayState.priceChangePercent;
+
+    for (const point of response.points) {
+      this.recordPriceHistory(this.intradayState, {
+        elapsedOffsetSec: point.elapsedOffsetSec,
+        priceChangePercent: basePrice + point.priceDelta,
+        volumeMultiplier: point.volumeMultiplier
+      });
+    }
+
+    this.recordPriceHistory(this.intradayState, {
+      elapsedOffsetSec: response.finalElapsedOffsetSec,
+      priceChangePercent: basePrice + response.finalPriceDelta,
+      volumeMultiplier: response.finalVolumeMultiplier
+    });
   }
 
   private advanceMarketBoard(): void {
@@ -560,9 +763,29 @@ export class GameSession {
     this.lastRetailSwarmState = null;
     this.autoCardLastTriggeredAt = {};
   }
+
+  private resetIntradayMoneyLedger(startingBudget: number): void {
+    this.intradayStartingBudget = startingBudget;
+    this.intradaySpentBudget = 0;
+    this.intradayRecoveredBudget = 0;
+  }
+
+  private recordBudgetLedgerDelta(delta: number): void {
+    if (delta < 0) {
+      this.intradaySpentBudget = round1(this.intradaySpentBudget + Math.abs(delta));
+      return;
+    }
+
+    if (delta > 0) {
+      this.intradayRecoveredBudget = round1(this.intradayRecoveredBudget + delta);
+    }
+  }
 }
 
 export const gameSession = new GameSession();
+
+export const intradayRepositionEntryCost = 5;
+export const intradayRepositionStartingHolding = 12;
 
 function round1(value: number): number {
   return Math.round(value * 10) / 10;
@@ -570,6 +793,31 @@ function round1(value: number): number {
 
 function getIntradayElapsedSec(state: IntradayState): number {
   return runDefaults.intradayDurationSec - state.timeRemainingSec;
+}
+
+function createPriceHistoryPoint(state: IntradayState, adjustment: PriceHistoryAdjustment = {}): PriceHistoryPoint {
+  const elapsedSec = Math.min(
+    runDefaults.intradayDurationSec,
+    getIntradayElapsedSec(state) + (adjustment.elapsedOffsetSec ?? 0)
+  );
+  const volumeMultiplier = adjustment.volumeMultiplier ?? 1;
+
+  return {
+    elapsedSec,
+    priceChangePercent: adjustment.priceChangePercent ?? state.priceChangePercent,
+    fictionalVolume: Math.round(calculateFictionalVolume(state) * volumeMultiplier)
+  };
+}
+
+function calculateFictionalVolume(state: IntradayState): number {
+  const participation = state.personalParticipation * 2.2;
+  const liquidity = state.marketLiquidity * 1.4;
+  const volatility = state.volatility * 1.1;
+  const pressure = Math.abs(state.marketPressure) * 0.9;
+  const tickImpulse = Math.abs(state.priceDeltaPerTick) * 260;
+  const simulatorVolumeFactor = state.latestPriceComponents?.externalSimulatorVolumeFactor ?? 1;
+
+  return Math.round((80 + participation + liquidity + volatility + pressure + tickImpulse) * simulatorVolumeFactor);
 }
 
 function getImmediateFailureReason(state: IntradayState): string | null {
@@ -586,4 +834,50 @@ function getImmediateFailureReason(state: IntradayState): string | null {
   }
 
   return null;
+}
+
+function getManualActionChartResponse(actionId: ManualActionId): ManualActionChartResponse {
+  switch (actionId) {
+    case "liquidity_supply":
+      return {
+        finalPriceDelta: 0.18,
+        finalElapsedOffsetSec: 0.45,
+        finalVolumeMultiplier: 4.2,
+        points: [
+          { elapsedOffsetSec: 0.12, priceDelta: 0.16, volumeMultiplier: 3.2 },
+          { elapsedOffsetSec: 0.28, priceDelta: -0.04, volumeMultiplier: 4.6 }
+        ]
+      };
+    case "price_push":
+      return {
+        finalPriceDelta: 0.32,
+        finalElapsedOffsetSec: 0.52,
+        finalVolumeMultiplier: 2.2,
+        points: [
+          { elapsedOffsetSec: 0.16, priceDelta: 0.08, volumeMultiplier: 1.6 },
+          { elapsedOffsetSec: 0.34, priceDelta: 0.19, volumeMultiplier: 1.9 }
+        ]
+      };
+    case "overheat_cooldown":
+      return {
+        finalPriceDelta: -1.25,
+        finalElapsedOffsetSec: 0.38,
+        finalVolumeMultiplier: 2.4,
+        points: [
+          { elapsedOffsetSec: 0.12, priceDelta: 0.08, volumeMultiplier: 1.8 },
+          { elapsedOffsetSec: 0.25, priceDelta: -0.62, volumeMultiplier: 2.2 }
+        ]
+      };
+    case "position_settlement":
+      return {
+        finalPriceDelta: -7.8,
+        finalElapsedOffsetSec: 0.48,
+        finalVolumeMultiplier: 8.6,
+        points: [
+          { elapsedOffsetSec: 0.1, priceDelta: -1.1, volumeMultiplier: 3.2 },
+          { elapsedOffsetSec: 0.24, priceDelta: -3.4, volumeMultiplier: 5.6 },
+          { elapsedOffsetSec: 0.38, priceDelta: -6.2, volumeMultiplier: 7.8 }
+        ]
+      };
+  }
 }

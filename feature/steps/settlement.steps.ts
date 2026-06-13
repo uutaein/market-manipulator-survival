@@ -270,7 +270,7 @@ Then("those aftereffects are weaker than the new Morning News", function (this: 
 
 Given("a Day used a Pre-open Card", function (this: MmsWorld) {
   this.openIntraday();
-  this.selectedPreOpenCard = "시장 관찰";
+  this.selectedPreOpenCard = "종목 분석";
   this.latestDaySettlement = calculateDaySettlement({
     dayIndex: this.currentDay,
     actualProfit: 10,
