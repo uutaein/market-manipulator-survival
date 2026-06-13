@@ -68,6 +68,7 @@ Current implementation status:
 - Document Event domain module: present
 - Retail Swarm domain module: present
 - Settlement domain module: present
+- Day Carryover domain module: present
 - Cucumber step definitions: present
 - Gameplay simulation: not implemented yet
 - BDD validation: executable against an in-memory support world, not yet against Phaser gameplay modules

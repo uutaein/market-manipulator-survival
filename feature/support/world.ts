@@ -30,6 +30,7 @@ import {
   calculateRetailSwarmModel
 } from "../../src/domain/intraday/retailSwarm";
 import type { MarketBoardState } from "../../src/domain/market/marketBoard";
+import type { DayCarryoverResult } from "../../src/domain/settlement/carryover";
 import type { DaySettlementResult, FinalSettlementResult } from "../../src/domain/settlement/settlement";
 import {
   approveOpening,
@@ -131,6 +132,7 @@ export class MmsWorld extends World {
   latestHoldingBand = "";
   latestDaySettlement?: DaySettlementResult;
   latestFinalSettlement?: FinalSettlementResult;
+  latestCarryoverResult?: DayCarryoverResult;
   daySettlementActualProfit = 10;
   finalSummaryConsidered = false;
   carryover = new Set<string>();

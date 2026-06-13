@@ -7,6 +7,8 @@ import {
   calculateFinalSettlement,
   getHoldingBand
 } from "../../src/domain/settlement/settlement";
+import { prepareNextDayCarryover } from "../../src/domain/settlement/carryover";
+import { applyIntradayStatUpdate } from "../../src/domain/intraday/intradayState";
 
 Given("intraday operation ends without forced failure", function (this: MmsWorld) {
   this.openIntraday();
@@ -154,75 +156,138 @@ Then("the failure reason is displayed", function (this: MmsWorld) {
 });
 
 Given("a Day Settlement is complete", function (this: MmsWorld) {
+  this.openIntraday();
+  this.daySettlementActualProfit = 10;
+  this.latestDaySettlement = calculateDaySettlement({
+    dayIndex: this.currentDay,
+    actualProfit: this.daySettlementActualProfit,
+    surveillance: this.intradayState!.surveillance,
+    budget: this.intradayState!.budget,
+    holdingRatio: this.intradayState!.holdingRatio,
+    personalParticipation: this.intradayState!.personalParticipation,
+    volatility: this.intradayState!.volatility,
+    socialCost: this.runState!.socialCost + this.intradayState!.pendingSocialCostDelta,
+    retailSwarmState: this.intradayState!.retailSwarmState,
+    priceChangePercent: this.intradayState!.priceChangePercent,
+    marketPressure: this.intradayState!.marketPressure
+  });
   this.daySettlementComplete = true;
 });
 
 When("the next Day is prepared", function (this: MmsWorld) {
-  this.currentDay += 1;
-  this.carryover.add("budget");
-  this.carryover.add("cumulative profit");
-  this.carryover.add("holding ratio");
-  this.carryover.add("social cost");
-  this.carryover.add("auto card levels");
-  this.carryover.add("surveillance partial");
-  this.carryover.add("personal participation reduced");
-  this.carryover.add("market liquidity reset");
-  this.carryover.add("volatility reset");
+  assert.ok(this.runState);
+  assert.ok(this.intradayState);
+  assert.ok(this.latestDaySettlement);
+  this.latestCarryoverResult = prepareNextDayCarryover({
+    runState: this.runState,
+    endingIntradayState: this.intradayState,
+    daySettlement: this.latestDaySettlement
+  });
+  this.runState = this.latestCarryoverResult.nextRunState;
+  this.currentDay = this.runState.currentDay;
 });
 
 Then("budget carries forward", function (this: MmsWorld) {
-  assert.ok(this.carryover.has("budget"));
+  assert.equal(this.latestCarryoverResult?.budgetCarried, true);
 });
 
 Then("cumulative profit carries forward", function (this: MmsWorld) {
-  assert.ok(this.carryover.has("cumulative profit"));
+  assert.equal(this.latestCarryoverResult?.cumulativeProfitCarried, true);
 });
 
 Then("holding ratio carries forward", function (this: MmsWorld) {
-  assert.ok(this.carryover.has("holding ratio"));
+  assert.equal(this.latestCarryoverResult?.holdingRatioCarried, true);
 });
 
 Then("social cost carries forward", function (this: MmsWorld) {
-  assert.ok(this.carryover.has("social cost"));
+  assert.equal(this.latestCarryoverResult?.socialCostCarried, true);
 });
 
 Then("auto card levels carry forward", function (this: MmsWorld) {
-  assert.ok(this.carryover.has("auto card levels"));
+  assert.equal(this.latestCarryoverResult?.autoCardsCarried, true);
 });
 
 Then("surveillance partially carries forward", function (this: MmsWorld) {
-  assert.ok(this.carryover.has("surveillance partial"));
+  assert.equal(this.latestCarryoverResult?.surveillancePartiallyCarried, true);
 });
 
 Then("personal participation carries forward in reduced form", function (this: MmsWorld) {
-  assert.ok(this.carryover.has("personal participation reduced"));
+  assert.equal(this.latestCarryoverResult?.personalParticipationReduced, true);
 });
 
 Then("market liquidity mostly resets", function (this: MmsWorld) {
-  assert.ok(this.carryover.has("market liquidity reset"));
+  assert.equal(this.latestCarryoverResult?.marketLiquidityMostlyReset, true);
 });
 
 Then("volatility mostly resets with possible aftereffects", function (this: MmsWorld) {
-  assert.ok(this.carryover.has("volatility reset"));
+  assert.ok(this.latestCarryoverResult);
+  assert.ok(this.latestCarryoverResult.nextDayInitials.volatility >= this.latestCarryoverResult.volatilityResetBase);
 });
 
 Given("the previous Day ended with overheat, panic, high surveillance, high profit, or excess holding", function (this: MmsWorld) {
-  this.aftereffectsWeak = true;
+  this.openIntraday();
+  this.daySettlementActualProfit = 22;
+  this.intradayState = applyIntradayStatUpdate(
+    {
+      ...this.intradayState!,
+      priceChangePercent: 14
+    },
+    {
+      personalParticipation: 92,
+      surveillance: 82,
+      volatility: 78,
+      holdingRatio: 60
+    }
+  );
+  this.latestDaySettlement = calculateDaySettlement({
+    dayIndex: this.currentDay,
+    actualProfit: this.daySettlementActualProfit,
+    surveillance: this.intradayState.surveillance,
+    budget: this.intradayState.budget,
+    holdingRatio: this.intradayState.holdingRatio,
+    personalParticipation: this.intradayState.personalParticipation,
+    volatility: this.intradayState.volatility,
+    socialCost: this.runState!.socialCost + this.intradayState.pendingSocialCostDelta,
+    retailSwarmState: this.intradayState.retailSwarmState,
+    priceChangePercent: this.intradayState.priceChangePercent,
+    marketPressure: this.intradayState.marketPressure
+  });
 });
 
 Then("weak market aftereffects can adjust initial participation, volatility, surveillance, or competition pressure", function (this: MmsWorld) {
-  assert.equal(this.aftereffectsWeak, true);
+  assert.ok(this.latestCarryoverResult);
+  assert.ok(this.latestCarryoverResult.activeAftereffects.length > 0);
+  assert.ok(
+    this.latestCarryoverResult.nextDayInitials.personalParticipation !== 0 ||
+      this.latestCarryoverResult.nextDayInitials.volatility !== this.latestCarryoverResult.volatilityResetBase ||
+      this.latestCarryoverResult.nextDayInitials.competitionPressure !== 30
+  );
 });
 
 Then("those aftereffects are weaker than the new Morning News", function (this: MmsWorld) {
-  assert.equal(this.aftereffectsWeak, true);
+  assert.equal(this.latestCarryoverResult?.aftereffectsAreWeak, true);
 });
 
 Given("a Day used a Pre-open Card", function (this: MmsWorld) {
+  this.openIntraday();
   this.selectedPreOpenCard = "시장 관찰";
+  this.latestDaySettlement = calculateDaySettlement({
+    dayIndex: this.currentDay,
+    actualProfit: 10,
+    surveillance: this.intradayState!.surveillance,
+    budget: this.intradayState!.budget,
+    holdingRatio: this.intradayState!.holdingRatio,
+    personalParticipation: this.intradayState!.personalParticipation,
+    volatility: this.intradayState!.volatility,
+    socialCost: this.runState!.socialCost + this.intradayState!.pendingSocialCostDelta,
+    retailSwarmState: this.intradayState!.retailSwarmState,
+    priceChangePercent: this.intradayState!.priceChangePercent,
+    marketPressure: this.intradayState!.marketPressure
+  });
 });
 
 Then("the Pre-open Card effect does not carry forward", function (this: MmsWorld) {
   assert.ok(this.selectedPreOpenCard);
-  assert.equal(this.carryover.has("pre-open card effect"), false);
+  assert.equal(this.latestCarryoverResult?.preOpenCardEffectCarried, false);
+  assert.equal(this.latestCarryoverResult?.nextDayInitials.preOpenCardEffect, null);
 });
