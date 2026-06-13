@@ -11,6 +11,8 @@ import { runPlayerPriceTick } from "../domain/intraday/priceTick";
 import { buildMarketBoard, type MarketBoardState } from "../domain/market/marketBoard";
 import { approveOpening, selectPreOpenCard } from "../domain/preopen/preOpenCards";
 import { createRunState, type RunState } from "../domain/run/runState";
+import { prepareNextDayCarryover } from "../domain/settlement/carryover";
+import { calculateDaySettlement, type DaySettlementResult } from "../domain/settlement/settlement";
 
 export class GameSession {
   selectedSectorId: SectorId = sectors[0].id;
@@ -21,6 +23,7 @@ export class GameSession {
   intradayState: IntradayState | null = null;
   marketBoardState: MarketBoardState | null = null;
   lastManualActionResult: ManualActionResult | null = null;
+  daySettlementResult: DaySettlementResult | null = null;
 
   setSelectedSector(sectorId: SectorId): void {
     this.selectedSectorId = sectorId;
@@ -43,6 +46,7 @@ export class GameSession {
     this.intradayState = null;
     this.marketBoardState = null;
     this.lastManualActionResult = null;
+    this.daySettlementResult = null;
     return this.runState;
   }
 
@@ -57,6 +61,7 @@ export class GameSession {
     this.intradayState = null;
     this.marketBoardState = null;
     this.lastManualActionResult = null;
+    this.daySettlementResult = null;
     return this.dayState;
   }
 
@@ -117,6 +122,57 @@ export class GameSession {
     return this.lastManualActionResult;
   }
 
+  calculateDaySettlement(): DaySettlementResult {
+    const runState = this.ensureRun();
+    const intradayState = this.intradayState ?? this.startIntraday();
+
+    this.daySettlementResult = calculateDaySettlement({
+      dayIndex: runState.currentDay,
+      actualProfit: round1(intradayState.priceChangePercent),
+      surveillance: intradayState.surveillance,
+      budget: intradayState.budget,
+      holdingRatio: intradayState.holdingRatio,
+      personalParticipation: intradayState.personalParticipation,
+      volatility: intradayState.volatility,
+      socialCost: runState.socialCost + intradayState.pendingSocialCostDelta,
+      retailSwarmState: intradayState.retailSwarmState,
+      priceChangePercent: intradayState.priceChangePercent,
+      marketPressure: intradayState.marketPressure,
+      forcedFailure: runState.runStatus === "failed",
+      failureReason: runState.failedReason
+    });
+    return this.daySettlementResult;
+  }
+
+  continueAfterDaySettlement(): void {
+    const runState = this.ensureRun();
+    const intradayState = this.intradayState ?? this.startIntraday();
+    const daySettlement = this.daySettlementResult ?? this.calculateDaySettlement();
+
+    if (runState.currentDay >= 5) {
+      this.runState = {
+        ...runState,
+        runStatus: "completed",
+        phase: "final_settlement"
+      };
+      return;
+    }
+
+    const carryover = prepareNextDayCarryover({
+      runState,
+      endingIntradayState: intradayState,
+      daySettlement
+    });
+    this.runState = carryover.nextRunState;
+    this.dayState = null;
+    this.marketBriefing = null;
+    this.intradayState = null;
+    this.marketBoardState = null;
+    this.lastManualActionResult = null;
+    this.daySettlementResult = null;
+    this.beginDay();
+  }
+
   getSelectedAssetLabel(): string {
     const asset = getAssetById(this.selectedAssetId);
     const sector = getSectorById(asset.sectorId);
@@ -126,3 +182,6 @@ export class GameSession {
 
 export const gameSession = new GameSession();
 
+function round1(value: number): number {
+  return Math.round(value * 10) / 10;
+}
