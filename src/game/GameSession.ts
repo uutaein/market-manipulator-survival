@@ -29,6 +29,13 @@ import { applyRetailSwarmRiskEffects, type RetailSwarmEffectResult } from "../do
 import { tickManualActionCooldowns, useManualAction, type ManualActionResult } from "../domain/intraday/manualActions";
 import { runPlayerPriceTick } from "../domain/intraday/priceTick";
 import { buildMarketBoard, type MarketBoardState } from "../domain/market/marketBoard";
+import {
+  canContinueSavedRun,
+  loadCurrentRun,
+  persistenceKeys,
+  saveCurrentRun,
+  saveFinalSettlement
+} from "../domain/persistence/localPersistence";
 import { approveOpening, selectPreOpenCard } from "../domain/preopen/preOpenCards";
 import { runDefaults } from "../domain/balancing/runDefaults";
 import { createRunState, restartRunWithSameSeed, type AutoCardState, type RunState } from "../domain/run/runState";
@@ -41,6 +48,7 @@ import {
   type FinalSettlementResult
 } from "../domain/settlement/settlement";
 import type { DayResultCategory } from "../domain/balancing/settlementValues";
+import { getBrowserStorage } from "./browserStorage";
 
 export class GameSession {
   selectedSectorId: SectorId = sectors[0].id;
@@ -61,6 +69,7 @@ export class GameSession {
   lastDocumentEventChoiceResult: DocumentEventChoiceResult | null = null;
   lastDocumentEventMessage: string | null = null;
   lastRetailSwarmEffectResult: RetailSwarmEffectResult | null = null;
+  lastFinalSaveUpdatedBest = false;
   private lastRetailSwarmState: RetailSwarmState | null = null;
   private autoCardLastTriggeredAt: Partial<Record<AutoCardState["cardId"], number>> = {};
 
@@ -88,7 +97,9 @@ export class GameSession {
     this.daySettlementResult = null;
     this.finalSettlementResult = null;
     this.surveillanceHistory = [];
+    this.lastFinalSaveUpdatedBest = false;
     this.resetDayAutoCardSession();
+    this.saveCurrentRunProgress();
     return this.runState;
   }
 
@@ -105,8 +116,70 @@ export class GameSession {
     this.daySettlementResult = null;
     this.finalSettlementResult = null;
     this.surveillanceHistory = [];
+    this.lastFinalSaveUpdatedBest = false;
     this.resetDayAutoCardSession();
+    this.saveCurrentRunProgress();
     return this.runState;
+  }
+
+  canContinueSavedRun(): boolean {
+    const storage = getBrowserStorage();
+    return storage ? canContinueSavedRun(storage) : false;
+  }
+
+  loadSavedRun(): boolean {
+    const storage = getBrowserStorage();
+
+    if (!storage) {
+      return false;
+    }
+
+    const result = loadCurrentRun(storage);
+
+    if (result.status !== "loaded") {
+      return false;
+    }
+
+    this.runState = result.envelope.data;
+    this.selectedSectorId = this.runState.selectedSectorId;
+    this.selectedAssetId = this.runState.selectedAssetId;
+    this.dayState = null;
+    this.marketBriefing = null;
+    this.intradayState = null;
+    this.marketBoardState = null;
+    this.lastManualActionResult = null;
+    this.daySettlementResult = null;
+    this.finalSettlementResult = null;
+    this.surveillanceHistory = [];
+    this.lastFinalSaveUpdatedBest = false;
+    this.resetDayAutoCardSession();
+    return true;
+  }
+
+  saveCurrentRunProgress(): boolean {
+    const storage = getBrowserStorage();
+
+    if (!storage || !this.runState || this.runState.runStatus !== "active") {
+      return false;
+    }
+
+    saveCurrentRun(storage, this.runState);
+    return true;
+  }
+
+  saveFinalSettlementRecord(): boolean {
+    const storage = getBrowserStorage();
+
+    if (!storage) {
+      this.lastFinalSaveUpdatedBest = false;
+      return false;
+    }
+
+    const finalSettlement = this.finalSettlementResult ?? this.calculateFinalSettlement();
+    const result = saveFinalSettlement(storage, finalSettlement);
+    storage.removeItem(persistenceKeys.currentRun);
+    this.lastFinalSaveUpdatedBest = result.bestRecordUpdated;
+    return true;
   }
 
   ensureRun(): RunState {
@@ -206,6 +279,7 @@ export class GameSession {
 
     const runState = this.ensureRun();
     this.runState = applyAutoCardChoice(runState, choice);
+    this.saveCurrentRunProgress();
     this.autoCardRewardChoices = [];
     const card = autoCardValues[choice.cardId];
     this.lastAutoCardRewardMessage =
@@ -290,6 +364,7 @@ export class GameSession {
     this.lastManualActionResult = null;
     this.daySettlementResult = null;
     this.beginDay();
+    this.saveCurrentRunProgress();
   }
 
   calculateFinalSettlement(): FinalSettlementResult {

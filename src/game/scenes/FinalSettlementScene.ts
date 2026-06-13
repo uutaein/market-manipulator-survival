@@ -9,6 +9,7 @@ export class FinalSettlementScene extends BaseDocumentScene {
 
   create(): void {
     const finalSettlement = gameSession.finalSettlementResult ?? gameSession.calculateFinalSettlement();
+    const saved = gameSession.saveFinalSettlementRecord();
     const runState = gameSession.ensureRun();
 
     this.drawDocumentShell(
@@ -26,6 +27,7 @@ export class FinalSettlementScene extends BaseDocumentScene {
         `AVERAGE SURVEILLANCE GRADE: ${finalSettlement.averageSurveillanceGrade}`,
         `FINAL HOLDING BAND: ${finalSettlement.finalHoldingBand.displayName}`,
         `SOCIAL COST: ${formatNumber(finalSettlement.socialCost)}`,
+        `LOCAL RECORD: ${saved ? (gameSession.lastFinalSaveUpdatedBest ? "best updated" : "saved") : "unavailable"}`,
         "",
         createFinalNote(finalSettlement.forcedFailure, finalSettlement.failureReason)
       ]

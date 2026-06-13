@@ -37,7 +37,8 @@ Current baseline:
 23. Phaser Intraday scene now renders Retail Swarm abstract tokens and applies one-shot overheat/panic transition risk effects.
 24. Phaser Day Settlement scene now displays Day result, surveillance grade, holding band, social cost, risk metrics, learning hint, and next-Day/Final routing.
 25. Phaser Final Settlement scene now displays Final grade, cumulative profit, surveillance summary, holding band, social cost, and restart choices.
-26. localStorage browser wiring and polished UI interaction are not implemented yet.
+26. Browser localStorage wiring now saves active Run state, exposes Main Menu continue, saves recent Final results, and tracks best record updates.
+27. Polished UI interaction and browser visual QA are not complete yet.
 
 ---
 
@@ -161,6 +162,7 @@ MVP shape:
 30. Added Auto Card scene wiring for periodic effects, 90/180/270-second paused reward choices, owned card display, and reward choice buttons.
 31. Added Document Event scene wiring for condition-based modal opening, Day 1 fallback event, paused choice display, choice effects, and resume behavior.
 32. Added Retail Swarm scene wiring for abstract token rendering, participation-synced density/speed, and one-shot overheat/panic transition risk effects.
+33. Added browser localStorage wiring for active Run save/load, Main Menu continue, Final Settlement record save, best-record update flag, and current Run cleanup after Final.
 
 ---
 
@@ -231,4 +233,5 @@ Current branch baseline includes:
 22. Auto Card scene wiring,
 23. Document Event scene wiring,
 24. Retail Swarm scene wiring,
-25. README, docs index, feature index, traceability, and MEMORY updates.
+25. Local persistence browser wiring,
+26. README, docs index, feature index, traceability, and MEMORY updates.

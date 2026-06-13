@@ -8,6 +8,8 @@ export class MainMenuScene extends BaseDocumentScene {
   }
 
   create(): void {
+    const canContinue = gameSession.canContinueSavedRun();
+
     this.drawDocumentShell(
       "Market Manipulator Survival",
       [
@@ -17,6 +19,7 @@ export class MainMenuScene extends BaseDocumentScene {
         "Morning documents",
         "Pre-open approval",
         "Intraday pressure management",
+        canContinue ? "Saved Run available" : "No saved Run",
         "",
         "No real companies, tickers, exchanges, market data, or real procedures."
       ],
@@ -29,8 +32,25 @@ export class MainMenuScene extends BaseDocumentScene {
           gameSession.marketBriefing = null;
           gameSession.intradayState = null;
           gameSession.marketBoardState = null;
+          gameSession.lastManualActionResult = null;
+          gameSession.daySettlementResult = null;
+          gameSession.finalSettlementResult = null;
+          gameSession.surveillanceHistory = [];
         }
       }
     );
+
+    if (canContinue) {
+      this.addActionButton(
+        {
+          label: "저장 Run 이어가기",
+          target: SceneKeys.MorningBriefing,
+          onClick: () => {
+            gameSession.loadSavedRun();
+          }
+        },
+        1
+      );
+    }
   }
 }
