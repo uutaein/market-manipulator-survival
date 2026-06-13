@@ -118,7 +118,7 @@ export function createIntradayState(runState: RunState, dayState: DayState): Int
     marketPressure: applyEffect(runDefaults.initialMarketPressure, effect, "marketPressureDelta"),
     holdingRatio,
     personalParticipation: runDefaults.initialPersonalParticipation + newsImpact.personalParticipationDelta,
-    marketLiquidity: runDefaults.initialMarketLiquidity + newsImpact.marketLiquidityDelta,
+    marketLiquidity: applyEffect(runDefaults.initialMarketLiquidity, effect, "marketLiquidityDelta") + newsImpact.marketLiquidityDelta,
     surveillance: applyEffect(runState.surveillance, effect, "surveillanceDelta") + newsImpact.surveillanceDelta,
     volatility: applyEffect(runDefaults.initialVolatility, effect, "volatilityDelta") + newsImpact.volatilityDelta,
     competitionPressure: runDefaults.initialCompetitionPressure,
@@ -296,7 +296,12 @@ function applyEffect(
   effect: PreOpenCardEffect | null,
   key: keyof Pick<
     PreOpenCardEffect,
-    "budgetDelta" | "holdingRatioDelta" | "marketPressureDelta" | "surveillanceDelta" | "volatilityDelta"
+    | "budgetDelta"
+    | "holdingRatioDelta"
+    | "marketLiquidityDelta"
+    | "marketPressureDelta"
+    | "surveillanceDelta"
+    | "volatilityDelta"
   >
 ): number {
   return value + (effect?.[key] ?? 0);

@@ -11,6 +11,7 @@ export interface PreOpenCardEffect {
   readonly earlyPositioningBudgetPercent: number | null;
   readonly budgetDelta: number;
   readonly holdingRatioDelta: number;
+  readonly marketLiquidityDelta: number;
   readonly marketPressureDelta: number;
   readonly surveillanceDelta: number;
   readonly volatilityDelta: number;

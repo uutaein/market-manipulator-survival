@@ -176,7 +176,7 @@ The first playable default formula and coefficients are defined in SRS v0.1.1 an
 
 Morning News must visibly change market feel through direction, volatility, participation, liquidity, surveillance, and/or fictional trade value. News that only changes hidden numbers is not sufficient for the first playable.
 
-Manual actions commit their budget cost/recovery immediately, then apply non-budget stat effects gradually during their execution/cooldown window. The executing button blinks, shows remaining seconds, and cannot be canceled or re-triggered while active.
+Manual actions commit their budget cost/recovery immediately, then apply non-budget stat effects gradually during their execution/cooldown window. The executing button blinks, shows gauge progress, and can be clicked again to interrupt remaining progress without rolling back already-applied effects.
 
 ### 6.3 Non-player Asset Simulation
 
@@ -225,16 +225,16 @@ The player can choose at most 1 per Day before Morning News is revealed.
 
 Both directions target the player-selected fictional asset for the current Day. Positive assignment improves attention and upward-action legitimacy. Negative assignment increases downside context and reduces surveillance burden for position settlement.
 
-`선취매` uses a drag-style investment ratio control instead of a fixed budget cost. On Day 1 or when no position carries over, the player chooses 10~50% of the current Day budget. From Day 2 onward, if a position carries over, the player chooses 0~50% because additional accumulation is optional. The chosen ratio determines budget spent and position acquired. The resulting average entry price starts roughly 2~7% above the opening price using deterministic Run/asset randomness, so the initial valuation can show a loss before intraday pressure changes the price.
+`선취매` uses a drag-style investment ratio control instead of a fixed budget cost. On Day 1 or when no position carries over, the player chooses 10~50% of the current Day budget. From Day 2 onward, if a position carries over, the player chooses 0~50% because additional accumulation is optional. The chosen ratio determines budget spent and position acquired; a higher ratio increases holding ratio and lowers opening market liquidity. The resulting average entry price starts roughly 2~7% above the opening price using deterministic Run/asset randomness, so the initial valuation can show a loss before intraday pressure changes the price.
 
 The Intraday chart must include a fictional order-book/depth panel for the player asset. Thin sell-side depth should make upward pressure more responsive; thin buy-side depth should make downward pressure more responsive. This is an abstract game model, not real order-book data.
 
 ### 7.3 Manual Actions
 
 1. 유동성 공급
-2. 가격 추진
-3. 과열 해소
-4. 포지션 일부 정리
+2. 매수봇
+3. 매도봇
+4. 포지션 정리, displayed as 수익실현 when above average entry and 손실차단 when below average entry
 
 Manual actions are unavailable while a document event or auto card reward choice is open.
 

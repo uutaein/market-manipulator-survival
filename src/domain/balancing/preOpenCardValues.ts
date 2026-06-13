@@ -70,7 +70,7 @@ export const preOpenCardValues = {
   asset_analysis: {
     id: "asset_analysis",
     displayName: "종목 분석",
-    role: "가격 추진과 과열 해소의 장중 효과를 강화한다. 즉시 가격이나 관심을 올리지는 않는다.",
+    role: "매수봇과 매도봇의 장중 효과를 강화한다. 즉시 가격이나 관심을 올리지는 않는다.",
     budgetDelta: -4,
     holdingRatioDelta: 0,
     marketPressureDelta: 0,

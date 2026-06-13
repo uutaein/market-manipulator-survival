@@ -6,7 +6,12 @@ import { createDayState } from "../../src/domain/day/daySetup";
 import { isMorningNewsTemplateId, morningNewsTemplates } from "../../src/domain/day/morningNews";
 import { getEarlyPositioningEntryPremiumPercent } from "../../src/domain/intraday/intradayState";
 import { getActiveNewsPricePressure } from "../../src/domain/intraday/newsPressure";
-import { canStartIntraday, getAvailablePreOpenCards, hasStatEffect } from "../../src/domain/preopen/preOpenCards";
+import {
+  canStartIntraday,
+  getAvailablePreOpenCards,
+  hasStatEffect,
+  previewEarlyPositioningEffect
+} from "../../src/domain/preopen/preOpenCards";
 
 Given("a new Day begins", function (this: MmsWorld) {
   this.beginDay();
@@ -272,6 +277,25 @@ Then("the initial total valuation is below the Day starting budget", function (t
 Then("no pre-open stat effect is applied for the early positioning choice", function (this: MmsWorld) {
   assert.equal(this.dayState?.preOpenCardId, "early_positioning");
   assert.equal(hasStatEffect(this.dayState!.preOpenCardEffect), false);
+});
+
+When("the player compares low and high early positioning", function (this: MmsWorld) {
+  assert.ok(this.dayState);
+  const low = previewEarlyPositioningEffect(this.dayState.startingBudgetForDay, 10);
+  const high = previewEarlyPositioningEffect(this.dayState.startingBudgetForDay, 50);
+
+  this.lowEarlyPositioningHoldingDelta = low.holdingRatioDelta;
+  this.highEarlyPositioningHoldingDelta = high.holdingRatioDelta;
+  this.lowEarlyPositioningLiquidityDelta = low.marketLiquidityDelta;
+  this.highEarlyPositioningLiquidityDelta = high.marketLiquidityDelta;
+});
+
+Then("higher early positioning grants more holding ratio", function (this: MmsWorld) {
+  assert.ok(this.highEarlyPositioningHoldingDelta > this.lowEarlyPositioningHoldingDelta);
+});
+
+Then("higher early positioning leaves lower opening liquidity", function (this: MmsWorld) {
+  assert.ok(this.highEarlyPositioningLiquidityDelta < this.lowEarlyPositioningLiquidityDelta);
 });
 
 Then("no pre-open stat effect is applied", function (this: MmsWorld) {

@@ -62,6 +62,12 @@ Feature: Pre-open Card selection and Opening Approval
     And the early positioning effect stores 0 percent as the chosen budget ratio
     And no pre-open stat effect is applied for the early positioning choice
 
+  Scenario: Higher early positioning increases holding and reduces opening liquidity
+    Given a new Day begins before Morning News is revealed
+    When the player compares low and high early positioning
+    Then higher early positioning grants more holding ratio
+    And higher early positioning leaves lower opening liquidity
+
   Scenario: Use "관망" as the explicit no-card choice
     Given the player does not want to spend budget before opening
     When the player chooses "관망"

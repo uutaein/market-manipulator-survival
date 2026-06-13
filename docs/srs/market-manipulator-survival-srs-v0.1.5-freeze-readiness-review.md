@@ -139,9 +139,9 @@ Recommended baseline:
 | Action | Recommended Cooldown |
 | --- | ---: |
 | 유동성 공급 | 8 sec |
-| 가격 추진 | 10 sec |
-| 과열 해소 | 12 sec |
-| 포지션 정리 | 14 sec |
+| 매수봇 | 16 sec |
+| 매도봇 | 12 sec |
+| 포지션 정리 | 10 sec |
 
 Manual actions should be disabled while a document event is active.
 

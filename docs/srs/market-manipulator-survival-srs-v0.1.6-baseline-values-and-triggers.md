@@ -165,11 +165,11 @@ The Market Dashboard should update through a stable DOM row pool or equivalent r
 
 | Card | Baseline Effect |
 | --- | --- |
-| 선취매 | On Day 1 or when no carried position exists, player chooses 10~50% of current Day budget with a drag-style investment ratio. From Day 2 onward, if a position carries over, the player may choose 0~50% because additional accumulation is optional. Budget spent is `currentBudget * selectedPercent`; holding, pressure, surveillance, and volatility scale from the invested amount. Average entry price starts roughly 2~7% above opening price using deterministic Run/asset randomness, so the initial position valuation may show a loss. Does not increase attention directly. |
+| 선취매 | On Day 1 or when no carried position exists, player chooses 10~50% of current Day budget with a drag-style investment ratio. From Day 2 onward, if a position carries over, the player may choose 0~50% because additional accumulation is optional. Budget spent is `currentBudget * selectedPercent`; higher selected percent increases holding ratio and reduces opening market liquidity. Pressure, surveillance, and volatility scale from the invested amount. Average entry price starts roughly 2~7% above opening price using deterministic Run/asset randomness, so the initial position valuation may show a loss. Does not increase attention directly. |
 | 뉴스 배정 | `budget -8`. Player chooses `호재` or `악재` before Morning News is revealed. The generated Morning News targets the player asset. |
 | 뉴스 배정: 호재 | Player asset positive news. Adds attention/upward context, lets liquidity supply add meaningful upward pressure, improves price-push effect, and reduces upward-action surveillance burden. |
 | 뉴스 배정: 악재 | Player asset negative news. Adds downside context and volatility, reduces position-settlement surveillance burden, but weakens price-push context. |
-| 종목 분석 | `budget -4`. Strengthens `가격 추진` and `과열 해소` effect multipliers. Does not directly move price or attention. |
+| 종목 분석 | `budget -4`. Strengthens `매수봇` and `매도봇` effect multipliers. Does not directly move price or attention. |
 | 관망 | No stat change. Preserves budget. |
 
 | ID | Requirement |
@@ -191,22 +191,24 @@ Manual actions are unavailable while a document event or auto card reward choice
 
 | Action | Cost / Recovery | Cooldown | Baseline Effect |
 | --- | ---: | ---: | --- |
-| 유동성 공급 | `budget -4` | 8 sec | Low-cost attention and liquidity setup. Gradually applies `marketPressure +5`, `marketLiquidity +22`, `personalParticipation +10`, `volatility +6`, `surveillance +2`. |
-| 가격 추진 | `budget -14` | 10 sec | High-cost upward pressure and position acquisition. Gradually applies `holdingRatio +4`, `marketPressure +58`, `marketLiquidity +8`, `personalParticipation +12`, `volatility +11`, `surveillance +7`, with average entry price rising when held units increase. |
-| 과열 해소 | `budget -3` | 12 sec | Low-cost downward stabilization while keeping activity visible. Gradually applies `marketPressure -46`, `marketLiquidity +6`, `personalParticipation +4`, `volatility -8`, `surveillance -2`. |
-| 포지션 일부 정리 | current-price-based partial recovery | 10 sec | Partial position cleanup with visible exit shock. Budget recovery is based on the normalized current fictional position value. Gradually applies `holdingRatio -10`, `marketPressure -34`, `marketLiquidity +6`, `personalParticipation +8`, `surveillance +4`, `volatility +12`. |
+| 유동성 공급 | `budget -2` | 8 sec | Low-cost attention and liquidity setup. Gradually applies `marketPressure +5`, `marketLiquidity +22`, `personalParticipation +10`, `volatility +6`, `surveillance +2`. |
+| 매수봇 | `budget -4` plus actual purchase budget | 16 sec | Moderate-cost upward pressure and position acquisition. Gradually applies `holdingRatio +5`, `marketPressure +52`, `marketLiquidity +12`, `personalParticipation +14`, `volatility +10`, `surveillance +7`. The 4B is committed when the action starts, and each acquired holding increment also spends purchase budget based on the fictional current price plus premium. Average entry may rise in an upward push, or fall when buying into a cheaper accumulation window. |
+| 매도봇 | `budget -4` | 12 sec | Controlled downward pressure for cheaper accumulation and average-entry management. Gradually applies `holdingRatio -4`, `marketPressure -42`, `marketLiquidity +8`, `personalParticipation +4`, `volatility -10`, `surveillance -1`, and may compress average entry if price is below average entry. This is not a budget recovery action. |
+| 포지션 정리 | current-price-based recovery | 10 sec | Profit taking when above average entry, or loss cutting when below average entry. This is the manual action that recovers budget from the position, but price shock, surveillance, and volatility risk are stronger than `매도봇`. Gradually applies `holdingRatio -12`, `marketPressure -58`, `marketLiquidity +3`, `personalParticipation +12`, `surveillance +7`, `volatility +22`. |
 
 | ID | Requirement |
 | --- | --- |
-| SRS-BASE-ACTION-001 | Manual action buttons must show disabled state when the player cannot pay the cost, the action is executing, or the action is on cooldown. |
-| SRS-BASE-ACTION-002 | Budget recovery from `포지션 일부 정리` must not raise budget above a future configurable Run budget cap if one is added. MVP may omit that cap. |
+| SRS-BASE-ACTION-001 | Manual action buttons must show disabled state when the player cannot pay the cost, a modal decision is open, or the action is on cooldown. An executing action remains clickable as an interruption control. |
+| SRS-BASE-ACTION-002 | Budget recovery from `포지션 정리` must not raise budget above a future configurable Run budget cap if one is added. MVP may omit that cap. |
 | SRS-BASE-ACTION-003 | Manual action values must live in `manualActionValues` or an equivalent balancing group. |
 | SRS-BASE-ACTION-004 | Manual action budget cost/recovery is committed immediately, but non-budget stat effects are applied gradually over the action execution duration. |
-| SRS-BASE-ACTION-005 | An executing manual action button must blink and show remaining seconds; the player cannot cancel or re-trigger that action while it is executing. |
-| SRS-BASE-ACTION-006 | If repeated `포지션 일부 정리` actions reduce holding ratio to 0 and no manual action is still executing, the player may use an intraday desk-reposition flow to choose a new fictional sector/asset while preserving Run/Day risk state. |
-| SRS-BASE-ACTION-007 | The intended MVP action rhythm is `선취매` followed by liquidity/attention setup, high-cost price pressure, overheat stabilization, and repeated partial position cleanup. |
-| SRS-BASE-ACTION-008 | `가격 추진` must increase held units and average entry price while spending budget. |
-| SRS-BASE-ACTION-009 | `포지션 일부 정리` must reduce held units and recover budget based on current fictional price context. |
+| SRS-BASE-ACTION-005 | An executing manual action button must blink and show gauge progress; clicking it again interrupts the remaining action progress without rolling back already-applied effects. |
+| SRS-BASE-ACTION-006 | If repeated `포지션 정리` actions reduce holding ratio to 0 and no manual action is still executing, the player may use an intraday desk-reposition flow to choose a new fictional sector/asset while preserving Run/Day risk state. |
+| SRS-BASE-ACTION-007 | The intended MVP action rhythm is `선취매` followed by liquidity/attention setup, `매수봇`, `매도봇` average-entry management, and `포지션 정리` as profit taking or loss cutting. |
+| SRS-BASE-ACTION-008 | `매수봇` must increase held units only by spending the 4B start cost plus additional purchase budget for acquired units. It must not grant free holdings. |
+| SRS-BASE-ACTION-009 | `매도봇` must spend `4B`, may reduce held units lightly, and help create a cheaper accumulation window / average-entry pressure relief rather than serving as a budget recovery or main exit action. |
+| SRS-BASE-ACTION-010 | `포지션 정리` must reduce held units and recover budget based on current fictional price context, with stronger market impact than `매도봇`. |
+| SRS-BASE-ACTION-011 | Active manual actions must show a fill gauge and may be interrupted mid-gauge. Already-applied partial effects remain; only the remaining action progress is cancelled. |
 
 ### 6.1 Intraday Money Flow Display
 
@@ -259,7 +261,7 @@ If fewer than 3 eligible choices exist, show all eligible choices.
 | 뉴스 증폭 | 15 sec | Current Morning News pressure +20% while active | period |
 | 감시 완충 | 16 sec | Next surveillance increase reduced by 20% | effect |
 | 경쟁 견제 | 14 sec | `competitionPressure -5`, `surveillance +1` | effect |
-| 정리 루틴 | 18 sec | Reduces market impact and volatility burden when `포지션 일부 정리` is used; does not sell automatically | period |
+| 정리 루틴 | 18 sec | Reduces market impact and volatility burden when `포지션 정리` is used; does not sell automatically | period |
 
 Level scaling:
 

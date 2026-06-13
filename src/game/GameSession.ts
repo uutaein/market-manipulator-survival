@@ -29,7 +29,12 @@ import {
   type DocumentEventChoiceResult
 } from "../domain/intraday/documentEvents";
 import { applyRetailSwarmRiskEffects, type RetailSwarmEffectResult } from "../domain/intraday/retailSwarm";
-import { tickManualActionCooldowns, useManualAction, type ManualActionResult } from "../domain/intraday/manualActions";
+import {
+  cancelManualAction,
+  tickManualActionCooldowns,
+  useManualAction,
+  type ManualActionResult
+} from "../domain/intraday/manualActions";
 import { runPlayerPriceTick } from "../domain/intraday/priceTick";
 import type { ManualActionId } from "../domain/balancing/manualActionValues";
 import { advanceMarketBoard, buildMarketBoard, type MarketBoardState } from "../domain/market/marketBoard";
@@ -326,6 +331,7 @@ export class GameSession {
     }
 
     const actionProgressState = tickManualActionCooldowns(currentState, 1);
+    this.recordBudgetLedgerDelta(actionProgressState.budget - currentState.budget);
     const tickedState = runPlayerPriceTick(actionProgressState, {
       runSeed: runState.runSeed,
       dayIndex: runState.currentDay
@@ -370,6 +376,12 @@ export class GameSession {
     this.applyManualActionChartResponse(this.lastManualActionResult);
     this.checkImmediateRunFailure(this.intradayState);
     return this.lastManualActionResult;
+  }
+
+  cancelManualAction(actionId: ManualActionId): IntradayState {
+    const currentState = this.intradayState ?? this.startIntraday();
+    this.intradayState = cancelManualAction(currentState, actionId);
+    return this.intradayState;
   }
 
   canRepositionIntradayAsset(): boolean {

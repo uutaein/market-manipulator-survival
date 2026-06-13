@@ -108,6 +108,8 @@ export class MmsWorld extends World {
   priceBeforeTick = 0;
   tickIndexBefore = 0;
   priceBeforeManualAction = 0;
+  budgetBeforeManualAction = 0;
+  holdingRatioBeforeManualAction = 0;
   heldUnitsBeforeManualAction = 0;
   averageEntryPriceBeforeManualAction = 0;
   lastManualActionResult?: ManualActionResult;
@@ -165,6 +167,10 @@ export class MmsWorld extends World {
   day1Onboarding = false;
   learningHintShown = false;
   latestNewsPressure = 0;
+  lowEarlyPositioningHoldingDelta = 0;
+  highEarlyPositioningHoldingDelta = 0;
+  lowEarlyPositioningLiquidityDelta = 0;
+  highEarlyPositioningLiquidityDelta = 0;
 
   startNewRun(): void {
     this.previousRunSeed = this.runSeed || "mms-seed-001";
@@ -295,12 +301,14 @@ export class MmsWorld extends World {
     });
   }
 
-  useManualAction(actionName = "가격 추진"): void {
+  useManualAction(actionName = "매수봇"): void {
     if (!this.intradayState) {
       this.openIntraday();
     }
 
     this.priceBeforeManualAction = this.intradayState!.priceChangePercent;
+    this.budgetBeforeManualAction = this.intradayState!.budget;
+    this.holdingRatioBeforeManualAction = this.intradayState!.holdingRatio;
     this.lastManualActionResult = useManualAction(this.intradayState!, actionName);
     this.intradayState = this.lastManualActionResult.state;
   }

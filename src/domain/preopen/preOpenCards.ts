@@ -24,6 +24,7 @@ export interface EarlyPositioningPreviewEffect {
   readonly earlyPositioningBudgetPercent: number;
   readonly budgetDelta: number;
   readonly holdingRatioDelta: number;
+  readonly marketLiquidityDelta: number;
   readonly marketPressureDelta: number;
   readonly surveillanceDelta: number;
   readonly volatilityDelta: number;
@@ -151,6 +152,7 @@ export function hasStatEffect(effect: PreOpenCardEffect | null): boolean {
   return (
     effect.budgetDelta !== 0 ||
     effect.holdingRatioDelta !== 0 ||
+    effect.marketLiquidityDelta !== 0 ||
     effect.marketPressureDelta !== 0 ||
     effect.surveillanceDelta !== 0 ||
     effect.volatilityDelta !== 0 ||
@@ -181,6 +183,7 @@ function createPreOpenCardEffect(
     earlyPositioningBudgetPercent: earlyPositioningEffect?.earlyPositioningBudgetPercent ?? null,
     budgetDelta: earlyPositioningEffect?.budgetDelta ?? card.budgetDelta,
     holdingRatioDelta: earlyPositioningEffect?.holdingRatioDelta ?? card.holdingRatioDelta,
+    marketLiquidityDelta: earlyPositioningEffect?.marketLiquidityDelta ?? 0,
     marketPressureDelta: earlyPositioningEffect?.marketPressureDelta ?? card.marketPressureDelta,
     surveillanceDelta: (earlyPositioningEffect?.surveillanceDelta ?? card.surveillanceDelta) + newsAssignmentEffect.surveillanceDelta,
     volatilityDelta: (earlyPositioningEffect?.volatilityDelta ?? card.volatilityDelta) + newsAssignmentEffect.volatilityDelta,
@@ -215,6 +218,7 @@ export function previewEarlyPositioningEffect(
     earlyPositioningBudgetPercent,
     budgetDelta: -budgetSpend,
     holdingRatioDelta,
+    marketLiquidityDelta: round1(-0.4 * earlyPositioningBudgetPercent),
     marketPressureDelta: round1(4 * scale),
     surveillanceDelta: round1(1 * scale),
     volatilityDelta: round1(2 * scale)

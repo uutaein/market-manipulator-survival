@@ -49,7 +49,7 @@ export function canUseManualAction(state: IntradayState, actionId: ManualActionI
     return false;
   }
 
-  if (actionId === "position_settlement" && state.holdingRatio <= 0) {
+  if (isPositionReducingAction(actionId) && state.holdingRatio <= 0) {
     return false;
   }
 
@@ -91,7 +91,7 @@ export function useManualAction(state: IntradayState, actionIdOrDisplayName: str
     };
   }
 
-  if (actionId === "position_settlement" && state.holdingRatio <= 0) {
+  if (isPositionReducingAction(actionId) && state.holdingRatio <= 0) {
     return {
       state,
       action,
@@ -143,6 +143,21 @@ export function useManualAction(state: IntradayState, actionIdOrDisplayName: str
   };
 }
 
+export function cancelManualAction(state: IntradayState, actionId: ManualActionId): IntradayState {
+  if (!state.activeManualActionEffects.some((effect) => effect.actionId === actionId)) {
+    return state;
+  }
+
+  return clampIntradayState({
+    ...state,
+    manualActionCooldowns: {
+      ...state.manualActionCooldowns,
+      [actionId]: 0
+    },
+    activeManualActionEffects: state.activeManualActionEffects.filter((effect) => effect.actionId !== actionId)
+  });
+}
+
 export function tickManualActionCooldowns(state: IntradayState, seconds: number = runDefaults.intradayDurationSec): IntradayState {
   if (state.isPaused) {
     return state;
@@ -159,6 +174,7 @@ export function tickManualActionCooldowns(state: IntradayState, seconds: number 
     surveillance: 0,
     volatility: 0
   };
+  const appliedActionIds = new Set<ManualActionId>();
   const activeManualActionEffects = state.activeManualActionEffects.flatMap((effect) => {
     const action = manualActionValues[effect.actionId];
     const appliedSeconds = Math.min(seconds, effect.remainingSec);
@@ -169,6 +185,10 @@ export function tickManualActionCooldowns(state: IntradayState, seconds: number 
     const impactMultiplier = getActionImpactMultiplier(state, effect.actionId);
 
     const pressureBonus = effect.actionId === "liquidity_supply" ? state.liquiditySupplyPressureBonus : 0;
+
+    if (appliedSeconds > 0) {
+      appliedActionIds.add(effect.actionId);
+    }
 
     effectDelta.marketPressure += (action.marketPressureDelta + pressureBonus) * cardMultiplier * impactMultiplier * fraction;
     effectDelta.marketLiquidity += action.marketLiquidityDelta * cardMultiplier * fraction;
@@ -195,7 +215,7 @@ export function tickManualActionCooldowns(state: IntradayState, seconds: number 
       volatility: state.volatility + effectDelta.volatility
     }
   );
-  return updatePositionAccountingForActionProgress(state, stateAfterStats);
+  return updatePositionAccountingForActionProgress(state, stateAfterStats, appliedActionIds);
 }
 
 export function getManualActionBudgetDelta(state: IntradayState, actionId: ManualActionId): number {
@@ -207,7 +227,7 @@ export function getManualActionBudgetDelta(state: IntradayState, actionId: Manua
 
   const positionMarketValue = getNormalizedPositionMarketValue(state);
   const settlementRatio = getPositionSettlementRatio(state, action);
-  return round1(clamp(positionMarketValue * settlementRatio * 0.72, 0, 18));
+  return round1(clamp(positionMarketValue * settlementRatio * 0.92, 0, 24));
 }
 
 function getActionEffectMultiplier(state: IntradayState, actionId: ManualActionId): number {
@@ -258,23 +278,53 @@ function getNormalizedPositionMarketValue(state: IntradayState): number {
   return state.holdingRatio * (state.currentPrice / state.averageEntryPrice);
 }
 
-function updatePositionAccountingForActionProgress(previousState: IntradayState, nextState: IntradayState): IntradayState {
+function updatePositionAccountingForActionProgress(
+  previousState: IntradayState,
+  nextState: IntradayState,
+  appliedActionIds: ReadonlySet<ManualActionId>
+): IntradayState {
   const unitDelta = nextState.heldUnits - previousState.heldUnits;
 
   if (unitDelta > 0) {
     const acquisitionPrice = roundToTick(
-      Math.max(nextState.currentPrice, previousState.averageEntryPrice) * (1 + acquisitionPricePremiumPercent / 100),
+      nextState.currentPrice * (1 + acquisitionPricePremiumPercent / 100),
       runDefaults.openingPriceTick
     );
+    const purchaseCost = appliedActionIds.has("price_push")
+      ? getNormalizedPurchaseBudgetCost(nextState, unitDelta, acquisitionPrice)
+      : 0;
+    const paidPurchaseCost = round1(Math.min(purchaseCost, nextState.budget));
+    const affordableState =
+      purchaseCost > paidPurchaseCost
+        ? clampIntradayState({
+            ...nextState,
+            budget: nextState.budget - paidPurchaseCost,
+            holdingRatio:
+              previousState.holdingRatio +
+              (nextState.holdingRatio - previousState.holdingRatio) * (purchaseCost > 0 ? paidPurchaseCost / purchaseCost : 0)
+          })
+        : clampIntradayState({
+            ...nextState,
+            budget: nextState.budget - paidPurchaseCost
+          });
+    const actualUnitDelta = Math.max(0, affordableState.heldUnits - previousState.heldUnits);
+
+    if (actualUnitDelta <= 0) {
+      return clampIntradayState({
+        ...affordableState,
+        averageEntryPrice: previousState.averageEntryPrice
+      });
+    }
+
     const previousCost = previousState.averageEntryPrice * previousState.heldUnits;
-    const addedCost = acquisitionPrice * unitDelta;
+    const addedCost = acquisitionPrice * actualUnitDelta;
     const averageEntryPrice = roundToTick(
-      (previousCost + addedCost) / Math.max(1, previousState.heldUnits + unitDelta),
+      (previousCost + addedCost) / Math.max(1, previousState.heldUnits + actualUnitDelta),
       runDefaults.openingPriceTick
     );
 
     return clampIntradayState({
-      ...nextState,
+      ...affordableState,
       averageEntryPrice
     });
   }
@@ -286,7 +336,35 @@ function updatePositionAccountingForActionProgress(previousState: IntradayState,
     });
   }
 
+  if (unitDelta < 0 && appliedActionIds.has("overheat_cooldown") && !appliedActionIds.has("position_settlement")) {
+    const lowerReferencePrice = Math.min(nextState.currentPrice, previousState.averageEntryPrice);
+    const compression = Math.min(
+      previousState.averageEntryPrice * 0.012,
+      Math.max(0, previousState.averageEntryPrice - lowerReferencePrice) * 0.25
+    );
+
+    if (compression > 0) {
+      return clampIntradayState({
+        ...nextState,
+        averageEntryPrice: roundToTick(previousState.averageEntryPrice - compression, runDefaults.openingPriceTick)
+      });
+    }
+  }
+
   return nextState;
+}
+
+function isPositionReducingAction(actionId: ManualActionId): boolean {
+  return manualActionValues[actionId].holdingRatioDelta < 0;
+}
+
+function getNormalizedPurchaseBudgetCost(state: IntradayState, unitDelta: number, acquisitionPrice: number): number {
+  if (state.fictionalFloatUnits <= 0 || state.openingPrice <= 0 || unitDelta <= 0) {
+    return 0;
+  }
+
+  const holdingRatioDelta = (unitDelta / state.fictionalFloatUnits) * 100;
+  return round1(holdingRatioDelta * (acquisitionPrice / state.openingPrice));
 }
 
 function roundToTick(value: number, tick: number): number {

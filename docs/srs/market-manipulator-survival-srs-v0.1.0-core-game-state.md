@@ -222,7 +222,7 @@ MVP는 마감 보유 비중을 4구간으로 분류한다.
 | ID | Requirement |
 | --- | --- |
 | SRS-STATE-HOLD-001 | 시스템은 Day Settlement 시 `holdingRatio`를 위 4구간 중 하나로 분류해야 한다. |
-| SRS-STATE-HOLD-002 | `포지션 일부 정리` 액션은 `holdingRatio`를 조금씩 낮추고 예산 회수를 보조하는 주요 수단이어야 한다. |
+| SRS-STATE-HOLD-002 | `매도봇`은 4B를 차감해 평단 압박 관리를 돕고 `holdingRatio`를 조금 낮출 수 있으며, `포지션 정리`는 수익실현 또는 손실차단을 위해 더 큰 회수와 정산 리스크 관리를 담당해야 한다. |
 | SRS-STATE-HOLD-003 | 높은 `holdingRatio`는 장중에는 가격 추진/방어 효율에 유리할 수 있지만, 정산에서는 리스크로 평가되어야 한다. |
 
 ---
@@ -257,9 +257,9 @@ MVP 수동 액션은 다음 4개로 고정한다.
 | Action ID | 표시명 | 주요 영향 상태 |
 | --- | --- | --- |
 | `liquidity_supply` | 유동성 공급 | 예산, 시장 유동성, 가격 반응성, 감시도, 변동성 |
-| `price_push` | 가격 추진 | 예산, 가격, 시장 압력, 감시도, 변동성 |
-| `overheat_cooldown` | 과열 해소 | 가격 압력, 개인 참여도, 변동성, 감시도 |
-| `position_settlement` | 포지션 일부 정리 | 보유 비중, 예산, 가격 지지 |
+| `price_push` | 매수봇 | 예산, 가격, 보유 비중, 시장 압력, 감시도, 변동성 |
+| `overheat_cooldown` | 매도봇 | 예산 차감, 보유 비중, 가격 압력, 평단 압박, 변동성 |
+| `position_settlement` | 포지션 정리 | 수익실현/손실차단, 보유 비중, 예산, 가격 지지 |
 
 | 변수 | 범위/형태 | 설명 |
 | --- | --- | --- |
@@ -281,7 +281,7 @@ MVP 자동 카드는 다음 8개로 고정한다.
 | `news_amplifier` | 뉴스 증폭 | Morning News 효과 |
 | `surveillance_buffer` | 감시 완충 | 감시도 증가량 |
 | `competition_check` | 경쟁 견제 | 경쟁 압박 |
-| `settlement_routine` | 정리 루틴 | 포지션 일부 정리 충격 완화 |
+| `settlement_routine` | 정리 루틴 | 포지션 정리 충격 완화 |
 
 | 변수 | 범위/형태 | 설명 |
 | --- | --- | --- |

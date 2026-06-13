@@ -34,7 +34,7 @@ export class IntradayRepositionScene extends BaseDocumentScene {
 
     if (!gameSession.canRepositionIntradayAsset()) {
       this.add
-        .text(96, 210, "현재는 재배치 조건이 아니다. 포지션 일부 정리를 반복해 보유 비중을 0%까지 낮춘 뒤 사용할 수 있다.", {
+        .text(96, 210, "현재는 재배치 조건이 아니다. 포지션 정리를 반복해 보유 비중을 0%까지 낮춘 뒤 사용할 수 있다.", {
           color: "#c46b5b",
           fontFamily: this.fontFamily,
           fontSize: "18px",

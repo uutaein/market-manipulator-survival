@@ -104,7 +104,7 @@ export const documentEventValues = {
     })
   ]),
   market_overheat_warning: createEvent("market_overheat_warning", "시장 과열 경보", 3, [
-    choice("stable", "과열 해소", {
+    choice("stable", "매도봇", {
       ...noEffect,
       personalParticipationDelta: -14,
       volatilityDelta: -10,
@@ -141,7 +141,7 @@ export const documentEventValues = {
     })
   ]),
   internal_risk_memo: createEvent("internal_risk_memo", "내부 리스크 메모", 5, [
-    choice("stable", "포지션 일부 정리", {
+    choice("stable", "포지션 정리", {
       ...noEffect,
       holdingRatioDelta: -12,
       budgetDelta: 8,

@@ -4,7 +4,8 @@ import type { MmsWorld } from "../support/world";
 import { excludedManualActions, manualActions } from "../support/world";
 import { autoCardIds } from "../../src/domain/balancing/runDefaults";
 import { isMvpAutoCardId } from "../../src/domain/intraday/autoCards";
-import { areManualActionsAvailable, tickManualActionCooldowns } from "../../src/domain/intraday/manualActions";
+import { clampIntradayState } from "../../src/domain/intraday/intradayState";
+import { areManualActionsAvailable, cancelManualAction, tickManualActionCooldowns } from "../../src/domain/intraday/manualActions";
 
 const normalizeLabel = (label: string) => label.normalize("NFC").trim();
 
@@ -159,7 +160,7 @@ Then("all manual action buttons are unavailable", function (this: MmsWorld) {
 });
 
 Given("the player uses a manual action", function (this: MmsWorld) {
-  this.useManualAction("가격 추진");
+  this.useManualAction("매수봇");
 });
 
 Then("the action affects budget, market pressure, liquidity, participation, holding ratio, surveillance, or volatility", function (this: MmsWorld) {
@@ -177,14 +178,16 @@ Then("the action enters cooldown if applicable", function (this: MmsWorld) {
   assert.ok(this.intradayState.manualActionCooldowns.price_push > 0);
 });
 
-When("the player runs price push long enough for position accounting", function (this: MmsWorld) {
+When("the player runs buy bot long enough for position accounting", function (this: MmsWorld) {
   if (!this.intradayState) {
     this.openIntraday();
   }
 
+  this.intradayState = movePriceAboveAverageEntry(this.intradayState!);
   this.heldUnitsBeforeManualAction = this.intradayState!.heldUnits;
   this.averageEntryPriceBeforeManualAction = this.intradayState!.averageEntryPrice;
-  this.useManualAction("가격 추진");
+  this.budgetBeforeManualAction = this.intradayState!.budget;
+  this.useManualAction("매수봇");
   this.intradayState = tickManualActionCooldowns(this.intradayState!, 4);
 });
 
@@ -198,9 +201,106 @@ Then("average entry price increases", function (this: MmsWorld) {
   assert.ok(this.intradayState.averageEntryPrice > this.averageEntryPriceBeforeManualAction);
 });
 
+Then("budget decreases by more than the buy bot fee", function (this: MmsWorld) {
+  assert.ok(this.intradayState);
+  assert.ok(this.intradayState.budget < this.budgetBeforeManualAction - 4);
+});
+
+When("the player uses liquidity supply", function (this: MmsWorld) {
+  this.useManualAction("유동성 공급");
+});
+
+When("the player uses buy bot", function (this: MmsWorld) {
+  this.useManualAction("매수봇");
+});
+
+Then("the manual action budget change is {int}", function (this: MmsWorld, budgetDelta: number) {
+  assert.equal(this.lastManualActionResult?.budgetDelta, budgetDelta);
+});
+
+When("the player runs sell bot long enough for position accounting", function (this: MmsWorld) {
+  if (!this.intradayState) {
+    this.openIntraday();
+  }
+
+  this.intradayState = movePriceBelowAverageEntry(this.intradayState!);
+  this.budgetBeforeManualAction = this.intradayState!.budget;
+  this.holdingRatioBeforeManualAction = this.intradayState!.holdingRatio;
+  this.averageEntryPriceBeforeManualAction = this.intradayState!.averageEntryPrice;
+  this.useManualAction("매도봇");
+  this.intradayState = tickManualActionCooldowns(this.intradayState!, 4);
+});
+
+Then("holding ratio decreases", function (this: MmsWorld) {
+  assert.ok(this.intradayState);
+  assert.ok(this.intradayState.holdingRatio < this.holdingRatioBeforeManualAction);
+});
+
+Then("budget decreases", function (this: MmsWorld) {
+  assert.ok(this.intradayState);
+  assert.ok(this.intradayState.budget < this.budgetBeforeManualAction);
+});
+
+Then("average entry price decreases", function (this: MmsWorld) {
+  assert.ok(this.intradayState);
+  assert.ok(this.intradayState.averageEntryPrice < this.averageEntryPriceBeforeManualAction);
+});
+
+When("the player uses sell bot to create a cheaper accumulation window", function (this: MmsWorld) {
+  if (!this.intradayState) {
+    this.openIntraday();
+  }
+
+  this.intradayState = movePriceBelowAverageEntry(this.intradayState!);
+  this.averageEntryPriceBeforeManualAction = this.intradayState!.averageEntryPrice;
+  this.useManualAction("매도봇");
+  this.intradayState = tickManualActionCooldowns(this.intradayState!, 4);
+});
+
+When("the player buys again in that cheaper accumulation window", function (this: MmsWorld) {
+  assert.ok(this.intradayState);
+  this.useManualAction("매수봇");
+  this.intradayState = tickManualActionCooldowns(this.intradayState, 4);
+});
+
+Then("the average entry price is below the pre-sell average", function (this: MmsWorld) {
+  assert.ok(this.intradayState);
+  assert.ok(this.intradayState.averageEntryPrice < this.averageEntryPriceBeforeManualAction);
+});
+
+When("the player starts a buy bot action", function (this: MmsWorld) {
+  this.useManualAction("매수봇");
+});
+
+When("the player interrupts the active buy bot action", function (this: MmsWorld) {
+  assert.ok(this.intradayState);
+  this.intradayState = cancelManualAction(this.intradayState, "price_push");
+});
+
+Then("the buy bot action is no longer active", function (this: MmsWorld) {
+  assert.ok(this.intradayState);
+  assert.equal(this.intradayState.activeManualActionEffects.some((effect) => effect.actionId === "price_push"), false);
+});
+
 Then("{string} is not a manual action button", function (this: MmsWorld, actionName: string) {
   assert.ok(excludedManualActions.has(normalizeLabel(actionName)));
 });
+
+function movePriceAboveAverageEntry(state: NonNullable<MmsWorld["intradayState"]>): NonNullable<MmsWorld["intradayState"]> {
+  const targetPrice = state.averageEntryPrice * 1.04;
+  return clampIntradayState({
+    ...state,
+    priceChangePercent: ((targetPrice / state.openingPrice) - 1) * 100
+  });
+}
+
+function movePriceBelowAverageEntry(state: NonNullable<MmsWorld["intradayState"]>): NonNullable<MmsWorld["intradayState"]> {
+  const targetPrice = state.averageEntryPrice * 0.88;
+  return clampIntradayState({
+    ...state,
+    priceChangePercent: ((targetPrice / state.openingPrice) - 1) * 100
+  });
+}
 
 When("initial Run state is created", function (this: MmsWorld) {
   if (!this.runState) {

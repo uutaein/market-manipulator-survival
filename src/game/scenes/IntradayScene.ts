@@ -6,7 +6,7 @@ import { documentEventRules, documentEventValues } from "../../domain/balancing/
 import { runDefaults } from "../../domain/balancing/runDefaults";
 import { getAutoCardPeriodSec } from "../../domain/intraday/autoCards";
 import type { IntradayState } from "../../domain/intraday/intradayState";
-import { manualActions } from "../../domain/intraday/manualActions";
+import { getManualActionBudgetDelta, manualActions } from "../../domain/intraday/manualActions";
 import { calculateRetailSwarmModel, type RetailSwarmModel } from "../../domain/intraday/retailSwarm";
 import { buildOrderBookProfile } from "../../domain/intraday/orderBook";
 import type { MorningNews } from "../../domain/day/morningNews";
@@ -35,6 +35,8 @@ export class IntradayScene extends BaseDocumentScene {
   private actionStatusText: Phaser.GameObjects.Text | null = null;
   private autoCardText: Phaser.GameObjects.Text | null = null;
   private manualActionButtons: Partial<Record<ManualActionId, Phaser.GameObjects.Text>> = {};
+  private manualActionGaugeTracks: Partial<Record<ManualActionId, Phaser.GameObjects.Rectangle>> = {};
+  private manualActionGaugeBars: Partial<Record<ManualActionId, Phaser.GameObjects.Rectangle>> = {};
   private repositionButton: Phaser.GameObjects.Text | null = null;
   private manualActionFeedbackEndsAt: Partial<Record<ManualActionId, number>> = {};
   private manualActionButtonModes: Partial<Record<ManualActionId, "normal" | "active">> = {};
@@ -50,6 +52,8 @@ export class IntradayScene extends BaseDocumentScene {
   create(): void {
     gameSession.intradayState ?? gameSession.startIntraday();
     this.manualActionButtons = {};
+    this.manualActionGaugeTracks = {};
+    this.manualActionGaugeBars = {};
     this.manualActionFeedbackEndsAt = {};
     this.manualActionButtonModes = {};
     this.previousMarketBoardRanks = new Map();
@@ -147,16 +151,34 @@ export class IntradayScene extends BaseDocumentScene {
       .setOrigin(0, 0);
 
     manualActions.forEach((action, index) => {
-      const button = this.addDocumentButton(96 + index * 206, 580, action.displayName, () => {
+      const buttonX = 96 + index * 206;
+      const button = this.addDocumentButton(buttonX, 580, action.displayName, () => {
+        const activeEffect = gameSession.intradayState?.activeManualActionEffects.find(
+          (effect) => effect.actionId === action.id
+        );
+
+        if (activeEffect) {
+          gameSession.cancelManualAction(action.id);
+          this.actionStatusText?.setText(`수동 액션: ${getManualActionDisplayLabel(action.id, gameSession.intradayState)} 중단`);
+          this.refreshIntradayUi();
+          return;
+        }
+
         const result = gameSession.useManualAction(action.id);
         if (result.applied) {
           this.startManualActionFeedback(action.id);
         }
-        this.actionStatusText?.setText(`수동 액션: ${action.displayName} / ${result.reason}`);
+        this.actionStatusText?.setText(`수동 액션: ${getManualActionDisplayLabel(action.id, gameSession.intradayState)} / ${result.reason}`);
         this.refreshIntradayUi();
         this.routeIfRunFailed();
       });
       this.manualActionButtons[action.id] = button;
+      this.manualActionGaugeTracks[action.id] = this.add
+        .rectangle(buttonX, 636, manualActionGaugeWidth, 5, 0x2a3033, 0.95)
+        .setOrigin(0, 0.5);
+      this.manualActionGaugeBars[action.id] = this.add
+        .rectangle(buttonX, 636, 0, 5, getManualActionFeedbackColorNumber(action.id), 0.95)
+        .setOrigin(0, 0.5);
     });
 
     this.addDocumentButton(1040, 618, "Day 정산", () => {
@@ -253,22 +275,39 @@ export class IntradayScene extends BaseDocumentScene {
         continue;
       }
 
-      const cooldown = state?.manualActionCooldowns[action.id] ?? 0;
-      const isActive = cooldown > 0 || time < (this.manualActionFeedbackEndsAt[action.id] ?? 0);
+      const activeEffect = state?.activeManualActionEffects.find((effect) => effect.actionId === action.id);
+      const progress = activeEffect ? 1 - activeEffect.remainingSec / Math.max(1, activeEffect.totalSec) : 0;
+      const isActive = Boolean(activeEffect) || time < (this.manualActionFeedbackEndsAt[action.id] ?? 0);
+      const label = getManualActionButtonLabel(action.id, action.displayName, state);
+      this.refreshManualActionGauge(action.id, progress, Boolean(activeEffect));
 
       if (isActive) {
         this.setManualActionButtonMode(button, action.id, "active");
-        button.disableInteractive();
-        button.setText(`${action.displayName} ${Math.ceil(cooldown)}s`);
+        button.setInteractive({ useHandCursor: true });
+        button.setText(
+          activeEffect ? `${getManualActionDisplayLabel(action.id, state)}\n진행 ${Math.round(progress * 100)}% · 중단` : label
+        );
         button.setAlpha(0.68 + Math.sin(time * 0.026) * 0.16 + 0.16);
         continue;
       }
 
       this.setManualActionButtonMode(button, action.id, "normal");
-      button.setText(action.displayName);
+      button.setText(label);
       button.setInteractive({ useHandCursor: true });
       button.setAlpha(1);
     }
+  }
+
+  private refreshManualActionGauge(actionId: ManualActionId, progress: number, visible: boolean): void {
+    const track = this.manualActionGaugeTracks[actionId];
+    const bar = this.manualActionGaugeBars[actionId];
+
+    if (!track || !bar) {
+      return;
+    }
+
+    track.setAlpha(visible ? 0.95 : 0.32);
+    bar.width = visible ? manualActionGaugeWidth * Math.max(0, Math.min(1, progress)) : 0;
   }
 
   private setManualActionButtonMode(
@@ -1247,6 +1286,7 @@ function getTrendLabel(priceChangePercent: number): string {
 }
 
 const manualActionFeedbackDurationMs = 900;
+const manualActionGaugeWidth = 156;
 
 function getChoiceTone(choiceType: string): string {
   if (choiceType === "stable") {
@@ -1273,16 +1313,67 @@ function getChoiceToneDescription(choiceType: string): string {
 }
 
 function getManualActionFeedbackColor(actionId: ManualActionId): string {
+  return `#${getManualActionFeedbackColorNumber(actionId).toString(16).padStart(6, "0")}`;
+}
+
+function getManualActionFeedbackColorNumber(actionId: ManualActionId): number {
   switch (actionId) {
     case "liquidity_supply":
-      return "#9ecf83";
+      return 0x9ecf83;
     case "price_push":
-      return "#d9c58b";
+      return 0xd9c58b;
     case "overheat_cooldown":
-      return "#7fb4c8";
+      return 0x7fb4c8;
     case "position_settlement":
-      return "#d08b72";
+      return 0xd08b72;
   }
+}
+
+function getManualActionButtonLabel(
+  actionId: ManualActionId,
+  fallbackDisplayName: string,
+  state: IntradayState | null
+): string {
+  const displayName = getManualActionDisplayLabel(actionId, state);
+  const budgetDelta = state ? getManualActionBudgetDelta(state, actionId) : 0;
+  return `${displayName}\n${formatManualActionBudgetDelta(budgetDelta, actionId, fallbackDisplayName)}`;
+}
+
+function getManualActionDisplayLabel(actionId: ManualActionId, state: IntradayState | null): string {
+  if (actionId !== "position_settlement") {
+    const action = manualActions.find((candidate) => candidate.id === actionId);
+    return action?.displayName ?? actionId;
+  }
+
+  if (!state || state.averageEntryPrice <= 0) {
+    return "포지션 정리";
+  }
+
+  return state.currentPrice >= state.averageEntryPrice ? "수익실현" : "손실차단";
+}
+
+function formatManualActionBudgetDelta(delta: number, actionId: ManualActionId, fallbackDisplayName: string): string {
+  if (delta < 0) {
+    if (actionId === "price_push") {
+      return `${formatBudget(Math.abs(delta))}+ 매수`;
+    }
+
+    if (actionId === "overheat_cooldown") {
+      return `${formatBudget(Math.abs(delta))} 압박`;
+    }
+
+    return `${formatBudget(Math.abs(delta))} 비용`;
+  }
+
+  if (delta > 0) {
+    return actionId === "position_settlement" ? `${formatBudget(delta)} 정리` : `${formatBudget(delta)} 회수`;
+  }
+
+  if (fallbackDisplayName === "매도봇" || fallbackDisplayName === "포지션 정리") {
+    return "보유 없음";
+  }
+
+  return "자금 변동 없음";
 }
 
 function getSwarmPanelColor(model: RetailSwarmModel): number {

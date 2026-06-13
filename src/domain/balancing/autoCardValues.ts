@@ -145,7 +145,7 @@ export const autoCardValues = {
   settlement_routine: {
     id: "settlement_routine",
     displayName: "정리 루틴",
-    description: "포지션 일부 정리 시 시장 충격과 변동성 부담을 낮춘다.",
+    description: "포지션 정리 시 시장 충격과 변동성 부담을 낮춘다.",
     periodSec: 18,
     growthType: "period",
     budgetDelta: 0,
