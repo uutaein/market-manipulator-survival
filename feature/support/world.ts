@@ -15,6 +15,7 @@ import type { ManualActionResult } from "../../src/domain/intraday/manualActions
 import { getManualActionDisplayNames, useManualAction } from "../../src/domain/intraday/manualActions";
 import type { AutoCardChoice, AutoCardEffectResult } from "../../src/domain/intraday/autoCards";
 import { applyAutoCardEffect, generateAutoCardChoices } from "../../src/domain/intraday/autoCards";
+import type { SectorId } from "../../src/domain/assets/assetCatalog";
 import type { DocumentEventChoiceResult, DocumentEventOpenResult } from "../../src/domain/intraday/documentEvents";
 import {
   applyDocumentEventChoice,
@@ -28,6 +29,7 @@ import {
   applyRetailSwarmRiskEffects,
   calculateRetailSwarmModel
 } from "../../src/domain/intraday/retailSwarm";
+import type { MarketBoardState } from "../../src/domain/market/marketBoard";
 import {
   approveOpening,
   canStartIntraday,
@@ -116,6 +118,8 @@ export class MmsWorld extends World {
   displayedAssets = 0;
   nonPlayerAssets = 0;
   sameSectorPeers = 0;
+  marketBoardState?: MarketBoardState;
+  newsAffectedSectorId?: SectorId;
   fictionalSectors = 0;
   fictionalAssetsPerSector = 0;
   hiddenProfilesAssigned = false;

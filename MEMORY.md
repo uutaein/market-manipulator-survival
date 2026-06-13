@@ -20,12 +20,13 @@ Current baseline:
 6. Core Run State domain module exists for seed, asset catalog, hidden profile assignment, and same-seed restart.
 7. Day Setup / Morning News domain module exists for Day state, sector-default news, Today Condition, and Market Briefing data.
 8. Pre-open Card domain module exists for 4 card values, one-card-per-Day selection, no-effect `관망`, and Opening Approval guard.
-9. Intraday State / Price Tick domain module exists for 360-second timer, pause/resume, bounded stat clamping, news pressure, and component price tick.
-10. Manual Action domain module exists for 4 action values, modal availability, budget/cooldown checks, state effects, and cooldown entry.
-11. Auto Card domain module exists for 8 card values, reward choices, Lv.1~Lv.3 handling, and simple periodic state effects.
-12. Document Event domain module exists for 8 event values, trigger priority, cap/gap rules, pause behavior, 3 choices, choice effects, and event history.
-13. Retail Swarm domain module exists for participation-synced state, abstract token model, warning/panic flags, and overheat/panic risk effects.
-14. Settlement, carryover, persistence, and Phaser gameplay wiring are not implemented yet.
+9. Market Board domain module exists for 8-slot selection, player detail entry, same-sector peers, news-priority representatives, and simplified non-player movement.
+10. Intraday State / Price Tick domain module exists for 360-second timer, pause/resume, bounded stat clamping, news pressure, and component price tick.
+11. Manual Action domain module exists for 4 action values, modal availability, budget/cooldown checks, state effects, and cooldown entry.
+12. Auto Card domain module exists for 8 card values, reward choices, Lv.1~Lv.3 handling, and simple periodic state effects.
+13. Document Event domain module exists for 8 event values, trigger priority, cap/gap rules, pause behavior, 3 choices, choice effects, and event history.
+14. Retail Swarm domain module exists for participation-synced state, abstract token model, warning/panic flags, and overheat/panic risk effects.
+15. Settlement, carryover, persistence, and Phaser gameplay wiring are not implemented yet.
 
 ---
 
@@ -137,6 +138,7 @@ MVP shape:
 18. Added Auto Card domain module for eight MVP auto cards, reward choices, level caps, and simple periodic state effects.
 19. Added Document Event domain module for eight MVP document events, trigger/cap/gap rules, popup pause, choices, effects, and history.
 20. Added Retail Swarm domain module for participation-synced token modeling, overheat warnings, panic state, and risk effects.
+21. Added Market Board domain module for 8-slot board selection, same-sector peers, news-priority representatives, and simplified non-player movement.
 
 ---
 
@@ -195,4 +197,5 @@ Current branch baseline includes:
 10. Auto Card domain module,
 11. Document Event domain module,
 12. Retail Swarm domain module,
-13. README, docs index, feature index, traceability, and MEMORY updates.
+13. Market Board domain module,
+14. README, docs index, feature index, traceability, and MEMORY updates.
