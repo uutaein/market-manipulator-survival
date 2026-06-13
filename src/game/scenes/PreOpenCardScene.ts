@@ -1,5 +1,6 @@
 import { BaseDocumentScene } from "./BaseDocumentScene";
 import { SceneKeys } from "./SceneKeys";
+import { getAssetInfluenceResistanceById } from "../../domain/assets/assetMarketProfiles";
 import type { DayState } from "../../domain/day/daySetup";
 import {
   earlyPositioningBudgetPercentMax,
@@ -25,6 +26,7 @@ export class PreOpenCardScene extends BaseDocumentScene {
     const selectedCardId = dayState.preOpenCardId;
     const availableCards = getAvailablePreOpenCards(runState);
     const earlyPositioningMinimumPercent = getEarlyPositioningBudgetPercentMin(runState);
+    const assetInfluenceResistance = getAssetInfluenceResistanceById(runState.selectedAssetId);
     this.earlyPositioningBudgetPercent =
       dayState.preOpenCardEffect?.earlyPositioningBudgetPercent ?? earlyPositioningMinimumPercent;
 
@@ -43,7 +45,8 @@ export class PreOpenCardScene extends BaseDocumentScene {
           y,
           selected,
           getEarlyPositioningEntryPremiumPercent(runState),
-          earlyPositioningMinimumPercent
+          earlyPositioningMinimumPercent,
+          assetInfluenceResistance
         );
       } else if (card.id === "news_assignment") {
         this.addChoiceCard(
@@ -176,7 +179,8 @@ export class PreOpenCardScene extends BaseDocumentScene {
     y: number,
     selected: boolean,
     entryPremiumPercent: number,
-    minimumPercent: number
+    minimumPercent: number,
+    assetInfluenceResistance: number
   ): void {
     const currentBudget = dayState.startingBudgetForDay;
     const panelX = 96;
@@ -190,7 +194,12 @@ export class PreOpenCardScene extends BaseDocumentScene {
       ((percent - minimumPercent) /
         (earlyPositioningBudgetPercentMax - minimumPercent)) *
         trackWidth;
-    const effect = previewEarlyPositioningEffect(currentBudget, this.earlyPositioningBudgetPercent, minimumPercent);
+    const effect = previewEarlyPositioningEffect(
+      currentBudget,
+      this.earlyPositioningBudgetPercent,
+      minimumPercent,
+      assetInfluenceResistance
+    );
 
     const panel = this.add
       .rectangle(panelX, y, panelWidth, panelHeight, selected ? 0x273e2f : 0x151b1f, selected ? 0.98 : 0.96)
@@ -239,7 +248,12 @@ export class PreOpenCardScene extends BaseDocumentScene {
           ratio * (earlyPositioningBudgetPercentMax - minimumPercent),
         minimumPercent
       );
-      const nextEffect = previewEarlyPositioningEffect(currentBudget, this.earlyPositioningBudgetPercent, minimumPercent);
+      const nextEffect = previewEarlyPositioningEffect(
+        currentBudget,
+        this.earlyPositioningBudgetPercent,
+        minimumPercent,
+        assetInfluenceResistance
+      );
       const knobX = percentToX(nextEffect.earlyPositioningBudgetPercent);
       knob.setPosition(knobX, trackY);
       fill.width = knobX - trackX;
@@ -385,7 +399,7 @@ function formatEarlyPositioningPreview(
   return [
     `투입 비율 ${formatPercent(effect.earlyPositioningBudgetPercent)}`,
     `예산 사용 ${formatBudget(budgetSpend)}`,
-    `매입 프리미엄 ${formatPercent(entryPremiumPercent)}`,
+    `체급 저항 x${formatNumber(effect.assetInfluenceResistance)} · 매입 프리미엄 ${formatPercent(entryPremiumPercent)}`,
     `잔여 예산 ${formatBudget(remainingBudget)} · 예산 소모율 ${formatBudgetSpendRate(currentBudget, budgetSpend)}`
   ].join("\n");
 }

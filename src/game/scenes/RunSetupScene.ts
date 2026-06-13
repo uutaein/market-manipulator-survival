@@ -221,6 +221,10 @@ function getAssetRoleLabel(role: ReturnType<typeof getAssetMarketProfile>["role"
 }
 
 function formatTradeValue(value: number): string {
+  if (value >= 100000000) {
+    return `${(value / 100000000).toFixed(1)}억`;
+  }
+
   return `${Math.round(value / 10000).toLocaleString("ko-KR")}만`;
 }
 

@@ -4,6 +4,7 @@ import type { MmsWorld } from "../support/world";
 import { assets, getAssetsBySector, sectors } from "../../src/domain/assets/assetCatalog";
 import {
   getAssetBaselineTradeValue,
+  getAssetInfluenceResistance,
   getAssetMarketProfile,
   getEntryRecommendedSectorIds,
   getNextLargerSectorId,
@@ -105,6 +106,19 @@ Then("sector leaders have higher baseline trade value than theme movers", functi
     assert.ok(themeMover);
     assert.ok(getAssetBaselineTradeValue(leader) > getAssetBaselineTradeValue(themeMover));
   }
+});
+
+Then("top market assets have exponentially higher trade value and influence resistance than entry theme assets", function () {
+  const rankedAssets = [...assets].sort(
+    (left, right) => getAssetBaselineTradeValue(left) - getAssetBaselineTradeValue(right)
+  );
+  const lowest = rankedAssets[0];
+  const highest = rankedAssets[rankedAssets.length - 1];
+
+  assert.ok(lowest);
+  assert.ok(highest);
+  assert.ok(getAssetBaselineTradeValue(highest) >= getAssetBaselineTradeValue(lowest) * 40);
+  assert.ok(getAssetInfluenceResistance(highest) >= getAssetInfluenceResistance(lowest) * 10);
 });
 
 Then("each entry recommended sector has a larger-sector progression target", function () {

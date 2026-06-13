@@ -33,7 +33,8 @@ export function buildOrderBookProfile(state: IntradayState, context: OrderBookCo
     );
     const priceChangePercent = round1(state.priceChangePercent + offsetPercent);
     const distance = Math.abs(offsetPercent);
-    const baseDepth = 38 + state.marketLiquidity * 0.42 + distance * 7 + (random.next() * 24 - 12);
+    const assetDepth = Math.max(0, state.assetInfluenceResistance - 1) * 5;
+    const baseDepth = 38 + state.marketLiquidity * 0.42 + distance * 7 + assetDepth + (random.next() * 24 - 12);
     const pressure = state.marketPressure;
     const participation = state.personalParticipation;
     const holding = state.holdingRatio;

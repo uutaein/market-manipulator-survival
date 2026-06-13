@@ -1,4 +1,5 @@
 import { getAssetById, getAssetsBySector, getSectorById, sectors, type AssetId, type SectorId } from "../domain/assets/assetCatalog";
+import { getAssetInfluenceResistanceById } from "../domain/assets/assetMarketProfiles";
 import { createDayState, createMarketBriefing, type DayState, type MarketBriefing } from "../domain/day/daySetup";
 import { autoCardRewardElapsedSeconds, autoCardValues } from "../domain/balancing/autoCardValues";
 import { documentEventRules } from "../domain/balancing/documentEventValues";
@@ -426,6 +427,7 @@ export class GameSession {
     this.intradayState = clampIntradayState({
       ...state,
       budget: state.budget - intradayRepositionEntryCost,
+      assetInfluenceResistance: getAssetInfluenceResistanceById(asset.id),
       openingPrice: quote.openingPrice,
       currentPrice: quote.currentPrice,
       averageEntryPrice: quote.averageEntryPrice,

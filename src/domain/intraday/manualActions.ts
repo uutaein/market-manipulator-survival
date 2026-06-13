@@ -364,7 +364,8 @@ function getNormalizedPurchaseBudgetCost(state: IntradayState, unitDelta: number
   }
 
   const holdingRatioDelta = (unitDelta / state.fictionalFloatUnits) * 100;
-  return round1(holdingRatioDelta * (acquisitionPrice / state.openingPrice));
+  const influenceResistance = Math.max(1, state.assetInfluenceResistance);
+  return round1(holdingRatioDelta * (acquisitionPrice / state.openingPrice) * influenceResistance);
 }
 
 function roundToTick(value: number, tick: number): number {

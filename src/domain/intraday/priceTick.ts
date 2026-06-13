@@ -43,6 +43,7 @@ export function calculatePriceTickComponents(
   const unsupportedPrice = Math.max(0, state.priceChangePercent);
   const attentionFade = -(unsupportedPrice * attentionGap * coefficients.unsupportedPriceFade);
   const directionalDelta = pressure + participation + holding + liquidity + competition + news + aftereffect + attentionFade;
+  const assetInfluenceResistance = Math.max(0.55, state.assetInfluenceResistance);
   const orderBook = buildOrderBookProfile(state, context);
   const orderBookMultiplier =
     directionalDelta >= 0 ? orderBook.upwardResponsiveness : orderBook.downwardResponsiveness;
@@ -52,7 +53,7 @@ export function calculatePriceTickComponents(
   const noiseRange = volatilityNoise.base + state.volatility * volatilityNoise.perVolatility;
   const volatilityNoiseComponent = volatilityRandom * noiseRange;
   const rawDelta =
-    directionalDelta * liquidityMultiplier * orderBookMultiplier +
+    (directionalDelta / assetInfluenceResistance) * liquidityMultiplier * orderBookMultiplier +
     simulation.simulatorAdjustment +
     volatilityNoiseComponent;
   const clampedDelta = clamp(
@@ -83,6 +84,7 @@ export function calculatePriceTickComponents(
     simulatorAdjustment: simulation.simulatorAdjustment,
     volatilityNoise: volatilityNoiseComponent,
     directionalDelta,
+    assetInfluenceResistance,
     liquidityMultiplier,
     rawDelta,
     clampedDelta

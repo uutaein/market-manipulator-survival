@@ -1,4 +1,5 @@
 import type { DayState, PreOpenCardEffect } from "../day/daySetup";
+import { getAssetInfluenceResistanceById } from "../assets/assetMarketProfiles";
 import { morningNewsTemplates, type MorningNews } from "../day/morningNews";
 import type { RunState } from "../run/runState";
 import {
@@ -22,6 +23,7 @@ export interface PreOpenCardSelectionOptions {
 
 export interface EarlyPositioningPreviewEffect {
   readonly earlyPositioningBudgetPercent: number;
+  readonly assetInfluenceResistance: number;
   readonly budgetDelta: number;
   readonly holdingRatioDelta: number;
   readonly marketLiquidityDelta: number;
@@ -168,12 +170,16 @@ function createPreOpenCardEffect(
   runState?: Pick<RunState, "currentDay" | "holdingRatio" | "selectedAssetId"> | null
 ): PreOpenCardEffect {
   const newsAssignmentEffect = getNewsAssignmentEffect(newsAssignmentDirection);
+  const assetInfluenceResistance = runState?.selectedAssetId
+    ? getAssetInfluenceResistanceById(runState.selectedAssetId)
+    : 1;
   const earlyPositioningEffect =
     card.id === "early_positioning"
       ? previewEarlyPositioningEffect(
           dayState.startingBudgetForDay,
           earlyPositioningBudgetPercent,
-          getEarlyPositioningBudgetPercentMin(runState)
+          getEarlyPositioningBudgetPercentMin(runState),
+          assetInfluenceResistance
         )
       : null;
 
@@ -204,21 +210,25 @@ function createPreOpenCardEffect(
 export function previewEarlyPositioningEffect(
   currentBudget: number,
   requestedPercent: number | null | undefined,
-  minimumPercent = earlyPositioningBudgetPercentMin
+  minimumPercent = earlyPositioningBudgetPercentMin,
+  assetInfluenceResistance = 1
 ): EarlyPositioningPreviewEffect {
   const earlyPositioningBudgetPercent = normalizeEarlyPositioningBudgetPercent(
     requestedPercent ?? minimumPercent,
     minimumPercent
   );
+  const effectiveResistance = Math.max(1, assetInfluenceResistance);
+  const liquidityScale = 1 / Math.sqrt(effectiveResistance);
   const budgetSpend = round1((Math.max(0, currentBudget) * earlyPositioningBudgetPercent) / 100);
-  const holdingRatioDelta = budgetSpend <= 0 ? 0 : round1(Math.max(1, (budgetSpend / 100) * 100));
+  const holdingRatioDelta = budgetSpend <= 0 ? 0 : round1(Math.max(0.5, budgetSpend / effectiveResistance));
   const scale = holdingRatioDelta / 10;
 
   return {
     earlyPositioningBudgetPercent,
+    assetInfluenceResistance: round2(assetInfluenceResistance),
     budgetDelta: -budgetSpend,
     holdingRatioDelta,
-    marketLiquidityDelta: round1(-0.4 * earlyPositioningBudgetPercent),
+    marketLiquidityDelta: round1(-0.4 * earlyPositioningBudgetPercent * liquidityScale),
     marketPressureDelta: round1(4 * scale),
     surveillanceDelta: round1(1 * scale),
     volatilityDelta: round1(2 * scale)
@@ -341,4 +351,8 @@ function getNewsAssignmentEffect(newsAssignmentDirection: NewsAssignmentDirectio
 
 function round1(value: number): number {
   return Math.round(value * 10) / 10;
+}
+
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
 }

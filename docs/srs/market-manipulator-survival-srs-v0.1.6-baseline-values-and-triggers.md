@@ -25,6 +25,7 @@ MVP implementation should keep the following balancing groups separate from core
 | --- | --- |
 | `runDefaults` | Starting Run and Day values |
 | `assetCatalog` | Fictional sector and asset identifiers |
+| `assetMarketProfiles` | Fictional sector/asset trade-value scale, market role, and influence resistance |
 | `marketBoardRules` | Displayed asset selection |
 | `preOpenCardValues` | Pre-open card baseline effects |
 | `manualActionValues` | Manual action costs, cooldowns, and effects |
@@ -69,6 +70,8 @@ Each sector's 3 assets must map to one fixed market role:
 3. `theme_mover`.
 
 Sector leaders have the highest baseline trade value and influence resistance. Theme movers have lower baseline trade value but higher news sensitivity. These roles are fictional game tuning labels and do not use real market data.
+
+Baseline trade value must be intentionally non-linear. The largest sector-leader asset should have at least 40x the baseline trade value of the smallest theme-mover asset, and its influence resistance should be at least 10x higher. This keeps the highest-ranked fictional assets from being moved too easily by the initial 100B budget while preserving readable movement in smaller entry/theme assets.
 
 | Sector ID | Sector | Asset ID | Display Name | Short Briefing |
 | --- | --- | --- | --- | --- |
@@ -180,6 +183,8 @@ The Market Dashboard should update through a stable DOM row pool or equivalent r
 | SRS-BASE-MARKET-012 | Market Dashboard trade-value ranking must use sector/asset baseline trade value as the anchor, not only instantaneous generated volume. |
 | SRS-BASE-MARKET-013 | Each sector must expose exactly one `sector_leader`, one `standard`, and one `theme_mover` market role. |
 | SRS-BASE-MARKET-014 | Run Setup may show non-locking entry recommendations and larger-sector progression guidance; it must not hard-lock sectors in MVP. |
+| SRS-BASE-MARKET-015 | Asset influence resistance must scale non-linearly from baseline trade value and market role. |
+| SRS-BASE-MARKET-016 | Player price tick pressure, pre-open position acquisition, purchase budget cost, and order-book depth must account for asset influence resistance. |
 
 ---
 
@@ -187,7 +192,7 @@ The Market Dashboard should update through a stable DOM row pool or equivalent r
 
 | Card | Baseline Effect |
 | --- | --- |
-| 선취매 | On Day 1 or when no carried position exists, player chooses 10~50% of current Day budget with a drag-style investment ratio. From Day 2 onward, if a position carries over, the player may choose 0~50% because additional accumulation is optional. Budget spent is `currentBudget * selectedPercent`; higher selected percent increases holding ratio and reduces opening market liquidity. Pressure, surveillance, and volatility scale from the invested amount. Average entry price starts roughly 2~7% above opening price using deterministic Run/asset randomness, so the initial position valuation may show a loss. Does not increase attention directly. |
+| 선취매 | On Day 1 or when no carried position exists, player chooses 10~50% of current Day budget with a drag-style investment ratio. From Day 2 onward, if a position carries over, the player may choose 0~50% because additional accumulation is optional. Budget spent is `currentBudget * selectedPercent`; higher selected percent increases holding ratio and reduces opening market liquidity, but the resulting holding-ratio gain is reduced by the selected asset's influence resistance. Pressure, surveillance, and volatility scale from the effective acquired influence, not only from raw spend. Average entry price starts roughly 2~7% above opening price using deterministic Run/asset randomness, so the initial position valuation may show a loss. Does not increase attention directly. |
 | 뉴스 배정 | `budget -8`. Player chooses `호재` or `악재` before Morning News is revealed. The generated Morning News targets the player asset. |
 | 뉴스 배정: 호재 | Player asset positive news. Adds attention/upward context, lets liquidity supply add meaningful upward pressure, improves price-push effect, and reduces upward-action surveillance burden. |
 | 뉴스 배정: 악재 | Player asset negative news. Adds downside context and volatility, reduces position-settlement surveillance burden, but weakens price-push context. |
@@ -214,7 +219,7 @@ Manual actions are unavailable while a document event or auto card reward choice
 | Action | Cost / Recovery | Cooldown | Baseline Effect |
 | --- | ---: | ---: | --- |
 | 유동성 공급 | `budget -2` | 8 sec | Low-cost attention and liquidity setup. Gradually applies `marketPressure +5`, `marketLiquidity +22`, `personalParticipation +10`, `volatility +6`, `surveillance +2`. |
-| 매수봇 | `budget -4` plus actual purchase budget | 16 sec | Moderate-cost upward pressure and position acquisition. Gradually applies `holdingRatio +5`, `marketPressure +52`, `marketLiquidity +12`, `personalParticipation +14`, `volatility +10`, `surveillance +7`. The 4B is committed when the action starts, and each acquired holding increment also spends purchase budget based on the fictional current price plus premium. Average entry may rise in an upward push, or fall when buying into a cheaper accumulation window. |
+| 매수봇 | `budget -4` plus actual purchase budget | 16 sec | Moderate-cost upward pressure and position acquisition. Gradually applies `holdingRatio +5`, `marketPressure +52`, `marketLiquidity +12`, `personalParticipation +14`, `volatility +10`, `surveillance +7`. The 4B is committed when the action starts, and each acquired holding increment also spends purchase budget based on the fictional current price plus premium and asset influence resistance. Average entry may rise in an upward push, or fall when buying into a cheaper accumulation window. |
 | 매도봇 | `budget -4` | 12 sec | Controlled downward pressure for cheaper accumulation and average-entry management. Gradually applies `holdingRatio -4`, `marketPressure -42`, `marketLiquidity +8`, `personalParticipation +4`, `volatility -10`, `surveillance -1`, and may compress average entry if price is below average entry. This is not a budget recovery action. |
 | 포지션 정리 | current-price-based recovery | 10 sec | Profit taking when above average entry, or loss cutting when below average entry. This is the manual action that recovers budget from the position, but price shock, surveillance, and volatility risk are stronger than `매도봇`. Gradually applies `holdingRatio -12`, `marketPressure -58`, `marketLiquidity +3`, `personalParticipation +12`, `surveillance +7`, `volatility +22`. |
 
@@ -231,6 +236,7 @@ Manual actions are unavailable while a document event or auto card reward choice
 | SRS-BASE-ACTION-009 | `매도봇` must spend `4B`, may reduce held units lightly, and help create a cheaper accumulation window / average-entry pressure relief rather than serving as a budget recovery or main exit action. |
 | SRS-BASE-ACTION-010 | `포지션 정리` must reduce held units and recover budget based on current fictional price context, with stronger market impact than `매도봇`. |
 | SRS-BASE-ACTION-011 | Active manual actions must show a fill gauge and may be interrupted mid-gauge. Already-applied partial effects remain; only the remaining action progress is cancelled. |
+| SRS-BASE-ACTION-012 | Acquisition budget and effective holding-ratio gain must respect asset influence resistance so top trade-value assets require materially more budget to move than entry/theme assets. |
 
 ### 6.1 Intraday Money Flow Display
 

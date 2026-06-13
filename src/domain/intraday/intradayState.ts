@@ -1,5 +1,5 @@
 import type { DayState, PreOpenCardEffect } from "../day/daySetup";
-import { getAssetMarketProfile } from "../assets/assetMarketProfiles";
+import { getAssetInfluenceResistanceById } from "../assets/assetMarketProfiles";
 import type { DocumentEventChoiceType, DocumentEventId } from "../balancing/documentEventValues";
 import { manualActionIds, type ManualActionId } from "../balancing/manualActionValues";
 import { retailSwarmValues } from "../balancing/retailSwarmValues";
@@ -32,6 +32,7 @@ export interface PriceTickComponents {
   readonly simulatorAdjustment: number;
   readonly volatilityNoise: number;
   readonly directionalDelta: number;
+  readonly assetInfluenceResistance: number;
   readonly liquidityMultiplier: number;
   readonly rawDelta: number;
   readonly clampedDelta: number;
@@ -64,6 +65,7 @@ export interface IntradayState {
   readonly competitionPressure: number;
   readonly activeNewsPricePressure: number;
   readonly marketAftereffectPressure: number;
+  readonly assetInfluenceResistance: number;
   readonly manualActionEffectMultiplier: number;
   readonly pricePushEffectMultiplier: number;
   readonly overheatCooldownEffectMultiplier: number;
@@ -101,8 +103,7 @@ export type BoundedIntradayStat =
 export function createIntradayState(runState: RunState, dayState: DayState): IntradayState {
   const effect = dayState.preOpenCardEffect;
   const newsImpact = getActiveNewsStatImpact(runState, dayState.morningNewsItems);
-  const selectedAssetProfile = getAssetMarketProfile(runState.selectedAssetId);
-  const influenceResistance = selectedAssetProfile.influenceResistance;
+  const influenceResistance = getAssetInfluenceResistanceById(runState.selectedAssetId);
   const holdingRatio = applyEffect(runState.holdingRatio, effect, "holdingRatioDelta");
   const quote = createFictionalQuoteState(runState, dayState, holdingRatio, runDefaults.initialPriceChangePercent);
 
@@ -118,18 +119,19 @@ export function createIntradayState(runState: RunState, dayState: DayState): Int
     priceChangePercent: runDefaults.initialPriceChangePercent,
     priceDeltaPerTick: 0,
     budget: applyEffect(runState.budget, effect, "budgetDelta"),
-    marketPressure: applyEffect(runDefaults.initialMarketPressure, effect, "marketPressureDelta") - (influenceResistance - 1) * 8,
+    marketPressure: applyEffect(runDefaults.initialMarketPressure, effect, "marketPressureDelta") - (influenceResistance - 1) * 6,
     holdingRatio,
     personalParticipation: runDefaults.initialPersonalParticipation + newsImpact.personalParticipationDelta,
     marketLiquidity:
       applyEffect(runDefaults.initialMarketLiquidity, effect, "marketLiquidityDelta") +
       newsImpact.marketLiquidityDelta +
-      (influenceResistance - 1) * 10,
+      (influenceResistance - 1) * 8,
     surveillance: applyEffect(runState.surveillance, effect, "surveillanceDelta") + newsImpact.surveillanceDelta,
     volatility: applyEffect(runDefaults.initialVolatility, effect, "volatilityDelta") + newsImpact.volatilityDelta,
-    competitionPressure: runDefaults.initialCompetitionPressure + (influenceResistance - 1) * 22,
+    competitionPressure: runDefaults.initialCompetitionPressure + (influenceResistance - 1) * 12,
     activeNewsPricePressure: getActiveNewsPricePressure(runState, dayState.morningNewsItems),
     marketAftereffectPressure: 0,
+    assetInfluenceResistance: influenceResistance,
     manualActionEffectMultiplier: effect?.manualActionEffectMultiplier ?? 1,
     pricePushEffectMultiplier: effect?.pricePushEffectMultiplier ?? 1,
     overheatCooldownEffectMultiplier: effect?.overheatCooldownEffectMultiplier ?? 1,

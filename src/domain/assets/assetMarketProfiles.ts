@@ -1,5 +1,6 @@
 import {
   assets,
+  getAssetById,
   sectors,
   type AssetDefinition,
   type AssetId,
@@ -29,56 +30,56 @@ export interface AssetMarketProfile {
 const sectorMarketProfiles = {
   food_agri: {
     sectorId: "food_agri",
-    baseTradeValue: 6800000,
+    baseTradeValue: 8800000,
     newsSensitivity: 1.06,
     capitalTier: "entry",
     recommendation: "초반 추천"
   },
   energy_grid: {
     sectorId: "energy_grid",
-    baseTradeValue: 8600000,
+    baseTradeValue: 38000000,
     newsSensitivity: 0.96,
     capitalTier: "large",
     recommendation: "대형 체급"
   },
   bio_trial: {
     sectorId: "bio_trial",
-    baseTradeValue: 5200000,
+    baseTradeValue: 3700000,
     newsSensitivity: 1.28,
     capitalTier: "speculative",
     recommendation: "고변동"
   },
   automation_ai: {
     sectorId: "automation_ai",
-    baseTradeValue: 7600000,
+    baseTradeValue: 22000000,
     newsSensitivity: 1.18,
     capitalTier: "growth",
     recommendation: "성장 체급"
   },
   chip_equipment: {
     sectorId: "chip_equipment",
-    baseTradeValue: 9400000,
+    baseTradeValue: 64000000,
     newsSensitivity: 0.92,
     capitalTier: "large",
     recommendation: "최대 체급"
   },
   payment_fintech: {
     sectorId: "payment_fintech",
-    baseTradeValue: 7000000,
+    baseTradeValue: 13500000,
     newsSensitivity: 1.0,
     capitalTier: "entry",
     recommendation: "초반 추천"
   },
   media_game: {
     sectorId: "media_game",
-    baseTradeValue: 6100000,
+    baseTradeValue: 5800000,
     newsSensitivity: 1.16,
     capitalTier: "entry",
     recommendation: "초반 추천"
   },
   meme_theme: {
     sectorId: "meme_theme",
-    baseTradeValue: 4500000,
+    baseTradeValue: 2500000,
     newsSensitivity: 1.42,
     capitalTier: "speculative",
     recommendation: "고위험"
@@ -87,24 +88,26 @@ const sectorMarketProfiles = {
 
 const roleProfiles = {
   sector_leader: {
-    tradeValueMultiplier: 1.72,
-    newsSensitivityMultiplier: 0.82,
-    influenceResistance: 1.42,
-    volumeStability: 0.9
+    tradeValueMultiplier: 2.4,
+    newsSensitivityMultiplier: 0.74,
+    influenceResistance: 2.7,
+    volumeStability: 0.95
   },
   standard: {
     tradeValueMultiplier: 1,
     newsSensitivityMultiplier: 1,
-    influenceResistance: 1,
+    influenceResistance: 1.25,
     volumeStability: 0.72
   },
   theme_mover: {
-    tradeValueMultiplier: 0.58,
-    newsSensitivityMultiplier: 1.55,
-    influenceResistance: 0.76,
-    volumeStability: 0.42
+    tradeValueMultiplier: 0.38,
+    newsSensitivityMultiplier: 1.65,
+    influenceResistance: 0.72,
+    volumeStability: 0.38
   }
 } as const satisfies Record<AssetMarketRole, Omit<AssetMarketProfile, "assetId" | "role">>;
+
+const influenceBaselineTradeValue = 8000000;
 
 const assetMarketRoles = Object.fromEntries(
   sectors.flatMap((sector) =>
@@ -150,6 +153,18 @@ export function getAssetBaselineTradeValue(asset: AssetDefinition): number {
   const assetProfile = getAssetMarketProfile(asset.id);
 
   return Math.round(sectorProfile.baseTradeValue * assetProfile.tradeValueMultiplier);
+}
+
+export function getAssetInfluenceResistance(asset: AssetDefinition): number {
+  const assetProfile = getAssetMarketProfile(asset.id);
+  const baselineTradeValue = getAssetBaselineTradeValue(asset);
+  const marketScale = Math.sqrt(baselineTradeValue / influenceBaselineTradeValue);
+
+  return round2(Math.max(0.55, assetProfile.influenceResistance * marketScale));
+}
+
+export function getAssetInfluenceResistanceById(assetId: AssetId): number {
+  return getAssetInfluenceResistance(getAssetById(assetId));
 }
 
 export function getAssetNewsSensitivity(asset: AssetDefinition): number {

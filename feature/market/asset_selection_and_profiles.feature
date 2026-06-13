@@ -28,4 +28,5 @@ Feature: Asset selection and hidden profiles
     Then entry recommended sectors are available
     And every sector has one sector leader, one standard asset, and one theme mover
     And sector leaders have higher baseline trade value than theme movers
+    And top market assets have exponentially higher trade value and influence resistance than entry theme assets
     And each entry recommended sector has a larger-sector progression target
