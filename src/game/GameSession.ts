@@ -10,9 +10,17 @@ import { tickManualActionCooldowns, useManualAction, type ManualActionResult } f
 import { runPlayerPriceTick } from "../domain/intraday/priceTick";
 import { buildMarketBoard, type MarketBoardState } from "../domain/market/marketBoard";
 import { approveOpening, selectPreOpenCard } from "../domain/preopen/preOpenCards";
-import { createRunState, type RunState } from "../domain/run/runState";
+import { runDefaults } from "../domain/balancing/runDefaults";
+import { createRunState, restartRunWithSameSeed, type RunState } from "../domain/run/runState";
 import { prepareNextDayCarryover } from "../domain/settlement/carryover";
-import { calculateDaySettlement, type DaySettlementResult } from "../domain/settlement/settlement";
+import {
+  calculateDaySettlement,
+  calculateFinalSettlement as calculateFinalSettlementResult,
+  isSuccessfulDayResult,
+  type DaySettlementResult,
+  type FinalSettlementResult
+} from "../domain/settlement/settlement";
+import type { DayResultCategory } from "../domain/balancing/settlementValues";
 
 export class GameSession {
   selectedSectorId: SectorId = sectors[0].id;
@@ -24,6 +32,8 @@ export class GameSession {
   marketBoardState: MarketBoardState | null = null;
   lastManualActionResult: ManualActionResult | null = null;
   daySettlementResult: DaySettlementResult | null = null;
+  finalSettlementResult: FinalSettlementResult | null = null;
+  surveillanceHistory: number[] = [];
 
   setSelectedSector(sectorId: SectorId): void {
     this.selectedSectorId = sectorId;
@@ -47,6 +57,24 @@ export class GameSession {
     this.marketBoardState = null;
     this.lastManualActionResult = null;
     this.daySettlementResult = null;
+    this.finalSettlementResult = null;
+    this.surveillanceHistory = [];
+    return this.runState;
+  }
+
+  restartWithSameSeed(): RunState {
+    const previousRun = this.ensureRun();
+    this.runState = restartRunWithSameSeed(previousRun);
+    this.selectedSectorId = this.runState.selectedSectorId;
+    this.selectedAssetId = this.runState.selectedAssetId;
+    this.dayState = null;
+    this.marketBriefing = null;
+    this.intradayState = null;
+    this.marketBoardState = null;
+    this.lastManualActionResult = null;
+    this.daySettlementResult = null;
+    this.finalSettlementResult = null;
+    this.surveillanceHistory = [];
     return this.runState;
   }
 
@@ -62,6 +90,7 @@ export class GameSession {
     this.marketBoardState = null;
     this.lastManualActionResult = null;
     this.daySettlementResult = null;
+    this.finalSettlementResult = null;
     return this.dayState;
   }
 
@@ -149,21 +178,25 @@ export class GameSession {
     const intradayState = this.intradayState ?? this.startIntraday();
     const daySettlement = this.daySettlementResult ?? this.calculateDaySettlement();
 
-    if (runState.currentDay >= 5) {
+    const carryover = prepareNextDayCarryover({
+      runState,
+      endingIntradayState: intradayState,
+      daySettlement
+    });
+
+    this.surveillanceHistory = [...this.surveillanceHistory, intradayState.surveillance];
+    this.runState = carryover.nextRunState;
+    this.finalSettlementResult = null;
+
+    if (runState.currentDay >= runDefaults.runLengthDays) {
       this.runState = {
-        ...runState,
+        ...carryover.nextRunState,
         runStatus: "completed",
         phase: "final_settlement"
       };
       return;
     }
 
-    const carryover = prepareNextDayCarryover({
-      runState,
-      endingIntradayState: intradayState,
-      daySettlement
-    });
-    this.runState = carryover.nextRunState;
     this.dayState = null;
     this.marketBriefing = null;
     this.intradayState = null;
@@ -171,6 +204,28 @@ export class GameSession {
     this.lastManualActionResult = null;
     this.daySettlementResult = null;
     this.beginDay();
+  }
+
+  calculateFinalSettlement(): FinalSettlementResult {
+    const runState = this.ensureRun();
+    const successfulDays = runState.dayResults.filter((result) =>
+      isSuccessfulDayResult(result as DayResultCategory)
+    ).length;
+    const surveillanceHistory = this.surveillanceHistory.length > 0 ? this.surveillanceHistory : [runState.surveillance];
+
+    this.finalSettlementResult = calculateFinalSettlementResult({
+      cumulativeProfit: round1(runState.cumulativeProfit),
+      finalSurveillance: runState.surveillance,
+      surveillanceHistory,
+      successfulDays,
+      finalBudget: runState.budget,
+      finalHoldingRatio: runState.holdingRatio,
+      socialCost: runState.socialCost,
+      forcedFailure: runState.runStatus === "failed",
+      failureReason: runState.failedReason
+    });
+
+    return this.finalSettlementResult;
   }
 
   getSelectedAssetLabel(): string {

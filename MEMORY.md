@@ -33,7 +33,8 @@ Current baseline:
 19. Phaser Run/Day flow scene wiring now exists for Main Menu, Run Setup, Morning Briefing, Pre-open Card selection, Opening Approval, and initial Intraday state display.
 20. Phaser Intraday scene now advances one-second price/timer ticks and exposes the 4 manual action buttons with cooldown feedback.
 21. Phaser Day Settlement scene now displays Day result, surveillance grade, holding band, social cost, risk metrics, learning hint, and next-Day/Final routing.
-22. Auto Card scene wiring, Document Event scene wiring, Final Settlement scene wiring, and polished UI interaction are not implemented yet.
+22. Phaser Final Settlement scene now displays Final grade, cumulative profit, surveillance summary, holding band, social cost, and restart choices.
+23. Auto Card scene wiring, Document Event scene wiring, Retail Swarm rendering, localStorage browser wiring, and polished UI interaction are not implemented yet.
 
 ---
 
@@ -153,6 +154,7 @@ MVP shape:
 26. Added first Phaser scene wiring slice for shared Run/Day session state, sector/asset selection, Morning Briefing, Pre-open Card selection/approval, and initial Intraday state display.
 27. Added Intraday scene tick/action wiring for one-second ticks, price/timer updates, manual action buttons, result feedback, and cooldown display.
 28. Added Day Settlement scene wiring for result display, risk metrics, learning hints, and next-Day/Final routing.
+29. Added Final Settlement scene wiring for Day 5 cumulative carryover, Final grade display, surveillance summary, and same-seed/new-Run restart choices.
 
 ---
 
@@ -219,4 +221,5 @@ Current branch baseline includes:
 18. Run/Day scene session wiring,
 19. Intraday tick/action scene wiring,
 20. Day Settlement scene wiring,
-21. README, docs index, feature index, traceability, and MEMORY updates.
+21. Final Settlement scene wiring,
+22. README, docs index, feature index, traceability, and MEMORY updates.
