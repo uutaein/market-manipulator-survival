@@ -67,7 +67,7 @@ This document tracks MVP feature scope from PRD decisions through SRS requiremen
 | FEAT-024 | Day 1 integrated onboarding | PRD v0.1.5; ADR-0019 | SRS v0.1.2, v0.1.6 | [day1_onboarding.feature](../feature/run/day1_onboarding.feature) | TC-ONBOARD-001 | SPEC Accepted / Gherkin Drafted / Step Definitions Drafted / TC Planned | Hint copy can be written later. |
 | FEAT-025 | MVP screens | PRD v0.1.5; ADR-0018 | SRS v0.1.2, v0.1.6 | [run_lifecycle.feature](../feature/run/run_lifecycle.feature) | TC-SCREEN-001 | SPEC Accepted / Gherkin Drafted / Step Definitions Drafted / TC Planned | 8 screens; failure is Final Settlement variant. |
 | FEAT-026 | Local persistence | PRD v0.1.5; ADR-0025 | SRS v0.1.0, v0.1.4, v0.1.6 | [local_storage.feature](../feature/persistence/local_storage.feature) | TC-SAVE-001 | SPEC Accepted / Gherkin Drafted / Step Definitions Drafted / Domain Implemented / TC Planned | Versioned local save envelopes, current Run save/load, recent Final save, best record update, and incompatible save discard exist in `src/domain/persistence/localPersistence.ts`; browser localStorage wiring pending. |
-| FEAT-027 | Safe abstraction layer | PRD v0.1.5; ADR-0002; ADR-0027 | All SRS docs | [safety_abstraction.feature](../feature/safety/safety_abstraction.feature) | TC-SAFE-001 | SPEC Accepted / Gherkin Drafted / Step Definitions Drafted / TC Planned | No real stocks, exchanges, market data, or real procedure modeling. |
+| FEAT-027 | Safe abstraction layer | PRD v0.1.5; ADR-0002; ADR-0027 | All SRS docs | [safety_abstraction.feature](../feature/safety/safety_abstraction.feature) | TC-SAFE-001 | SPEC Accepted / Gherkin Drafted / Step Definitions Drafted / Domain Implemented / TC Planned | Player-facing content collection, forbidden entity/procedure term checks, approved safe-term checks, and fictional calculation checks exist in `src/domain/safety/safetyContract.ts`. |
 
 ---
 
@@ -108,6 +108,7 @@ This document tracks MVP feature scope from PRD decisions through SRS requiremen
 | IMP-010 | Settlement domain module | SPEC v0.1.0 sections 8, 9 | `src/domain/settlement/settlement.ts`, `src/domain/balancing/settlementValues.ts` | Domain Implemented | Adds surveillance grades, profit bands, Day result matrix, holding bands, social cost deltas, Final grade baselines, downgrade rules, and forced failure handling. |
 | IMP-011 | Day carryover domain module | SPEC v0.1.0 sections 8, 9 | `src/domain/settlement/carryover.ts` | Domain Implemented | Adds Day-to-Day Run state carryover, partial surveillance/participation carryover, liquidity/volatility reset baselines, weak aftereffects, and Pre-open Card non-carryover. |
 | IMP-012 | Local persistence domain module | SPEC v0.1.0 sections 9, 10 | `src/domain/persistence/localPersistence.ts` | Domain Implemented | Adds versioned save envelopes, current Run save/load, recent Final save, best record comparison, forbidden key list, and incompatible save discard behavior. |
+| IMP-013 | Safety contract domain module | SPEC v0.1.0 section 2 | `src/domain/safety/safetyContract.ts` | Domain Implemented | Adds player-facing content collection, approved safe terms, forbidden procedure/entity terms, and fictional calculation validation. |
 
 ---
 

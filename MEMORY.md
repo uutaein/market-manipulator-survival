@@ -29,7 +29,8 @@ Current baseline:
 15. Settlement domain module exists for Day result matrix, surveillance grade, holding bands, social cost deltas, Final grade baselines, and forced failure handling.
 16. Day Carryover domain module exists for persistent Run state carryover, partial risk carryover, reset baselines, weak aftereffects, and Pre-open Card non-carryover.
 17. Local Persistence domain module exists for versioned save envelopes, current Run save/load, recent Final save, best record update, forbidden keys, and incompatible save discard.
-18. Phaser gameplay wiring is not implemented yet.
+18. Safety Contract domain module exists for player-facing content checks, approved safe terms, forbidden procedure/entity terms, and fictional calculation validation.
+19. Phaser gameplay wiring is not implemented yet.
 
 ---
 
@@ -145,6 +146,7 @@ MVP shape:
 22. Added Settlement domain module for Day/Final result classification, holding risk bands, social cost deltas, and forced failure handling.
 23. Added Day Carryover domain module for persistent state carryover, partial risk carryover, reset baselines, weak aftereffects, and Pre-open Card non-carryover.
 24. Added Local Persistence domain module for versioned local save envelopes, current Run save/load, recent Final save, best record update, and incompatible save discard.
+25. Added Safety Contract domain module for player-facing content checks, forbidden term/entity validation, and fictional calculation validation.
 
 ---
 
@@ -207,4 +209,5 @@ Current branch baseline includes:
 14. Settlement domain module,
 15. Day Carryover domain module,
 16. Local Persistence domain module,
-17. README, docs index, feature index, traceability, and MEMORY updates.
+17. Safety Contract domain module,
+18. README, docs index, feature index, traceability, and MEMORY updates.

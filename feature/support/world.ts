@@ -32,6 +32,7 @@ import {
 import type { MarketBoardState } from "../../src/domain/market/marketBoard";
 import type { DayCarryoverResult } from "../../src/domain/settlement/carryover";
 import type { DaySettlementResult, FinalSettlementResult } from "../../src/domain/settlement/settlement";
+import type { CalculationSafetyReport, SafetyValidationReport } from "../../src/domain/safety/safetyContract";
 import {
   approveOpening,
   canStartIntraday,
@@ -144,6 +145,9 @@ export class MmsWorld extends World {
   safeContentChecked = false;
   safeTerminologyChecked = false;
   fictionalCalculationChecked = false;
+  safetyReport?: SafetyValidationReport;
+  terminologyReport?: SafetyValidationReport;
+  calculationSafetyReport?: CalculationSafetyReport;
   day1Onboarding = false;
   learningHintShown = false;
 
