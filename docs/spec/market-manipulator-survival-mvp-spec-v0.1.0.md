@@ -6,7 +6,7 @@
 | Product | Market Manipulator Survival |
 | Scope | MVP first playable implementation specification |
 | Version | v0.1.0 |
-| Status | Candidate |
+| Status | Accepted |
 | Date | 2026-06-13 |
 | Baseline PRD | ../prd/market-manipulator-survival-prd-v0.1.5.md |
 | Baseline SRS | ../srs/market-manipulator-survival-srs-v0.1.0-core-game-state.md through ../srs/market-manipulator-survival-srs-v0.1.6-baseline-values-and-triggers.md |

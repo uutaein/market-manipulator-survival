@@ -116,10 +116,10 @@ The SRS is close to implementation-planning ready, but a final review pass is st
 
 Remaining non-code work:
 
-1. Review MVP SPEC v0.1.0 and accept it as the first playable build scope.
+1. MVP SPEC v0.1.0 has been accepted as the first playable build scope.
 2. Review fictional asset names for tone.
 3. Keep SRS v0.1.6 values as first-playable defaults until real playtesting.
-4. Create Gherkin feature files after SPEC acceptance.
+4. Create Gherkin feature files next.
 5. Convert planned TC IDs in `docs/traceability.md` into actual manual or automated test cases after Gherkin feature files exist.
 6. Keep new ideas in P1/P2 unless they are essential to the MVP loop.
 
@@ -153,9 +153,6 @@ Latest known commit before the newest uncommitted documentation additions:
 
 Current uncommitted work may include:
 
-1. SRS v0.1.5 freeze readiness review,
-2. SRS v0.1.6 baseline values and triggers,
-3. SDD modularity update,
-4. traceability matrix,
-5. `MEMORY.md`,
-6. `SKILLS.md`.
+1. SPEC v0.1.0 status changed to Accepted,
+2. ADR-0028 MVP SPEC Acceptance,
+3. traceability status updates.

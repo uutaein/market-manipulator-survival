@@ -37,4 +37,4 @@ This directory contains the product, requirement, decision, and design documents
 ## ADRs
 
 ADR files are stored in [`adr/`](adr/).  
-The latest PRD and MVP Freeze Candidate reference ADR-0001 through ADR-0027.
+The latest PRD, MVP Freeze Candidate, and MVP SPEC reference ADR-0001 through ADR-0028.
