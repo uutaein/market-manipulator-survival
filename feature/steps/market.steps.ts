@@ -2,6 +2,13 @@ import { Given, Then, When } from "@cucumber/cucumber";
 import assert from "node:assert/strict";
 import type { MmsWorld } from "../support/world";
 import { assets, getAssetsBySector, sectors } from "../../src/domain/assets/assetCatalog";
+import {
+  getAssetBaselineTradeValue,
+  getAssetMarketProfile,
+  getEntryRecommendedSectorIds,
+  getNextLargerSectorId,
+  getSectorMarketProfile
+} from "../../src/domain/assets/assetMarketProfiles";
 import { buildMarketBoard } from "../../src/domain/market/marketBoard";
 import { assignRunAssetProfiles, getSectorTendencies, isValidRunAssetProfiles } from "../../src/domain/run/runState";
 
@@ -69,6 +76,41 @@ Then("the player cannot see the hidden stable, standard, or high-risk tendency",
 
 Then("the player cannot see full profile values before play", function (this: MmsWorld) {
   assert.equal(this.hiddenProfilesVisible, false);
+});
+
+Then("entry recommended sectors are available", function () {
+  const recommendedSectorIds = getEntryRecommendedSectorIds();
+
+  assert.ok(recommendedSectorIds.length > 0);
+  assert.ok(recommendedSectorIds.every((sectorId) => getSectorMarketProfile(sectorId).capitalTier === "entry"));
+});
+
+Then("every sector has one sector leader, one standard asset, and one theme mover", function () {
+  for (const sector of sectors) {
+    const roles = getAssetsBySector(sector.id)
+      .map((asset) => getAssetMarketProfile(asset.id).role)
+      .sort();
+
+    assert.deepEqual(roles, ["sector_leader", "standard", "theme_mover"].sort());
+  }
+});
+
+Then("sector leaders have higher baseline trade value than theme movers", function () {
+  for (const sector of sectors) {
+    const sectorAssets = getAssetsBySector(sector.id);
+    const leader = sectorAssets.find((asset) => getAssetMarketProfile(asset.id).role === "sector_leader");
+    const themeMover = sectorAssets.find((asset) => getAssetMarketProfile(asset.id).role === "theme_mover");
+
+    assert.ok(leader);
+    assert.ok(themeMover);
+    assert.ok(getAssetBaselineTradeValue(leader) > getAssetBaselineTradeValue(themeMover));
+  }
+});
+
+Then("each entry recommended sector has a larger-sector progression target", function () {
+  for (const sectorId of getEntryRecommendedSectorIds()) {
+    assert.ok(getNextLargerSectorId(sectorId));
+  }
 });
 
 Given("intraday operation has started", function (this: MmsWorld) {

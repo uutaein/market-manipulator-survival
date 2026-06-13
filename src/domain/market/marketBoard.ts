@@ -8,6 +8,11 @@ import {
   type SectorDefinition,
   type SectorId
 } from "../assets/assetCatalog";
+import {
+  getAssetBaselineTradeValue,
+  getAssetNewsSensitivity,
+  getSectorAverageBaselineTradeValue
+} from "../assets/assetMarketProfiles";
 import { newsPricePressure } from "../balancing/priceTickValues";
 import { runDefaults } from "../balancing/runDefaults";
 import type { DayState } from "../day/daySetup";
@@ -31,6 +36,7 @@ export interface MarketBoardEntryBase {
   readonly calculationMode: MarketBoardCalculationMode;
   readonly newsBadge: MarketBoardNewsBadge;
   readonly newsTone: MarketBoardNewsTone;
+  readonly baselineTradeValue: number;
 }
 
 export interface PlayerMarketBoardEntry extends MarketBoardEntryBase {
@@ -176,6 +182,7 @@ function createPlayerEntry(asset: AssetDefinition, morningNewsItems: readonly Mo
     calculationMode: "detailed",
     newsBadge: getNewsBadge(asset, morningNewsItems),
     newsTone: getNewsTone(asset, morningNewsItems),
+    baselineTradeValue: getAssetBaselineTradeValue(asset),
     usesDetailedPlayerState: true
   };
 }
@@ -198,6 +205,7 @@ function createSameSectorPeerEntry(
     calculationMode: "simplified",
     newsBadge: getNewsBadge(asset, dayState.morningNewsItems),
     newsTone: getNewsTone(asset, dayState.morningNewsItems),
+    baselineTradeValue: getAssetBaselineTradeValue(asset),
     usesDetailedPlayerState: false,
     simplifiedMovement: true,
     referencePrice: quote.referencePrice,
@@ -226,6 +234,7 @@ function createSectorAverageEntry(
     calculationMode: "sector_average",
     newsBadge: getSectorAverageNewsBadge(sector.id, dayState.morningNewsItems),
     newsTone: getSectorAverageNewsTone(sector.id, dayState.morningNewsItems),
+    baselineTradeValue: getSectorAverageBaselineTradeValue(sector.id),
     usesDetailedPlayerState: false,
     simplifiedMovement: true,
     sectorAverage: true,
@@ -247,10 +256,11 @@ function calculateSimplifiedPriceChange(
   const random = createSeededRandom(`${runState.runSeed}:day:${dayState.dayIndex}:market-board:${asset.id}:${slotIndex}`);
   const sectorNewsPressure = getSectorNewsPressure(asset, dayState);
   const marketNewsPressure = getMarketNewsPressure(dayState);
+  const newsSensitivity = getAssetNewsSensitivity(asset);
   const trendBias = random.next() * 1.8 - 0.9;
   const simplifiedVolatility = 35 + dayState.todayCondition.volatilityShiftPercent;
   const randomNoise = (random.next() * 2 - 1) * (0.5 + simplifiedVolatility * 0.025);
-  const rawDelta = (sectorNewsPressure + marketNewsPressure) * 95 + trendBias + randomNoise;
+  const rawDelta = (sectorNewsPressure * newsSensitivity + marketNewsPressure) * 95 + trendBias + randomNoise;
 
   return round2(clamp(rawDelta, -8.5, 8.5));
 }
@@ -267,10 +277,11 @@ function calculateSimplifiedPriceDelta(
   );
   const sectorNewsPressure = getSectorNewsPressure(asset, dayState) * 0.3;
   const marketNewsPressure = getMarketNewsPressure(dayState) * 0.3;
+  const newsSensitivity = getAssetNewsSensitivity(asset);
   const trendBias = random.next() * 0.16 - 0.08;
   const simplifiedVolatility = 35 + dayState.todayCondition.volatilityShiftPercent;
   const randomNoise = (random.next() * 2 - 1) * (0.04 + simplifiedVolatility * 0.002);
-  const rawDelta = (sectorNewsPressure + marketNewsPressure) * 12 + trendBias + randomNoise;
+  const rawDelta = (sectorNewsPressure * newsSensitivity + marketNewsPressure) * 12 + trendBias + randomNoise;
 
   return round2(clamp(rawDelta, -0.9, 0.9));
 }

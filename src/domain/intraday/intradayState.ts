@@ -1,4 +1,5 @@
 import type { DayState, PreOpenCardEffect } from "../day/daySetup";
+import { getAssetMarketProfile } from "../assets/assetMarketProfiles";
 import type { DocumentEventChoiceType, DocumentEventId } from "../balancing/documentEventValues";
 import { manualActionIds, type ManualActionId } from "../balancing/manualActionValues";
 import { retailSwarmValues } from "../balancing/retailSwarmValues";
@@ -100,6 +101,8 @@ export type BoundedIntradayStat =
 export function createIntradayState(runState: RunState, dayState: DayState): IntradayState {
   const effect = dayState.preOpenCardEffect;
   const newsImpact = getActiveNewsStatImpact(runState, dayState.morningNewsItems);
+  const selectedAssetProfile = getAssetMarketProfile(runState.selectedAssetId);
+  const influenceResistance = selectedAssetProfile.influenceResistance;
   const holdingRatio = applyEffect(runState.holdingRatio, effect, "holdingRatioDelta");
   const quote = createFictionalQuoteState(runState, dayState, holdingRatio, runDefaults.initialPriceChangePercent);
 
@@ -115,13 +118,16 @@ export function createIntradayState(runState: RunState, dayState: DayState): Int
     priceChangePercent: runDefaults.initialPriceChangePercent,
     priceDeltaPerTick: 0,
     budget: applyEffect(runState.budget, effect, "budgetDelta"),
-    marketPressure: applyEffect(runDefaults.initialMarketPressure, effect, "marketPressureDelta"),
+    marketPressure: applyEffect(runDefaults.initialMarketPressure, effect, "marketPressureDelta") - (influenceResistance - 1) * 8,
     holdingRatio,
     personalParticipation: runDefaults.initialPersonalParticipation + newsImpact.personalParticipationDelta,
-    marketLiquidity: applyEffect(runDefaults.initialMarketLiquidity, effect, "marketLiquidityDelta") + newsImpact.marketLiquidityDelta,
+    marketLiquidity:
+      applyEffect(runDefaults.initialMarketLiquidity, effect, "marketLiquidityDelta") +
+      newsImpact.marketLiquidityDelta +
+      (influenceResistance - 1) * 10,
     surveillance: applyEffect(runState.surveillance, effect, "surveillanceDelta") + newsImpact.surveillanceDelta,
     volatility: applyEffect(runDefaults.initialVolatility, effect, "volatilityDelta") + newsImpact.volatilityDelta,
-    competitionPressure: runDefaults.initialCompetitionPressure,
+    competitionPressure: runDefaults.initialCompetitionPressure + (influenceResistance - 1) * 22,
     activeNewsPricePressure: getActiveNewsPricePressure(runState, dayState.morningNewsItems),
     marketAftereffectPressure: 0,
     manualActionEffectMultiplier: effect?.manualActionEffectMultiplier ?? 1,

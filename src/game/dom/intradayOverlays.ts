@@ -53,6 +53,7 @@ export interface MarketTerminalModel {
   readonly dashboardRows: readonly MarketBoardRankRow[];
   readonly rankRows: readonly MarketBoardRankRow[];
   readonly ranks: Map<string, number>;
+  readonly tradeValues: Map<string, number>;
 }
 
 export interface OrderBookOverlayLevel {

@@ -183,7 +183,7 @@ export class PreOpenCardScene extends BaseDocumentScene {
     const panelWidth = 760;
     const panelHeight = 118;
     const trackX = panelX + 24;
-    const trackY = y + 96;
+    const trackY = y + 101;
     const trackWidth = 340;
     const percentToX = (percent: number) =>
       trackX +
@@ -204,11 +204,12 @@ export class PreOpenCardScene extends BaseDocumentScene {
       })
       .setOrigin(0, 0);
     this.add
-      .text(panelX + 22, y + 50, "개장 전 미리 확보한다. 평균단가가 장가격보다 불리해 시작 손실이 날 수 있다.", {
+      .text(panelX + 22, y + 48, "개장 전 미리 확보한다. 장가격보다 비싸게 사서 시작 손실이 날 수 있다.", {
         color: "#c9c1ad",
         fontFamily: this.fontFamily,
-        fontSize: "15px",
-        wordWrap: { width: 360 }
+        fontSize: "13px",
+        lineSpacing: 2,
+        wordWrap: { width: 390 }
       })
       .setOrigin(0, 0);
 

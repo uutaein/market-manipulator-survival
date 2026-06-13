@@ -55,6 +55,21 @@ Run-level hidden tendencies are assigned per sector at Run start:
 
 The tendency is not shown directly to the player.
 
+Each sector also has a fixed fictional market profile used for readability and replay goals:
+
+1. baseline trade value,
+2. news sensitivity,
+3. capital tier,
+4. setup recommendation label.
+
+Each sector's 3 assets must map to one fixed market role:
+
+1. `sector_leader`,
+2. `standard`,
+3. `theme_mover`.
+
+Sector leaders have the highest baseline trade value and influence resistance. Theme movers have lower baseline trade value but higher news sensitivity. These roles are fictional game tuning labels and do not use real market data.
+
 | Sector ID | Sector | Asset ID | Display Name | Short Briefing |
 | --- | --- | --- | --- | --- |
 | `food_agri` | 식량·농업 | `food_agri_01` | 밥심푸드 | 식량 테마가 붙으면 개인 참여도가 빠르게 붙는 허구 식품 데스크. |
@@ -135,6 +150,10 @@ The market dashboard is not a sector-average list. It ranks all 24 individual fi
 
 Morning News affected sectors or assets must receive visible badges or stronger movement/volume signals in the relevant rows.
 
+The dashboard ranking should be anchored by each asset's fixed baseline trade value, then adjusted by live activity, Morning News, price movement, and player action volume. The renderer may use EMA-smoothed trade value to reduce per-tick rank churn while still letting large player actions visibly move rank.
+
+Run Setup may show entry recommended sectors and asset market roles so the player can start with smaller, more readable sectors and later try larger trade-value sectors after a 5-Day Run. This is guidance only; all sectors and assets remain selectable from the start.
+
 The player chart includes a fictional order-book/depth panel. The price formula applies an `orderBookMultiplier` after directional pressure and liquidity are combined. Thin sell-side depth amplifies upward responsiveness; thin buy-side depth amplifies downward responsiveness. The values are fictional and seeded for gameplay readability.
 
 The price tick also uses a fictional price-motion simulator module. This module adds mean reversion, target-band resistance, overheat drag, occasional pullback shocks, crash-area rebound support, and a seeded fake OHLCV package impulse so prices do not simply drift upward whenever pressure is positive.
@@ -158,6 +177,9 @@ The Market Dashboard should update through a stable DOM row pool or equivalent r
 | SRS-BASE-MARKET-009 | The price-motion simulator may use a seeded fake OHLCV package adapter, but the adapter must remain replaceable and must not introduce real market data. |
 | SRS-BASE-MARKET-010 | The candle/volume chart renderer must be separated from the Phaser scene and receive data through an adapter or overlay boundary. |
 | SRS-BASE-MARKET-011 | The Market Dashboard renderer must use retained rows or an equivalent approach that avoids per-tick row object recreation. |
+| SRS-BASE-MARKET-012 | Market Dashboard trade-value ranking must use sector/asset baseline trade value as the anchor, not only instantaneous generated volume. |
+| SRS-BASE-MARKET-013 | Each sector must expose exactly one `sector_leader`, one `standard`, and one `theme_mover` market role. |
+| SRS-BASE-MARKET-014 | Run Setup may show non-locking entry recommendations and larger-sector progression guidance; it must not hard-lock sectors in MVP. |
 
 ---
 

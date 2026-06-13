@@ -1,5 +1,7 @@
 import { BaseDocumentScene } from "./BaseDocumentScene";
 import { SceneKeys } from "./SceneKeys";
+import { getSectorById } from "../../domain/assets/assetCatalog";
+import { getNextLargerSectorId, getSectorMarketProfile } from "../../domain/assets/assetMarketProfiles";
 import { gameSession } from "../GameSession";
 
 export class FinalSettlementScene extends BaseDocumentScene {
@@ -29,7 +31,8 @@ export class FinalSettlementScene extends BaseDocumentScene {
         `SOCIAL COST: ${formatNumber(finalSettlement.socialCost)}`,
         `LOCAL RECORD: ${saved ? (gameSession.lastFinalSaveUpdatedBest ? "best updated" : "saved") : "unavailable"}`,
         "",
-        createFinalNote(finalSettlement.forcedFailure, finalSettlement.failureReason)
+        createFinalNote(finalSettlement.forcedFailure, finalSettlement.failureReason),
+        createProgressionNote(runState.selectedSectorId, finalSettlement.forcedFailure)
       ]
     );
 
@@ -93,4 +96,21 @@ function createFinalNote(forcedFailure: boolean, failureReason: string | null): 
   }
 
   return "NOTE: 같은 조건 재시작은 동일 Run Seed로 초기 조건을 다시 생성합니다.";
+}
+
+function createProgressionNote(selectedSectorId: Parameters<typeof getSectorById>[0], forcedFailure: boolean): string {
+  if (forcedFailure) {
+    return "NEXT: 초반 추천 섹터로 다시 자본과 감각을 안정화하세요.";
+  }
+
+  const nextSectorId = getNextLargerSectorId(selectedSectorId);
+
+  if (!nextSectorId) {
+    return "NEXT: 이미 최대 거래대금 체급입니다. 같은 체급에서 더 높은 Final 등급을 노리세요.";
+  }
+
+  const nextSector = getSectorById(nextSectorId);
+  const nextProfile = getSectorMarketProfile(nextSectorId);
+
+  return `NEXT: ${nextSector.displayName} (${nextProfile.recommendation}) 같은 더 큰 거래대금 체급에 도전하세요.`;
 }

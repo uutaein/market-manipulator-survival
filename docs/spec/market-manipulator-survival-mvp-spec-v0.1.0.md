@@ -77,7 +77,8 @@ The first playable build must include the following feature set.
 | Immediate failure | budget exhaustion, surveillance 100, critical price collapse |
 | Sectors | 8 fictional sectors |
 | Assets | 24 fictional assets |
-| Asset choice | player selects sector and asset at Run start |
+| Asset choice | player selects sector and asset at Run start; setup may show non-locking entry recommendations |
+| Asset market profile | each sector has one sector leader, one standard asset, and one theme mover with fixed fictional baseline trade value |
 | Hidden asset tendency | stable / standard / high-risk assignment per sector at Run start |
 | Morning News | 5 templates, 3 items per Day: 1 sector item and 2 asset items |
 | Pre-open Cards | 4 |
@@ -86,7 +87,7 @@ The first playable build must include the following feature set.
 | Document Events | 8 |
 | Retail Swarm | interest / overheated / panic |
 | Market Board | player asset + 2 same-sector competitors + 7 other-sector averages |
-| Market Dashboard | 24 individual fictional assets ranked by fictional trade value |
+| Market Dashboard | 24 individual fictional assets ranked by baseline-anchored fictional trade value with live activity adjustment |
 | Player asset simulation | detailed |
 | Non-player asset simulation | simplified competitor/sector-average movement |
 | Day Settlement | actual profit + surveillance grade |

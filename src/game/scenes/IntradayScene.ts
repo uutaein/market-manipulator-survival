@@ -1,6 +1,10 @@
 import { BaseDocumentScene } from "./BaseDocumentScene";
 import { SceneKeys } from "./SceneKeys";
 import { assets, type AssetDefinition } from "../../domain/assets/assetCatalog";
+import {
+  getAssetBaselineTradeValue,
+  getAssetNewsSensitivity
+} from "../../domain/assets/assetMarketProfiles";
 import { autoCardRewardElapsedSeconds, autoCardValues } from "../../domain/balancing/autoCardValues";
 import { documentEventRules, documentEventValues } from "../../domain/balancing/documentEventValues";
 import { runDefaults } from "../../domain/balancing/runDefaults";
@@ -41,6 +45,7 @@ export class IntradayScene extends BaseDocumentScene {
   private manualActionFeedbackEndsAt: Partial<Record<ManualActionId, number>> = {};
   private manualActionButtonModes: Partial<Record<ManualActionId, "normal" | "active">> = {};
   private previousMarketBoardRanks = new Map<string, number>();
+  private previousMarketTradeValues = new Map<string, number>();
   private autoChoiceObjects: Phaser.GameObjects.GameObject[] = [];
   private documentEventObjects: Phaser.GameObjects.GameObject[] = [];
   private retailSwarmObjects: Phaser.GameObjects.GameObject[] = [];
@@ -57,6 +62,7 @@ export class IntradayScene extends BaseDocumentScene {
     this.manualActionFeedbackEndsAt = {};
     this.manualActionButtonModes = {};
     this.previousMarketBoardRanks = new Map();
+    this.previousMarketTradeValues = new Map();
 
     this.drawDocumentShell("장중 운용 화면", [], undefined, "LIVE SESSION");
     this.ensurePepeMascotTexture();
@@ -440,9 +446,11 @@ export class IntradayScene extends BaseDocumentScene {
         averageEntryPrice: playerState?.averageEntryPrice ?? 10000
       },
       this.previousMarketBoardRanks,
+      this.previousMarketTradeValues,
       gameSession.ensureDay().morningNewsItems
     );
     this.previousMarketBoardRanks = model.ranks;
+    this.previousMarketTradeValues = model.tradeValues;
     this.marketTerminalOverlay?.update(model);
   }
 
@@ -975,10 +983,11 @@ function buildMarketTerminalModel(
     averageEntryPrice: 10000
   },
   previousRanks: ReadonlyMap<string, number> = new Map(),
+  previousTradeValues: ReadonlyMap<string, number> = new Map(),
   morningNewsItems: readonly MorningNews[] = []
 ): MarketTerminalModel {
   if (!marketBoardState) {
-    return { peerRows: [], sectorRows: [], dashboardRows: [], rankRows: [], ranks: new Map() };
+    return { peerRows: [], sectorRows: [], dashboardRows: [], rankRows: [], ranks: new Map(), tradeValues: new Map() };
   }
 
   const boardRows = marketBoardState.entries
@@ -994,6 +1003,7 @@ function buildMarketTerminalModel(
         asset,
         marketBoardState.playerAssetId,
         playerPriceChangePercent,
+        playerVolume,
         playerQuote,
         index,
         previousRanks,
@@ -1002,8 +1012,10 @@ function buildMarketTerminalModel(
     );
   });
 
-  const rankedAssetRows = applyMarketRanks(assetRankBaseRows, previousRanks);
+  const smoothedAssetRows = smoothMarketTradeValues(assetRankBaseRows, previousTradeValues);
+  const rankedAssetRows = applyMarketRanks(smoothedAssetRows, previousRanks);
   const ranks = new Map(rankedAssetRows.map((row) => [row.key, row.rank]));
+  const tradeValues = new Map(rankedAssetRows.map((row) => [row.key, row.fictionalTradeValue]));
   const rankByKey = new Map(rankedAssetRows.map((row) => [row.key, row]));
   const playerRankIndex = Math.max(0, rankedAssetRows.findIndex((row) => row.roleLabel === "ME"));
   const dashboardStart = clampRankWindowStart(playerRankIndex, rankedAssetRows.length, 7);
@@ -1015,7 +1027,8 @@ function buildMarketTerminalModel(
     sectorRows: boardRows.filter((row) => row.roleLabel === "AVG"),
     dashboardRows: rankedAssetRows.slice(dashboardStart, dashboardStart + 7),
     rankRows: rankedAssetRows,
-    ranks
+    ranks,
+    tradeValues
   };
 }
 
@@ -1040,6 +1053,13 @@ function createMarketBoardEntryRow(
     entry.calculationMode === "detailed"
       ? Math.max(playerVolume, 1)
       : calculateBoardEntryVolume(entry.priceChangePercent, entry.newsBadge, entry.role, index);
+  const activityTradeValue = Math.round(fictionalVolume * quote.currentPrice);
+  const baselineMultiplier = getEntryTradeValueMultiplier(priceChangePercent, entry.newsBadge, entry.newsTone);
+  const activityWeight = entry.calculationMode === "detailed" ? 0.85 : 0.18;
+  const fictionalTradeValue = Math.round(
+    entry.baselineTradeValue * baselineMultiplier + activityTradeValue * activityWeight
+  );
+  const displayVolume = Math.max(1, Math.round(fictionalTradeValue / Math.max(1, quote.currentPrice)));
   const key = getMarketBoardRankKey(entry);
 
   return {
@@ -1053,8 +1073,8 @@ function createMarketBoardEntryRow(
     currentPrice: quote.currentPrice,
     averageEntryPrice: quote.averageEntryPrice,
     priceChangePercent,
-    fictionalVolume,
-    fictionalTradeValue: Math.round(fictionalVolume * quote.currentPrice),
+    fictionalVolume: displayVolume,
+    fictionalTradeValue,
     trend: entry.calculationMode === "detailed" ? getTrendLabel(priceChangePercent) : entry.trend.toUpperCase(),
     newsBadge: entry.newsBadge ?? "-",
     newsTone: entry.newsTone
@@ -1077,6 +1097,29 @@ function applyMarketRanks(
         rankMarker: rankMarker(row.key, rank, previousRanks)
       };
     });
+}
+
+const marketDashboardTradeValueEmaAlpha = 0.28;
+
+function smoothMarketTradeValues(
+  rows: readonly MarketBoardRankRow[],
+  previousTradeValues: ReadonlyMap<string, number>
+): readonly MarketBoardRankRow[] {
+  return rows.map((row) => {
+    const previous = previousTradeValues.get(row.key);
+
+    if (previous === undefined) {
+      return row;
+    }
+
+    const smoothedTradeValue =
+      previous * (1 - marketDashboardTradeValueEmaAlpha) + row.fictionalTradeValue * marketDashboardTradeValueEmaAlpha;
+
+    return {
+      ...row,
+      fictionalTradeValue: Math.round(smoothedTradeValue)
+    };
+  });
 }
 
 function formatNumber(value: number): string {
@@ -1125,6 +1168,7 @@ function createFullMarketAssetRow(
   asset: AssetDefinition,
   playerAssetId: string,
   playerPriceChangePercent: number,
+  playerVolume: number,
   playerQuote: MarketBoardQuote,
   index: number,
   previousRanks: ReadonlyMap<string, number>,
@@ -1135,9 +1179,14 @@ function createFullMarketAssetRow(
   const priceWave = ((seed % 170) - 85) / 10;
   const priceChangePercent = asset.id === playerAssetId ? playerPriceChangePercent : priceWave;
   const quote = asset.id === playerAssetId ? playerQuote : createSyntheticBoardQuote(asset.id, index, priceChangePercent);
-  const baseVolume = 260 + (seed % 520);
-  const priceActivity = Math.abs(priceChangePercent) * 32;
-  const fictionalVolume = Math.round(baseVolume + priceActivity);
+  const baselineTradeValue = getAssetBaselineTradeValue(asset);
+  const newsBadge = getAssetNewsBadge(asset, morningNewsItems);
+  const newsTone = getAssetNewsTone(asset, morningNewsItems);
+  const movementMultiplier = 1 + Math.min(0.5, Math.abs(priceChangePercent) * 0.028);
+  const newsMultiplier = getAssetNewsTradeValueMultiplier(asset, newsBadge, newsTone);
+  const playerActionTradeValue = asset.id === playerAssetId ? Math.max(0, playerVolume * quote.currentPrice * 0.85) : 0;
+  const fictionalTradeValue = Math.round(baselineTradeValue * movementMultiplier * newsMultiplier + playerActionTradeValue);
+  const fictionalVolume = Math.max(1, Math.round(fictionalTradeValue / Math.max(1, quote.currentPrice)));
 
   return {
     key,
@@ -1151,11 +1200,49 @@ function createFullMarketAssetRow(
     averageEntryPrice: quote.averageEntryPrice,
     priceChangePercent,
     fictionalVolume,
-    fictionalTradeValue: Math.round(fictionalVolume * quote.currentPrice),
+    fictionalTradeValue,
     trend: getTrendLabel(priceChangePercent),
-    newsBadge: getAssetNewsBadge(asset, morningNewsItems) ?? "-",
-    newsTone: getAssetNewsTone(asset, morningNewsItems)
+    newsBadge: newsBadge ?? "-",
+    newsTone
   };
+}
+
+function getEntryTradeValueMultiplier(
+  priceChangePercent: number,
+  newsBadge: string | null,
+  newsTone: "positive" | "negative" | null
+): number {
+  const movementMultiplier = 1 + Math.min(0.42, Math.abs(priceChangePercent) * 0.024);
+  const newsMultiplier =
+    newsBadge === "asset"
+      ? newsTone === "positive"
+        ? 1.34
+        : 1.24
+      : newsBadge === "sector"
+        ? newsTone === "positive"
+          ? 1.24
+          : 1.16
+        : newsBadge === "market"
+          ? 1.1
+          : 1;
+
+  return movementMultiplier * newsMultiplier;
+}
+
+function getAssetNewsTradeValueMultiplier(
+  asset: AssetDefinition,
+  newsBadge: string | null,
+  newsTone: "positive" | "negative" | null
+): number {
+  if (!newsBadge) {
+    return 1;
+  }
+
+  const sensitivity = getAssetNewsSensitivity(asset);
+  const base = newsBadge === "asset" ? 0.36 : 0.24;
+  const toneFactor = newsTone === "positive" ? 1 : 0.82;
+
+  return 1 + base * sensitivity * toneFactor;
 }
 
 function createSyntheticBoardQuote(assetId: string, index: number, priceChangePercent: number): MarketBoardQuote {
