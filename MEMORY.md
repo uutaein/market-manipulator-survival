@@ -27,7 +27,8 @@ Current baseline:
 13. Document Event domain module exists for 8 event values, trigger priority, cap/gap rules, pause behavior, 3 choices, choice effects, and event history.
 14. Retail Swarm domain module exists for participation-synced state, abstract token model, warning/panic flags, and overheat/panic risk effects.
 15. Settlement domain module exists for Day result matrix, surveillance grade, holding bands, social cost deltas, Final grade baselines, and forced failure handling.
-16. Carryover, persistence, and Phaser gameplay wiring are not implemented yet.
+16. Day Carryover domain module exists for persistent Run state carryover, partial risk carryover, reset baselines, weak aftereffects, and Pre-open Card non-carryover.
+17. Persistence and Phaser gameplay wiring are not implemented yet.
 
 ---
 
@@ -141,6 +142,7 @@ MVP shape:
 20. Added Retail Swarm domain module for participation-synced token modeling, overheat warnings, panic state, and risk effects.
 21. Added Market Board domain module for 8-slot board selection, same-sector peers, news-priority representatives, and simplified non-player movement.
 22. Added Settlement domain module for Day/Final result classification, holding risk bands, social cost deltas, and forced failure handling.
+23. Added Day Carryover domain module for persistent state carryover, partial risk carryover, reset baselines, weak aftereffects, and Pre-open Card non-carryover.
 
 ---
 
@@ -201,4 +203,5 @@ Current branch baseline includes:
 12. Retail Swarm domain module,
 13. Market Board domain module,
 14. Settlement domain module,
-15. README, docs index, feature index, traceability, and MEMORY updates.
+15. Day Carryover domain module,
+16. README, docs index, feature index, traceability, and MEMORY updates.
