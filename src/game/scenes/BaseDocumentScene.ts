@@ -3,10 +3,13 @@ import type { SceneKey } from "./SceneKeys";
 
 export type SceneAction = {
   label: string;
-  target: SceneKey;
+  target?: SceneKey;
+  onClick?: () => void;
 };
 
 export abstract class BaseDocumentScene extends Phaser.Scene {
+  protected readonly fontFamily = "Consolas, Courier New, monospace";
+
   protected drawDocumentShell(title: string, lines: string[], action?: SceneAction): void {
     const { width, height } = this.scale;
 
@@ -19,7 +22,7 @@ export abstract class BaseDocumentScene extends Phaser.Scene {
     this.add
       .text(96, 78, title, {
         color: "#f3e8ca",
-        fontFamily: "Consolas, Courier New, monospace",
+        fontFamily: this.fontFamily,
         fontSize: "30px"
       })
       .setOrigin(0, 0);
@@ -27,7 +30,7 @@ export abstract class BaseDocumentScene extends Phaser.Scene {
     this.add
       .text(96, 136, lines.join("\n"), {
         color: "#c9c1ad",
-        fontFamily: "Consolas, Courier New, monospace",
+        fontFamily: this.fontFamily,
         fontSize: "18px",
         lineSpacing: 10,
         wordWrap: { width: width - 192 }
@@ -37,7 +40,7 @@ export abstract class BaseDocumentScene extends Phaser.Scene {
     this.add
       .text(width - 260, height - 104, "SPEC ACCEPTED", {
         color: "#8f9f7a",
-        fontFamily: "Consolas, Courier New, monospace",
+        fontFamily: this.fontFamily,
         fontSize: "14px"
       })
       .setOrigin(0, 0.5);
@@ -47,20 +50,46 @@ export abstract class BaseDocumentScene extends Phaser.Scene {
     }
   }
 
-  private addActionButton(action: SceneAction): void {
+  protected addActionButton(action: SceneAction, index = 0): Phaser.GameObjects.Text {
     const { height } = this.scale;
     const button = this.add
-      .text(96, height - 124, `[ ${action.label} ]`, {
+      .text(96 + index * 260, height - 124, `[ ${action.label} ]`, {
         color: "#111417",
         backgroundColor: "#d9c58b",
-        fontFamily: "Consolas, Courier New, monospace",
+        fontFamily: this.fontFamily,
         fontSize: "20px",
         padding: { x: 16, y: 10 }
       })
       .setInteractive({ useHandCursor: true });
 
     button.on("pointerup", () => {
-      this.scene.start(action.target);
+      action.onClick?.();
+      if (action.target) {
+        this.scene.start(action.target);
+      }
     });
+
+    return button;
+  }
+
+  protected addDocumentButton(
+    x: number,
+    y: number,
+    label: string,
+    onClick: () => void,
+    selected = false
+  ): Phaser.GameObjects.Text {
+    const button = this.add
+      .text(x, y, label, {
+        color: selected ? "#111417" : "#f3e8ca",
+        backgroundColor: selected ? "#d9c58b" : "#2a3033",
+        fontFamily: this.fontFamily,
+        fontSize: "17px",
+        padding: { x: 12, y: 8 }
+      })
+      .setInteractive({ useHandCursor: true });
+
+    button.on("pointerup", onClick);
+    return button;
   }
 }

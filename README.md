@@ -71,6 +71,7 @@ Current implementation status:
 - Day Carryover domain module: present
 - Local Persistence domain module: present
 - Safety Contract domain module: present
+- Run/Day scene wiring: partial
 - Cucumber step definitions: present
 - Gameplay simulation: not implemented yet
 - BDD validation: executable against an in-memory support world, not yet against Phaser gameplay modules
