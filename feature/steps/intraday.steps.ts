@@ -18,12 +18,11 @@ Given("intraday operation is active", function (this: MmsWorld) {
 });
 
 Then("the intraday timer starts at 360 seconds", function (this: MmsWorld) {
-  assert.equal(this.timerSeconds, 360);
+  assert.equal(this.intradayState?.timeRemainingSec, 360);
 });
 
 When("the timer reaches 0", function (this: MmsWorld) {
-  this.timerSeconds = 0;
-  this.daySettlementComplete = true;
+  this.finishIntradayTimer();
 });
 
 Then("the Day transitions to Day Settlement", function (this: MmsWorld) {
@@ -35,11 +34,13 @@ When("a document event or auto card reward choice is open", function (this: MmsW
 });
 
 Then("the intraday timer pauses", function (this: MmsWorld) {
-  assert.equal(this.intradayPaused, true);
+  assert.equal(this.intradayState?.isPaused, true);
 });
 
 Then("price ticks do not run", function (this: MmsWorld) {
-  assert.equal(this.intradayPaused, true);
+  const tickIndex = this.intradayState?.priceTickIndex;
+  this.runPriceTick();
+  assert.equal(this.intradayState?.priceTickIndex, tickIndex);
 });
 
 When("the player resolves the modal decision", function (this: MmsWorld) {
@@ -47,27 +48,45 @@ When("the player resolves the modal decision", function (this: MmsWorld) {
 });
 
 Then("intraday operation resumes", function (this: MmsWorld) {
-  assert.equal(this.intradayPaused, false);
+  assert.equal(this.intradayState?.isPaused ?? this.intradayPaused, false);
 });
 
 When("a price tick runs", function (this: MmsWorld) {
-  this.visibleOptions.add("price components calculated");
+  this.runPriceTick();
 });
 
 Then("price movement is calculated from pressure, participation, holding, liquidity, competition, news, aftereffect, and volatility noise components", function (this: MmsWorld) {
-  assert.ok(this.visibleOptions.has("price components calculated"));
+  assert.ok(this.intradayState?.latestPriceComponents);
+  assert.equal(typeof this.intradayState.latestPriceComponents.pressure, "number");
+  assert.equal(typeof this.intradayState.latestPriceComponents.participation, "number");
+  assert.equal(typeof this.intradayState.latestPriceComponents.holding, "number");
+  assert.equal(typeof this.intradayState.latestPriceComponents.liquidity, "number");
+  assert.equal(typeof this.intradayState.latestPriceComponents.competition, "number");
+  assert.equal(typeof this.intradayState.latestPriceComponents.news, "number");
+  assert.equal(typeof this.intradayState.latestPriceComponents.aftereffect, "number");
+  assert.equal(typeof this.intradayState.latestPriceComponents.volatilityNoise, "number");
 });
 
 Then("the price is not directly overwritten by a manual action or card", function (this: MmsWorld) {
-  assert.ok(this.visibleOptions.has("price components calculated"));
+  assert.ok(this.intradayState?.latestPriceComponents);
+  assert.equal(
+    this.intradayState.priceChangePercent,
+    this.priceBeforeTick + this.intradayState.latestPriceComponents.clampedDelta
+  );
 });
 
 Given("an intraday stat update occurs", function (this: MmsWorld) {
-  this.visibleOptions.add("bounded stats updated");
+  this.forceBoundedStatUpdate();
 });
 
 Then("holding ratio, personal participation, market liquidity, surveillance, volatility, and competition pressure stay within the 0 to 100 range", function (this: MmsWorld) {
-  assert.ok(this.visibleOptions.has("bounded stats updated"));
+  assert.ok(this.intradayState);
+  assert.ok(this.intradayState.holdingRatio >= 0 && this.intradayState.holdingRatio <= 100);
+  assert.ok(this.intradayState.personalParticipation >= 0 && this.intradayState.personalParticipation <= 100);
+  assert.ok(this.intradayState.marketLiquidity >= 0 && this.intradayState.marketLiquidity <= 100);
+  assert.ok(this.intradayState.surveillance >= 0 && this.intradayState.surveillance <= 100);
+  assert.ok(this.intradayState.volatility >= 0 && this.intradayState.volatility <= 100);
+  assert.ok(this.intradayState.competitionPressure >= 0 && this.intradayState.competitionPressure <= 100);
 });
 
 Then("the player can see {string}", function (this: MmsWorld, actionName: string) {

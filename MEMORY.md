@@ -20,7 +20,8 @@ Current baseline:
 6. Core Run State domain module exists for seed, asset catalog, hidden profile assignment, and same-seed restart.
 7. Day Setup / Morning News domain module exists for Day state, sector-default news, Today Condition, and Market Briefing data.
 8. Pre-open Card domain module exists for 4 card values, one-card-per-Day selection, no-effect `관망`, and Opening Approval guard.
-9. Gameplay simulation systems are not implemented yet.
+9. Intraday State / Price Tick domain module exists for 360-second timer, pause/resume, bounded stat clamping, news pressure, and component price tick.
+10. Manual action, auto card, document event, settlement, carryover, persistence, and Phaser gameplay wiring are not implemented yet.
 
 ---
 
@@ -127,6 +128,7 @@ MVP shape:
 13. Added Core Run State domain module for seeded Run creation, fictional asset catalog, hidden asset tendency assignment, and same-seed restart.
 14. Added Day Setup / Morning News domain module for seeded Morning News, Today Condition, Day State, and Market Briefing data.
 15. Added Pre-open Card domain module for MVP card values, selection rules, and Opening Approval.
+16. Added Intraday State / Price Tick domain module for timer, pause/resume, bounded stats, news pressure, and fictional component-based player price ticks.
 
 ---
 
@@ -180,4 +182,5 @@ Current branch baseline includes:
 5. Core Run State domain module,
 6. Day Setup / Morning News domain module,
 7. Pre-open Card domain module,
-8. README, docs index, feature index, traceability, and MEMORY updates.
+8. Intraday State / Price Tick domain module,
+9. README, docs index, feature index, traceability, and MEMORY updates.

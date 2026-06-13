@@ -2,6 +2,16 @@ import { World, setWorldConstructor } from "@cucumber/cucumber";
 import type { DayState, MarketBriefing } from "../../src/domain/day/daySetup";
 import { createDayState, createMarketBriefing } from "../../src/domain/day/daySetup";
 import {
+  advanceIntradayTime,
+  applyIntradayStatUpdate,
+  createIntradayState,
+  isIntradayComplete,
+  pauseIntraday,
+  resumeIntraday,
+  type IntradayState
+} from "../../src/domain/intraday/intradayState";
+import { runPlayerPriceTick } from "../../src/domain/intraday/priceTick";
+import {
   approveOpening,
   canStartIntraday,
   getPreOpenCardDisplayNames,
@@ -55,6 +65,7 @@ export class MmsWorld extends World {
   runState?: RunState;
   dayState?: DayState;
   marketBriefing?: MarketBriefing;
+  intradayState?: IntradayState;
   runSeed = "";
   previousRunSeed = "";
   previousRunProfilesSnapshot = "";
@@ -65,6 +76,8 @@ export class MmsWorld extends World {
   intradayActive = false;
   intradayPaused = false;
   timerSeconds = 0;
+  priceBeforeTick = 0;
+  tickIndexBefore = 0;
   openingApproved = false;
   selectedPreOpenCard = "";
   preOpenSelectionError = "";
@@ -177,10 +190,65 @@ export class MmsWorld extends World {
   }
 
   openIntraday(): void {
+    if (!this.runState) {
+      this.startNewRun();
+    }
+
+    if (!this.dayState) {
+      this.beginDay();
+    }
+
+    if (!this.dayState!.preOpenCardId) {
+      this.choosePreOpenCard("관망");
+    }
+
+    if (!this.dayState!.openingApproved) {
+      this.approveOpening();
+    }
+
+    this.intradayState = createIntradayState(this.runState!, this.dayState!);
     this.intradayActive = true;
-    this.intradayPaused = false;
-    this.timerSeconds = 360;
+    this.intradayPaused = this.intradayState.isPaused;
+    this.timerSeconds = this.intradayState.timeRemainingSec;
     this.currentScreen = "intraday";
+  }
+
+  finishIntradayTimer(): void {
+    if (!this.intradayState) {
+      this.openIntraday();
+    }
+
+    this.intradayState = advanceIntradayTime(this.intradayState!, this.intradayState!.timeRemainingSec);
+    this.timerSeconds = this.intradayState.timeRemainingSec;
+    this.daySettlementComplete = isIntradayComplete(this.intradayState);
+  }
+
+  runPriceTick(): void {
+    if (!this.intradayState) {
+      this.openIntraday();
+    }
+
+    this.priceBeforeTick = this.intradayState!.priceChangePercent;
+    this.tickIndexBefore = this.intradayState!.priceTickIndex;
+    this.intradayState = runPlayerPriceTick(this.intradayState!, {
+      runSeed: this.runSeed,
+      dayIndex: this.currentDay
+    });
+  }
+
+  forceBoundedStatUpdate(): void {
+    if (!this.intradayState) {
+      this.openIntraday();
+    }
+
+    this.intradayState = applyIntradayStatUpdate(this.intradayState!, {
+      holdingRatio: 150,
+      personalParticipation: -20,
+      marketLiquidity: 125,
+      surveillance: 140,
+      volatility: -10,
+      competitionPressure: 130
+    });
   }
 
   triggerFailure(reason = "immediate failure"): void {
@@ -198,7 +266,12 @@ export class MmsWorld extends World {
   }
 
   openModal(type: "document" | "auto-card"): void {
-    this.intradayPaused = true;
+    if (!this.intradayState) {
+      this.openIntraday();
+    }
+
+    this.intradayState = pauseIntraday(this.intradayState!);
+    this.intradayPaused = this.intradayState.isPaused;
     if (type === "document") {
       this.documentEventOpen = true;
     } else {
@@ -209,7 +282,12 @@ export class MmsWorld extends World {
   closeModal(): void {
     this.documentEventOpen = false;
     this.autoCardRewardOpen = false;
-    this.intradayPaused = false;
+    if (this.intradayState) {
+      this.intradayState = resumeIntraday(this.intradayState);
+      this.intradayPaused = this.intradayState.isPaused;
+    } else {
+      this.intradayPaused = false;
+    }
   }
 }
 
