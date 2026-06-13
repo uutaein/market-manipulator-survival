@@ -61,6 +61,7 @@ Current implementation status:
 - Core Run State domain module: present
 - Day Setup / Morning News domain module: present
 - Pre-open Card domain module: present
+- Market Board domain module: present
 - Intraday State / Price Tick domain module: present
 - Manual Action domain module: present
 - Auto Card domain module: present

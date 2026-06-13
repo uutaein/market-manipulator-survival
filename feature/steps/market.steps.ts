@@ -2,6 +2,7 @@ import { Given, Then, When } from "@cucumber/cucumber";
 import assert from "node:assert/strict";
 import type { MmsWorld } from "../support/world";
 import { getAssetsBySector, sectors } from "../../src/domain/assets/assetCatalog";
+import { buildMarketBoard } from "../../src/domain/market/marketBoard";
 import { assignRunAssetProfiles, getSectorTendencies, isValidRunAssetProfiles } from "../../src/domain/run/runState";
 
 Given("a new Run is created", function (this: MmsWorld) {
@@ -76,8 +77,11 @@ Given("intraday operation has started", function (this: MmsWorld) {
 });
 
 When("the Market Board is shown", function (this: MmsWorld) {
-  this.displayedAssets = 8;
-  this.nonPlayerAssets = 7;
+  assert.ok(this.runState);
+  assert.ok(this.dayState);
+  this.marketBoardState = buildMarketBoard(this.runState, this.dayState);
+  this.displayedAssets = this.marketBoardState.entries.length;
+  this.nonPlayerAssets = this.marketBoardState.nonPlayerAssetSummaries.length;
 });
 
 Then("exactly 8 assets are displayed", function (this: MmsWorld) {
@@ -85,7 +89,9 @@ Then("exactly 8 assets are displayed", function (this: MmsWorld) {
 });
 
 Then("one displayed asset is the player's selected asset", function (this: MmsWorld) {
-  assert.equal(this.displayedAssets, 8);
+  assert.ok(this.marketBoardState);
+  assert.equal(this.marketBoardState.entries.filter((entry) => entry.role === "player").length, 1);
+  assert.equal(this.marketBoardState.playerAssetId, this.runState?.selectedAssetId);
 });
 
 Then("seven displayed assets are non-player assets", function (this: MmsWorld) {
@@ -93,37 +99,91 @@ Then("seven displayed assets are non-player assets", function (this: MmsWorld) {
 });
 
 Given("the player's selected asset belongs to a sector with two peer assets", function (this: MmsWorld) {
-  this.sameSectorPeers = 2;
+  if (!this.runState) {
+    this.startNewRun();
+  }
+
+  this.sameSectorPeers = getAssetsBySector(this.runState!.selectedSectorId).filter(
+    (asset) => asset.id !== this.runState!.selectedAssetId
+  ).length;
 });
 
 When("the Market Board is built", function (this: MmsWorld) {
-  this.displayedAssets = 8;
+  if (!this.dayState) {
+    this.beginDay();
+  }
+
+  this.marketBoardState = buildMarketBoard(this.runState!, this.dayState!);
+  this.displayedAssets = this.marketBoardState.entries.length;
 });
 
 Then("the two same-sector peer assets are displayed", function (this: MmsWorld) {
   assert.equal(this.sameSectorPeers, 2);
+  assert.ok(this.marketBoardState);
+  assert.equal(this.marketBoardState.entries.filter((entry) => entry.role === "same_sector_peer").length, 2);
 });
 
 Given("Morning News affects a non-player sector", function (this: MmsWorld) {
-  this.visibleOptions.add("news-affected sector");
+  if (!this.runState) {
+    this.startNewRun();
+  }
+
+  if (!this.dayState) {
+    this.beginDay();
+  }
+
+  const targetSector = sectors.find((sector) => sector.id !== this.runState!.selectedSectorId);
+  assert.ok(targetSector);
+  this.newsAffectedSectorId = targetSector.id;
+  this.dayState = {
+    ...this.dayState!,
+    morningNews: {
+      ...this.dayState!.morningNews,
+      target: {
+        type: "sector",
+        sectorId: targetSector.id
+      }
+    }
+  };
 });
 
 When("representative other-sector assets are selected", function (this: MmsWorld) {
-  this.visibleOptions.add("news-affected representative asset");
+  this.marketBoardState = buildMarketBoard(this.runState!, this.dayState!);
 });
 
 Then("at least one asset from the affected sector should be displayed", function (this: MmsWorld) {
-  assert.ok(this.visibleOptions.has("news-affected representative asset"));
+  assert.ok(this.marketBoardState);
+  assert.ok(this.newsAffectedSectorId);
+  assert.ok(
+    this.marketBoardState.entries.some(
+      (entry) => entry.role === "representative" && entry.sectorId === this.newsAffectedSectorId
+    )
+  );
 });
 
 Given("non-player assets are displayed on the Market Board", function (this: MmsWorld) {
-  this.nonPlayerAssets = 7;
+  this.startNewRun();
+  this.beginDay();
+  this.marketBoardState = buildMarketBoard(this.runState!, this.dayState!);
+  this.nonPlayerAssets = this.marketBoardState.nonPlayerAssetSummaries.length;
 });
 
 Then("each non-player asset shows simplified movement", function (this: MmsWorld) {
   assert.equal(this.nonPlayerAssets, 7);
+  assert.ok(this.marketBoardState);
+  assert.ok(
+    this.marketBoardState.nonPlayerAssetSummaries.every(
+      (entry) => entry.calculationMode === "simplified" && entry.simplifiedMovement
+    )
+  );
 });
 
 Then("non-player assets do not use detailed budget, holding ratio, or surveillance state", function (this: MmsWorld) {
   assert.equal(this.nonPlayerAssets, 7);
+  assert.ok(this.marketBoardState);
+  assert.ok(
+    this.marketBoardState.nonPlayerAssetSummaries.every(
+      (entry) => !("budget" in entry) && !("holdingRatio" in entry) && !("surveillance" in entry)
+    )
+  );
 });
