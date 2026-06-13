@@ -67,6 +67,10 @@ MVP에서 자주 바뀔 수치는 코드 로직이 아니라 밸런싱 데이터
 | Settlement Values | 수익 구간, 보유 비중 패널티, 사회적 비용 보정 |
 | Day 1 Values | Day 1 완화 보정, 확정 문서 이벤트, 힌트 조건 |
 
+The first MVP baseline for these data groups is defined in:
+
+- `../srs/market-manipulator-survival-srs-v0.1.6-baseline-values-and-triggers.md`
+
 ### 3.1 Required Balancing Rule
 
 | ID | Requirement |
@@ -75,6 +79,26 @@ MVP에서 자주 바뀔 수치는 코드 로직이 아니라 밸런싱 데이터
 | SDD-MOD-DATA-002 | 수치 변경만으로 플레이 감각을 조정할 수 있어야 한다. |
 | SDD-MOD-DATA-003 | 새 수치를 적용하기 위해 상태 구조 전체를 바꾸지 않아야 한다. |
 | SDD-MOD-DATA-004 | MVP에서는 데이터 편집 UI를 만들지 않는다. |
+
+### 3.2 MVP Balancing Modules
+
+The implementation should keep the following conceptual balancing modules separate.
+
+| Balancing Module | Source SRS Section | Primary Consumers |
+| --- | --- | --- |
+| `runDefaults` | SRS v0.1.6 section 3 | Run setup, Day setup |
+| `assetCatalog` | SRS v0.1.6 section 2 | Run setup, Market Board |
+| `marketBoardRules` | SRS v0.1.6 section 4 | Market Board |
+| `preOpenCardValues` | SRS v0.1.6 section 5 | Pre-open flow, Day setup |
+| `manualActionValues` | SRS v0.1.6 section 6 | ActionEffect |
+| `autoCardValues` | SRS v0.1.6 section 7 | AutoCardEffect |
+| `autoRewardRules` | SRS v0.1.6 section 7 | Auto card reward choice |
+| `documentEventRules` | SRS v0.1.6 section 8 | DocumentEventEffect |
+| `settlementValues` | SRS v0.1.6 section 9 | Settlement |
+| `carryoverValues` | SRS v0.1.6 section 10 | Aftereffect, Day setup |
+| `persistenceKeys` | SRS v0.1.6 section 11 | Persistence |
+
+These names are conceptual module names, not required file names. Implementation can combine small modules if the balancing groups remain easy to find and change.
 
 ---
 
