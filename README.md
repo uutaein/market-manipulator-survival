@@ -49,6 +49,8 @@ The repository now has a minimal TypeScript + Phaser 3 + Vite scaffold.
 ```powershell
 npm install
 npm run dev
+npm run bdd
+npm run typecheck
 npm run build
 ```
 
@@ -56,8 +58,9 @@ Current implementation status:
 
 - Project scaffold: present
 - MVP scene shell: present
+- Cucumber step definitions: present
 - Gameplay simulation: not implemented yet
-- Cucumber step definitions: deferred
+- BDD validation: executable against an in-memory support world, not yet against Phaser gameplay modules
 
 ---
 
@@ -75,6 +78,8 @@ feature/
   settlement/   Settlement and carryover features
   persistence/  Local storage features
   safety/       Safety abstraction features
+  steps/        TypeScript Cucumber step definitions
+  support/      Shared Cucumber world and accepted MVP constants
 
 docs/
   adr/   Architecture Decision Records
@@ -129,4 +134,4 @@ Use fictional, abstract terminology:
 The repository is still documentation-first.
 
 Implementation has started with a minimal project scaffold.  
-The current work is still early: gameplay systems and Cucumber step definitions are not implemented yet.
+The current work is still early: gameplay systems are not implemented yet. The Cucumber layer currently validates accepted Gherkin coverage against an in-memory support world.

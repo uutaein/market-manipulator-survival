@@ -16,7 +16,8 @@ Current baseline:
 2. SRS exists as draft requirements and baseline tuning documents.
 3. SDD exists only for lightweight simulation modularity.
 4. TypeScript + Phaser 3 + Vite project scaffold has been created.
-5. Gameplay systems and Cucumber step definitions are not implemented yet.
+5. Cucumber step definitions exist for accepted MVP Gherkin coverage.
+6. Gameplay systems are not implemented yet.
 
 ---
 
@@ -31,6 +32,8 @@ Current baseline:
 | `docs/spec/` | Implementation-facing specifications |
 | `docs/traceability.md` | PRD/ADR/SRS/TC traceability matrix |
 | `feature/` | Gherkin feature files grouped by domain and function |
+| `feature/steps/` | TypeScript Cucumber step definitions grouped by domain |
+| `feature/support/` | Shared Cucumber world and accepted MVP constants |
 | `src/` | TypeScript + Phaser 3 source scaffold |
 | `MEMORY.md` | Current progress memory |
 | `SKILLS.md` | Project-specific rules and reusable design knowledge |
@@ -97,6 +100,7 @@ MVP shape:
 | MVP SPEC | `docs/spec/market-manipulator-survival-mvp-spec-v0.1.0.md` |
 | Traceability | `docs/traceability.md` |
 | Gherkin Features | `feature/README.md` |
+| Cucumber Config | `cucumber.mjs` |
 | Source Scaffold | `src/README.md` |
 
 ---
@@ -113,21 +117,23 @@ MVP shape:
 8. Accepted MVP SPEC v0.1.0 through ADR-0028.
 9. Added root `feature/` Gherkin files grouped by domain and function.
 10. Added this memory file and `SKILLS.md`.
+11. Added TypeScript + Phaser 3 + Vite project scaffold.
+12. Added Cucumber configuration, shared in-memory world, and domain step definitions.
 
 ---
 
-## Known Remaining Work Before Implementation
+## Known Remaining Work Before Gameplay Implementation
 
-The SRS is close to implementation-planning ready, but a final review pass is still useful.
+The SRS is close to implementation-planning ready, but implementation still needs to connect gameplay modules to the accepted behavior.
 
 Remaining non-code work:
 
-1. Keep Cucumber step definitions deferred until the project scaffold commit is complete.
-2. Review root `feature/` Gherkin files for scenario coverage.
-3. Review fictional asset names for tone.
-4. Keep SRS v0.1.6 values as first-playable defaults until real playtesting.
-5. Convert planned TC IDs in `docs/traceability.md` into actual manual or automated test cases after Gherkin review.
-6. Keep new ideas in P1/P2 unless they are essential to the MVP loop.
+1. Review root `feature/` Gherkin files for scenario coverage after the first implementation pass.
+2. Review fictional asset names for tone.
+3. Keep SRS v0.1.6 values as first-playable defaults until real playtesting.
+4. Convert planned TC IDs in `docs/traceability.md` into actual manual or automated test cases after Gherkin review.
+5. Keep new ideas in P1/P2 unless they are essential to the MVP loop.
+6. Replace in-memory BDD assumptions with module-backed checks as gameplay modules are implemented.
 
 ---
 
@@ -151,10 +157,10 @@ The game is a fictional resource-management and pressure-management game.
 
 ## Recent Commit Memory
 
-Latest committed baseline before project scaffold:
+Latest committed baseline before BDD step definitions:
 
 ```text
-235822a test(feature): add MVP Gherkin feature coverage
+8a3131f build(scaffold): add Phaser Vite project shell
 ```
 
 Current documentation baseline includes:
@@ -162,4 +168,5 @@ Current documentation baseline includes:
 1. TypeScript + Phaser 3 + Vite scaffold,
 2. MVP Phaser scene shell,
 3. traceability implementation scaffold section,
-4. README, docs index, and MEMORY updates.
+4. Cucumber step definitions for accepted MVP Gherkin scenarios,
+5. README, docs index, feature index, traceability, and MEMORY updates.

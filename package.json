@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
+    "bdd": "tsx ./node_modules/@cucumber/cucumber/bin/cucumber.js --config cucumber.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },
@@ -13,7 +14,9 @@
     "phaser": "^3.90.0"
   },
   "devDependencies": {
+    "@cucumber/cucumber": "^13.0.0",
     "@types/node": "^25.9.3",
+    "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "vite": "^8.0.16"
   }

@@ -22,8 +22,9 @@ Current project rule:
 4. SDD defines lightweight module boundaries.
 5. SPEC consolidates the buildable first playable scope.
 6. Gherkin feature files come before TC documents.
-7. Implementation starts only after explicit approval.
-8. The current implementation has started with a minimal Phaser/Vite scaffold.
+7. Cucumber step definitions make accepted Gherkin scenarios executable before TC documents.
+8. Implementation starts only after explicit approval.
+9. The current implementation has started with a minimal Phaser/Vite scaffold and in-memory BDD step layer.
 
 When adding or changing a feature:
 
@@ -33,7 +34,8 @@ When adding or changing a feature:
 4. update SDD only if module boundaries change,
 5. update SPEC if first playable scope changes,
 6. update root `feature/` Gherkin files if behavior coverage changes,
-7. update `docs/traceability.md` in the same change.
+7. update `feature/steps/` if executable behavior coverage changes,
+8. update `docs/traceability.md` in the same change.
 
 ---
 
@@ -273,6 +275,26 @@ Use approved Korean player-facing terms inside quoted game labels.
 
 Do not create TC documents before Gherkin feature coverage exists.
 
+Cucumber step definitions live under:
+
+```text
+feature/steps/
+```
+
+Shared test state lives under:
+
+```text
+feature/support/
+```
+
+Current BDD rule:
+
+1. Use `npm run bdd` to execute accepted MVP Gherkin coverage.
+2. Keep step definitions aligned with `docs/traceability.md`.
+3. The current steps use an in-memory support world.
+4. As gameplay modules are implemented, replace broad in-memory assumptions with module-backed checks.
+5. Do not treat passing BDD steps as proof that Phaser gameplay is implemented until the steps exercise real modules.
+
 ---
 
 ## 9. Traceability Skill
@@ -331,5 +353,5 @@ Current scaffold rules:
 2. Keep Document Event as an Intraday modal concept, not a separate full screen.
 3. Do not implement gameplay simulation inside scene placeholders.
 4. Keep balancing values outside scene code when gameplay implementation begins.
-5. Add Cucumber step definitions after the project scaffold is committed.
-6. Use `npm run build` to verify TypeScript and Vite.
+5. Keep Cucumber support code under `feature/support/`.
+6. Use `npm run bdd`, `npm run typecheck`, and `npm run build` before committing implementation-facing changes.

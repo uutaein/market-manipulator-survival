@@ -17,7 +17,7 @@ This directory contains the product, requirement, decision, and design documents
 | Document | Purpose |
 | --- | --- |
 | [traceability.md](traceability.md) | Links PRD/ADR decisions to SRS requirements, Gherkin features, future test cases, and status. |
-| [../feature/README.md](../feature/README.md) | Root Gherkin feature index grouped by domain and function. |
+| [../feature/README.md](../feature/README.md) | Root Gherkin feature and Cucumber step index grouped by domain and function. |
 
 ## Current Baseline
 
@@ -35,6 +35,7 @@ This directory contains the product, requirement, decision, and design documents
 | SDD | [market-manipulator-survival-sdd-v0.1.0-simulation-modularity.md](sdd/market-manipulator-survival-sdd-v0.1.0-simulation-modularity.md) |
 | SPEC | [market-manipulator-survival-mvp-spec-v0.1.0.md](spec/market-manipulator-survival-mvp-spec-v0.1.0.md) |
 | Implementation Scaffold | [../src/README.md](../src/README.md) |
+| BDD Coverage | [../feature/README.md](../feature/README.md) |
 
 ## ADRs
 
