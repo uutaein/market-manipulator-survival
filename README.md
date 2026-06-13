@@ -42,6 +42,25 @@ MVP defaults:
 
 ---
 
+## Development
+
+The repository now has a minimal TypeScript + Phaser 3 + Vite scaffold.
+
+```powershell
+npm install
+npm run dev
+npm run build
+```
+
+Current implementation status:
+
+- Project scaffold: present
+- MVP scene shell: present
+- Gameplay simulation: not implemented yet
+- Cucumber step definitions: deferred
+
+---
+
 ## Documentation Layout
 
 Product and design documents live under `docs/`.
@@ -109,5 +128,5 @@ Use fictional, abstract terminology:
 
 The repository is still documentation-first.
 
-Implementation has not started.  
-The current work is SPEC/Gherkin refinement for a small MVP.
+Implementation has started with a minimal project scaffold.  
+The current work is still early: gameplay systems and Cucumber step definitions are not implemented yet.

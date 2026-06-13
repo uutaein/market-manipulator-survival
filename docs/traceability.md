@@ -29,6 +29,7 @@ This document tracks MVP feature scope from PRD decisions through SRS requiremen
 | `TC Planned` | Test case ID is reserved but not written. |
 | `TC Drafted` | Test case is written but not executed. |
 | `Implemented` | Feature has code implementation. |
+| `Scaffolded` | Implementation structure exists, but feature behavior is not complete. |
 | `Verified` | Feature has passed its planned tests. |
 | `Deferred` | Explicitly outside MVP or moved to P1/P2. |
 
@@ -82,6 +83,17 @@ This document tracks MVP feature scope from PRD decisions through SRS requiremen
 | DEF-008 | Electron packaging and mobile optimization | PRD v0.1.5; ADR-0020 | Deferred | P1/P2 candidate. |
 | DEF-009 | Real market data or real financial model | PRD v0.1.5; ADR-0002; ADR-0027 | Deferred | Excluded from MVP direction. |
 | DEF-010 | Financial domain expert review / real market validation | SDD v0.1.0 | Deferred | Explicitly outside MVP. |
+
+---
+
+## Implementation Scaffold Traceability
+
+| Scaffold ID | Scope | SPEC / SDD Source | Implementation Location | Status | Notes |
+| --- | --- | --- | --- | --- | --- |
+| SCF-001 | TypeScript + Phaser 3 + Vite project | SPEC v0.1.0 section 1 | `package.json`, `index.html`, `vite.config.ts`, `tsconfig.json`, `src/main.ts` | Scaffolded | Buildable browser scaffold. |
+| SCF-002 | MVP screen shell | SPEC v0.1.0 section 4 | `src/game/scenes/` | Scaffolded | 7 Phaser scenes cover 8 MVP screens; Document Event remains an Intraday modal concept. |
+| SCF-003 | Shared document UI shell | SDD v0.1.0 module boundaries | `src/game/scenes/BaseDocumentScene.ts` | Scaffolded | Temporary document-style shell for first implementation passes. |
+| SCF-004 | Cucumber step definitions | Gherkin feature files | Not created | Deferred | Step definitions are intentionally deferred until project scaffold is established. |
 
 ---
 

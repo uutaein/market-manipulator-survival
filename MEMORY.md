@@ -15,8 +15,8 @@ Current baseline:
 1. PRD is at MVP freeze-candidate level.
 2. SRS exists as draft requirements and baseline tuning documents.
 3. SDD exists only for lightweight simulation modularity.
-4. No game code or Phaser/Vite project has been created.
-5. Implementation should not start until explicitly requested.
+4. TypeScript + Phaser 3 + Vite project scaffold has been created.
+5. Gameplay systems and Cucumber step definitions are not implemented yet.
 
 ---
 
@@ -31,6 +31,7 @@ Current baseline:
 | `docs/spec/` | Implementation-facing specifications |
 | `docs/traceability.md` | PRD/ADR/SRS/TC traceability matrix |
 | `feature/` | Gherkin feature files grouped by domain and function |
+| `src/` | TypeScript + Phaser 3 source scaffold |
 | `MEMORY.md` | Current progress memory |
 | `SKILLS.md` | Project-specific rules and reusable design knowledge |
 
@@ -96,6 +97,7 @@ MVP shape:
 | MVP SPEC | `docs/spec/market-manipulator-survival-mvp-spec-v0.1.0.md` |
 | Traceability | `docs/traceability.md` |
 | Gherkin Features | `feature/README.md` |
+| Source Scaffold | `src/README.md` |
 
 ---
 
@@ -120,11 +122,12 @@ The SRS is close to implementation-planning ready, but a final review pass is st
 
 Remaining non-code work:
 
-1. Review root `feature/` Gherkin files for scenario coverage.
-2. Review fictional asset names for tone.
-3. Keep SRS v0.1.6 values as first-playable defaults until real playtesting.
-4. Convert planned TC IDs in `docs/traceability.md` into actual manual or automated test cases after Gherkin review.
-5. Keep new ideas in P1/P2 unless they are essential to the MVP loop.
+1. Keep Cucumber step definitions deferred until the project scaffold commit is complete.
+2. Review root `feature/` Gherkin files for scenario coverage.
+3. Review fictional asset names for tone.
+4. Keep SRS v0.1.6 values as first-playable defaults until real playtesting.
+5. Convert planned TC IDs in `docs/traceability.md` into actual manual or automated test cases after Gherkin review.
+6. Keep new ideas in P1/P2 unless they are essential to the MVP loop.
 
 ---
 
@@ -148,14 +151,15 @@ The game is a fictional resource-management and pressure-management game.
 
 ## Recent Commit Memory
 
-Latest committed baseline before Gherkin feature coverage:
+Latest committed baseline before project scaffold:
 
 ```text
-29649bb docs(spec): accept first playable MVP spec
+235822a test(feature): add MVP Gherkin feature coverage
 ```
 
 Current documentation baseline includes:
 
-1. root `feature/` Gherkin files,
-2. traceability Gherkin source links,
-3. README, docs index, MEMORY, and SKILLS updates.
+1. TypeScript + Phaser 3 + Vite scaffold,
+2. MVP Phaser scene shell,
+3. traceability implementation scaffold section,
+4. README, docs index, and MEMORY updates.

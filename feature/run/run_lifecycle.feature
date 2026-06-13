@@ -30,9 +30,7 @@ Feature: Run lifecycle
 
   Scenario: Trigger immediate Run failure
     Given the player is in intraday operation
-    When budget falls below the minimum threshold
-    Or surveillance reaches 100
-    Or price reaches the critical collapse line
+    When any immediate failure condition is met
     Then the Run failure result is shown as a Final Settlement variant
     And the final grade is F
     And the player can choose same-condition restart or new Run

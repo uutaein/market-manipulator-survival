@@ -34,6 +34,7 @@ This directory contains the product, requirement, decision, and design documents
 | SRS | [market-manipulator-survival-srs-v0.1.6-baseline-values-and-triggers.md](srs/market-manipulator-survival-srs-v0.1.6-baseline-values-and-triggers.md) |
 | SDD | [market-manipulator-survival-sdd-v0.1.0-simulation-modularity.md](sdd/market-manipulator-survival-sdd-v0.1.0-simulation-modularity.md) |
 | SPEC | [market-manipulator-survival-mvp-spec-v0.1.0.md](spec/market-manipulator-survival-mvp-spec-v0.1.0.md) |
+| Implementation Scaffold | [../src/README.md](../src/README.md) |
 
 ## ADRs
 

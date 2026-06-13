@@ -23,6 +23,7 @@ Current project rule:
 5. SPEC consolidates the buildable first playable scope.
 6. Gherkin feature files come before TC documents.
 7. Implementation starts only after explicit approval.
+8. The current implementation has started with a minimal Phaser/Vite scaffold.
 
 When adding or changing a feature:
 
@@ -313,3 +314,22 @@ When editing docs:
 When in doubt:
 
 > Keep the MVP smaller.
+
+---
+
+## 11. Implementation Scaffold Skill
+
+Current scaffold target:
+
+```text
+TypeScript + Phaser 3 + Vite
+```
+
+Current scaffold rules:
+
+1. Keep the Phaser scene shell aligned with the 8 MVP screens.
+2. Keep Document Event as an Intraday modal concept, not a separate full screen.
+3. Do not implement gameplay simulation inside scene placeholders.
+4. Keep balancing values outside scene code when gameplay implementation begins.
+5. Add Cucumber step definitions after the project scaffold is committed.
+6. Use `npm run build` to verify TypeScript and Vite.
