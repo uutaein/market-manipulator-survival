@@ -17,12 +17,13 @@ Current implemented scope:
 | `day/` | Day start state, Morning News generation, Today Condition, Market Briefing summary |
 | `intraday/` | Intraday state, timer pause/resume, bounded stats, and player asset price tick |
 | `market/marketBoard.ts` | MVP 8-slot Market Board selection and simplified non-player summaries |
+| `persistence/localPersistence.ts` | Versioned local save envelopes, current Run save/load, recent Final, and best record updates |
 | `preopen/` | Pre-open Card selection and Opening Approval rules |
 | `random/SeededRandom.ts` | Deterministic seeded random source for reproducible Run setup |
 | `run/runState.ts` | Core Run State creation, same-seed restart, hidden asset tendency assignment |
 | `settlement/settlement.ts` | Day/Final Settlement classification, holding bands, and abstract social cost adjustments |
 | `settlement/carryover.ts` | Day-to-Day Run carryover and weak market aftereffects |
 
-The current domain layer supports early Run, Day setup, Pre-open Card selection, the player asset intraday tick skeleton, Market Board selection, Manual Action state effects, Auto Card rewards/effects, Document Event decisions, Retail Swarm state modeling, Day/Final Settlement classification, and Day-to-Day carryover. It does not yet include persistence modules.
+The current domain layer supports early Run, Day setup, Pre-open Card selection, the player asset intraday tick skeleton, Market Board selection, Manual Action state effects, Auto Card rewards/effects, Document Event decisions, Retail Swarm state modeling, Day/Final Settlement classification, Day-to-Day carryover, and local persistence envelopes.
 
-BDD steps currently exercise this domain layer for Run start, same-seed restart, asset catalog completeness, hidden profile assignment, Morning News generation, Market Briefing data, Pre-open Card selection, Opening Approval, Market Board selection/simplified summaries, intraday timer behavior, pause/resume behavior, bounded stat clamping, player price tick components, Manual Action state effects, Auto Card rewards/effects, Document Event trigger/choice behavior, Retail Swarm participation/overheat/panic behavior, Day/Final Settlement outcomes, and Day carryover/aftereffects.
+BDD steps currently exercise this domain layer for Run start, same-seed restart, asset catalog completeness, hidden profile assignment, Morning News generation, Market Briefing data, Pre-open Card selection, Opening Approval, Market Board selection/simplified summaries, intraday timer behavior, pause/resume behavior, bounded stat clamping, player price tick components, Manual Action state effects, Auto Card rewards/effects, Document Event trigger/choice behavior, Retail Swarm participation/overheat/panic behavior, Day/Final Settlement outcomes, Day carryover/aftereffects, and local persistence.
