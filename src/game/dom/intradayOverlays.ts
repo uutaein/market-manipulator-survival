@@ -26,6 +26,7 @@ export interface PriceChartOverlayUpdate {
   readonly targetBandMin: number;
   readonly targetBandMax: number;
   readonly crashLine: number;
+  readonly averageEntryPriceChangePercent: number | null;
 }
 
 export interface MarketBoardRankRow {
@@ -103,6 +104,7 @@ export class IntradayPriceChartOverlay {
   private readonly targetMinLine: IPriceLine;
   private readonly targetMaxLine: IPriceLine;
   private readonly crashLine: IPriceLine;
+  private readonly averageEntryLine: IPriceLine;
   private readonly syncLayout: () => void;
   private currentSize = { width: 0, height: 0 };
 
@@ -173,6 +175,15 @@ export class IntradayPriceChartOverlay {
     this.targetMinLine = this.candleSeries.createPriceLine(createReferenceLineOptions(bounds.targetMinFallback ?? 0, "#8f9f7a", "TARGET L"));
     this.targetMaxLine = this.candleSeries.createPriceLine(createReferenceLineOptions(bounds.targetMaxFallback ?? 0, "#8f9f7a", "TARGET H"));
     this.crashLine = this.candleSeries.createPriceLine(createReferenceLineOptions(bounds.crashFallback ?? -20, "#c46b5b", "CRASH"));
+    this.averageEntryLine = this.candleSeries.createPriceLine({
+      price: bounds.averageEntryFallback ?? 0,
+      color: "#e0d3a2",
+      lineWidth: 2 as const,
+      lineStyle: LineStyle.Dashed,
+      lineVisible: false,
+      axisLabelVisible: false,
+      title: "AVG"
+    });
     this.syncLayout = () => this.positionAndResize();
     window.addEventListener("resize", this.syncLayout);
     this.scene.scale.on("resize", this.syncLayout);
@@ -200,6 +211,15 @@ export class IntradayPriceChartOverlay {
     this.targetMinLine.applyOptions({ price: update.targetBandMin });
     this.targetMaxLine.applyOptions({ price: update.targetBandMax });
     this.crashLine.applyOptions({ price: update.crashLine });
+    this.averageEntryLine.applyOptions(
+      update.averageEntryPriceChangePercent === null
+        ? { lineVisible: false, axisLabelVisible: false }
+        : {
+            price: update.averageEntryPriceChangePercent,
+            lineVisible: true,
+            axisLabelVisible: true
+          }
+    );
     this.chart.timeScale().fitContent();
   }
 
@@ -412,6 +432,7 @@ interface GameOverlayBounds {
   readonly targetMinFallback?: number;
   readonly targetMaxFallback?: number;
   readonly crashFallback?: number;
+  readonly averageEntryFallback?: number;
 }
 
 function createOverlayElement(className: string): HTMLDivElement {

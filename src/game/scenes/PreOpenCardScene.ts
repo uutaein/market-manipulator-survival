@@ -9,6 +9,7 @@ import {
   preOpenCards,
   previewEarlyPositioningEffect
 } from "../../domain/preopen/preOpenCards";
+import { getEarlyPositioningEntryPremiumPercent } from "../../domain/intraday/intradayState";
 import { gameSession } from "../GameSession";
 
 export class PreOpenCardScene extends BaseDocumentScene {
@@ -36,7 +37,12 @@ export class PreOpenCardScene extends BaseDocumentScene {
       const selected = selectedCardId === card.id;
 
       if (card.id === "early_positioning") {
-        this.drawEarlyPositioningControl(dayState, y, selected);
+        this.drawEarlyPositioningControl(
+          dayState,
+          y,
+          selected,
+          getEarlyPositioningEntryPremiumPercent(runState)
+        );
       } else if (card.id === "news_assignment") {
         this.addChoiceCard(
           96,
@@ -163,7 +169,12 @@ export class PreOpenCardScene extends BaseDocumentScene {
       .setOrigin(0, 0);
   }
 
-  private drawEarlyPositioningControl(dayState: DayState, y: number, selected: boolean): void {
+  private drawEarlyPositioningControl(
+    dayState: DayState,
+    y: number,
+    selected: boolean,
+    entryPremiumPercent: number
+  ): void {
     const currentBudget = dayState.startingBudgetForDay;
     const panelX = 96;
     const panelWidth = 760;
@@ -203,7 +214,7 @@ export class PreOpenCardScene extends BaseDocumentScene {
       .setOrigin(0, 0.5);
     const knob = this.add.circle(percentToX(effect.earlyPositioningBudgetPercent), trackY, 11, 0xf3e8ca, 1);
     const previewText = this.add
-      .text(panelX + 420, y + 18, formatEarlyPositioningPreview(effect, currentBudget), {
+      .text(panelX + 420, y + 18, formatEarlyPositioningPreview(effect, currentBudget, entryPremiumPercent), {
         color: selected ? "#f3e8ca" : "#8f9f7a",
         fontFamily: this.fontFamily,
         fontSize: "15px",
@@ -226,7 +237,7 @@ export class PreOpenCardScene extends BaseDocumentScene {
       const knobX = percentToX(nextEffect.earlyPositioningBudgetPercent);
       knob.setPosition(knobX, trackY);
       fill.width = knobX - trackX;
-      previewText.setText(formatEarlyPositioningPreview(nextEffect, currentBudget));
+      previewText.setText(formatEarlyPositioningPreview(nextEffect, currentBudget, entryPremiumPercent));
     };
 
     if (!selected) {
@@ -260,6 +271,13 @@ export class PreOpenCardScene extends BaseDocumentScene {
       },
       selected
     );
+    this.add
+      .text(884, y + 18, `원가 대비 +${formatPercent(entryPremiumPercent)}`, {
+        color: selected ? "#f3e8ca" : "#d9c58b",
+        fontFamily: this.fontFamily,
+        fontSize: "14px"
+      })
+      .setOrigin(0, 0);
   }
 
   private addChoiceCard(
@@ -352,7 +370,8 @@ function formatSelectedCard(dayState: DayState): string {
 
 function formatEarlyPositioningPreview(
   effect: ReturnType<typeof previewEarlyPositioningEffect>,
-  currentBudget: number
+  currentBudget: number,
+  entryPremiumPercent: number
 ): string {
   const budgetSpend = Math.abs(effect.budgetDelta);
   const remainingBudget = Math.max(0, currentBudget - budgetSpend);
@@ -360,6 +379,7 @@ function formatEarlyPositioningPreview(
   return [
     `투입 비율 ${formatPercent(effect.earlyPositioningBudgetPercent)}`,
     `예산 사용 ${formatBudget(budgetSpend)}`,
+    `매입 프리미엄 +${formatPercent(entryPremiumPercent)}`,
     `잔여 예산 ${formatBudget(remainingBudget)} · 예산 소모율 ${formatBudgetSpendRate(currentBudget, budgetSpend)}`
   ].join("\n");
 }

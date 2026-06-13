@@ -236,7 +236,7 @@ export function createFictionalQuoteState(
   };
 }
 
-function getEarlyPositioningEntryPremiumPercent(
+export function getEarlyPositioningEntryPremiumPercent(
   runState: Pick<RunState, "runSeed" | "selectedAssetId">
 ): number {
   const random = createSeededRandom(`${runState.runSeed}:early-positioning-premium:${runState.selectedAssetId}`);

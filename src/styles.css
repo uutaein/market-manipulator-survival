@@ -125,6 +125,21 @@ canvas {
   font-size: calc(10px * var(--mms-overlay-scale, 1));
 }
 
+.mms-terminal-panel-ranked .mms-terminal-body {
+  padding: calc(1px * var(--mms-overlay-scale, 1)) calc(6px * var(--mms-overlay-scale, 1)) calc(3px * var(--mms-overlay-scale, 1));
+}
+
+.mms-terminal-panel-ranked .mms-terminal-row {
+  height: calc(13px * var(--mms-overlay-scale, 1));
+  font-size: calc(9.5px * var(--mms-overlay-scale, 1));
+  line-height: calc(13px * var(--mms-overlay-scale, 1));
+}
+
+.mms-terminal-panel-ranked .mms-terminal-header {
+  height: calc(14px * var(--mms-overlay-scale, 1));
+  font-size: calc(9px * var(--mms-overlay-scale, 1));
+}
+
 .mms-market-icon {
   width: calc(9px * var(--mms-overlay-scale, 1));
   height: calc(9px * var(--mms-overlay-scale, 1));
