@@ -23,7 +23,8 @@ Current baseline:
 9. Intraday State / Price Tick domain module exists for 360-second timer, pause/resume, bounded stat clamping, news pressure, and component price tick.
 10. Manual Action domain module exists for 4 action values, modal availability, budget/cooldown checks, state effects, and cooldown entry.
 11. Auto Card domain module exists for 8 card values, reward choices, Lv.1~Lv.3 handling, and simple periodic state effects.
-12. Document event effects, settlement, carryover, persistence, and Phaser gameplay wiring are not implemented yet.
+12. Document Event domain module exists for 8 event values, trigger priority, cap/gap rules, pause behavior, 3 choices, choice effects, and event history.
+13. Settlement, carryover, persistence, and Phaser gameplay wiring are not implemented yet.
 
 ---
 
@@ -133,6 +134,7 @@ MVP shape:
 16. Added Intraday State / Price Tick domain module for timer, pause/resume, bounded stats, news pressure, and fictional component-based player price ticks.
 17. Added Manual Action domain module for four MVP manual actions, state effects, and cooldown entry.
 18. Added Auto Card domain module for eight MVP auto cards, reward choices, level caps, and simple periodic state effects.
+19. Added Document Event domain module for eight MVP document events, trigger/cap/gap rules, popup pause, choices, effects, and history.
 
 ---
 
@@ -189,4 +191,5 @@ Current branch baseline includes:
 8. Intraday State / Price Tick domain module,
 9. Manual Action domain module,
 10. Auto Card domain module,
-11. README, docs index, feature index, traceability, and MEMORY updates.
+11. Document Event domain module,
+12. README, docs index, feature index, traceability, and MEMORY updates.

@@ -1,4 +1,5 @@
 import type { DayState, PreOpenCardEffect } from "../day/daySetup";
+import type { DocumentEventChoiceType, DocumentEventId } from "../balancing/documentEventValues";
 import { manualActionIds, type ManualActionId } from "../balancing/manualActionValues";
 import { runDefaults } from "../balancing/runDefaults";
 import type { RunState } from "../run/runState";
@@ -40,7 +41,19 @@ export interface IntradayState {
   readonly retailSwarmState: RetailSwarmState;
   readonly manualActionCooldowns: Readonly<Record<ManualActionId, number>>;
   readonly lastManualActionId: ManualActionId | null;
+  readonly activeDocumentEventId: DocumentEventId | null;
+  readonly documentEventChoices: readonly DocumentEventChoiceType[];
+  readonly documentEventHistory: readonly DocumentEventHistoryEntry[];
+  readonly lastDocumentEventElapsedSec: number | null;
+  readonly pendingSocialCostDelta: number;
+  readonly pendingAftereffectTags: readonly string[];
   readonly latestPriceComponents: PriceTickComponents | null;
+}
+
+export interface DocumentEventHistoryEntry {
+  readonly eventId: DocumentEventId;
+  readonly choiceType: DocumentEventChoiceType | null;
+  readonly elapsedSec: number;
 }
 
 export type BoundedIntradayStat =
@@ -73,6 +86,12 @@ export function createIntradayState(runState: RunState, dayState: DayState): Int
     retailSwarmState: "interest",
     manualActionCooldowns: createEmptyManualActionCooldowns(),
     lastManualActionId: null,
+    activeDocumentEventId: null,
+    documentEventChoices: [],
+    documentEventHistory: [],
+    lastDocumentEventElapsedSec: null,
+    pendingSocialCostDelta: 0,
+    pendingAftereffectTags: [],
     latestPriceComponents: null
   });
 }

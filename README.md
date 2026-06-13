@@ -64,6 +64,7 @@ Current implementation status:
 - Intraday State / Price Tick domain module: present
 - Manual Action domain module: present
 - Auto Card domain module: present
+- Document Event domain module: present
 - Cucumber step definitions: present
 - Gameplay simulation: not implemented yet
 - BDD validation: executable against an in-memory support world, not yet against Phaser gameplay modules

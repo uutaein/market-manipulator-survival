@@ -15,6 +15,13 @@ import type { ManualActionResult } from "../../src/domain/intraday/manualActions
 import { getManualActionDisplayNames, useManualAction } from "../../src/domain/intraday/manualActions";
 import type { AutoCardChoice, AutoCardEffectResult } from "../../src/domain/intraday/autoCards";
 import { applyAutoCardEffect, generateAutoCardChoices } from "../../src/domain/intraday/autoCards";
+import type { DocumentEventChoiceResult, DocumentEventOpenResult } from "../../src/domain/intraday/documentEvents";
+import {
+  applyDocumentEventChoice,
+  canOpenAnotherDocumentEvent,
+  evaluateDocumentEvent,
+  openDocumentEvent
+} from "../../src/domain/intraday/documentEvents";
 import { runPlayerPriceTick } from "../../src/domain/intraday/priceTick";
 import {
   approveOpening,
@@ -87,6 +94,9 @@ export class MmsWorld extends World {
   finalSettlementComplete = false;
   documentEventOpen = false;
   documentEventsToday = 0;
+  documentEventLimitAllowsAnother = true;
+  lastDocumentEventOpenResult?: DocumentEventOpenResult;
+  lastDocumentEventChoiceResult?: DocumentEventChoiceResult;
   autoCardRewardOpen = false;
   autoCards = new Map<string, number>();
   pendingAutoCardChoices: readonly AutoCardChoice[] = [];
@@ -295,6 +305,99 @@ export class MmsWorld extends World {
     const card = this.runState!.autoCards[0];
     this.lastAutoCardEffectResult = applyAutoCardEffect(this.intradayState!, card);
     this.intradayState = this.lastAutoCardEffectResult.state;
+  }
+
+  forceDocumentEventTriggerCondition(): void {
+    if (!this.intradayState) {
+      this.openIntraday();
+    }
+
+    this.intradayState = applyIntradayStatUpdate(
+      {
+        ...this.intradayState!,
+        timeRemainingSec: 300
+      },
+      {
+        surveillance: 65
+      }
+    );
+  }
+
+  allowDocumentEventByGlobalRules(): void {
+    if (!this.intradayState) {
+      this.openIntraday();
+    }
+
+    this.intradayState = {
+      ...this.intradayState!,
+      documentEventHistory: [],
+      lastDocumentEventElapsedSec: null
+    };
+    this.documentEventsToday = this.intradayState.documentEventHistory.length;
+    this.documentEventLimitAllowsAnother = canOpenAnotherDocumentEvent(this.intradayState);
+  }
+
+  evaluateAndOpenDocumentEvent(): void {
+    if (!this.intradayState) {
+      this.openIntraday();
+    }
+
+    this.lastDocumentEventOpenResult = evaluateDocumentEvent(this.intradayState!);
+    this.intradayState = this.lastDocumentEventOpenResult.state;
+    this.documentEventOpen = this.lastDocumentEventOpenResult.opened;
+    this.intradayPaused = this.intradayState.isPaused;
+    this.documentEventsToday = this.intradayState.documentEventHistory.length;
+  }
+
+  openDefaultDocumentEvent(): void {
+    if (!this.intradayState) {
+      this.openIntraday();
+    }
+
+    this.lastDocumentEventOpenResult = openDocumentEvent(this.intradayState!, "unusual_flow_inquiry");
+    this.intradayState = this.lastDocumentEventOpenResult.state;
+    this.documentEventOpen = true;
+    this.intradayPaused = this.intradayState.isPaused;
+    this.documentEventsToday = this.intradayState.documentEventHistory.length;
+  }
+
+  chooseDocumentEventOption(choiceType: "stable" | "aggressive" | "avoid" = "stable"): void {
+    if (!this.intradayState?.activeDocumentEventId) {
+      this.openDefaultDocumentEvent();
+    }
+
+    this.lastDocumentEventChoiceResult = applyDocumentEventChoice(this.intradayState!, choiceType);
+    this.intradayState = this.lastDocumentEventChoiceResult.state;
+    this.documentEventOpen = false;
+    this.intradayPaused = this.intradayState.isPaused;
+  }
+
+  setDocumentEventGapBlockedState(): void {
+    if (!this.intradayState) {
+      this.openIntraday();
+    }
+
+    this.intradayState = {
+      ...this.intradayState!,
+      timeRemainingSec: 210,
+      documentEventHistory: [
+        {
+          eventId: "unusual_flow_inquiry",
+          choiceType: "stable",
+          elapsedSec: 100
+        }
+      ],
+      lastDocumentEventElapsedSec: 100
+    };
+    this.documentEventsToday = this.intradayState.documentEventHistory.length;
+  }
+
+  checkDocumentEventLimits(): void {
+    if (!this.intradayState) {
+      this.openIntraday();
+    }
+
+    this.documentEventLimitAllowsAnother = canOpenAnotherDocumentEvent(this.intradayState!);
   }
 
   forceBoundedStatUpdate(): void {
