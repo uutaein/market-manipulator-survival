@@ -31,7 +31,8 @@ Current baseline:
 17. Local Persistence domain module exists for versioned save envelopes, current Run save/load, recent Final save, best record update, forbidden keys, and incompatible save discard.
 18. Safety Contract domain module exists for player-facing content checks, approved safe terms, forbidden procedure/entity terms, and fictional calculation validation.
 19. Phaser Run/Day flow scene wiring now exists for Main Menu, Run Setup, Morning Briefing, Pre-open Card selection, Opening Approval, and initial Intraday state display.
-20. Full Intraday ticking/actions, Day Settlement scene wiring, Final Settlement scene wiring, and polished UI interaction are not implemented yet.
+20. Phaser Intraday scene now advances one-second price/timer ticks and exposes the 4 manual action buttons with cooldown feedback.
+21. Auto Card scene wiring, Document Event scene wiring, Day Settlement scene wiring, Final Settlement scene wiring, and polished UI interaction are not implemented yet.
 
 ---
 
@@ -149,6 +150,7 @@ MVP shape:
 24. Added Local Persistence domain module for versioned local save envelopes, current Run save/load, recent Final save, best record update, and incompatible save discard.
 25. Added Safety Contract domain module for player-facing content checks, forbidden term/entity validation, and fictional calculation validation.
 26. Added first Phaser scene wiring slice for shared Run/Day session state, sector/asset selection, Morning Briefing, Pre-open Card selection/approval, and initial Intraday state display.
+27. Added Intraday scene tick/action wiring for one-second ticks, price/timer updates, manual action buttons, result feedback, and cooldown display.
 
 ---
 
@@ -213,4 +215,5 @@ Current branch baseline includes:
 16. Local Persistence domain module,
 17. Safety Contract domain module,
 18. Run/Day scene session wiring,
-19. README, docs index, feature index, traceability, and MEMORY updates.
+19. Intraday tick/action scene wiring,
+20. README, docs index, feature index, traceability, and MEMORY updates.
