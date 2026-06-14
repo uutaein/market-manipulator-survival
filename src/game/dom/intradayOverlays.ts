@@ -84,6 +84,10 @@ export interface OrderBookOverlayWallAction {
   readonly disabled: boolean;
   readonly active: boolean;
   readonly cooldownRemainingSec: number;
+  readonly remainingDepthBoost?: number;
+  readonly initialDepthBoost?: number;
+  readonly remainingReservedBudget?: number;
+  readonly initialReservedBudget?: number;
 }
 
 export function buildPriceCandles(history: readonly { readonly elapsedSec: number; readonly priceChangePercent: number; readonly fictionalVolume: number }[], secondsPerCandle = 6): readonly PriceCandle[] {
@@ -503,6 +507,7 @@ function createOrderBookRows(parent: HTMLElement, count: number): HTMLDivElement
     row.className = "mms-orderbook-row";
     row.innerHTML =
       `<span class="mms-orderbook-depth"></span>` +
+      `<span class="mms-orderbook-wall-meter"><span class="mms-orderbook-wall-fill"></span></span>` +
       `<span class="mms-orderbook-price"></span>` +
       `<span class="mms-orderbook-size"></span>` +
       `<span class="mms-orderbook-action"></span>`;
@@ -559,17 +564,44 @@ function updateOrderBookRows(
 
 function updateOrderBookRowAction(rowElement: HTMLDivElement, action: OrderBookOverlayWallAction): void {
   const label = action.statusLabel || action.label;
+  const wallDepthRatio = getOrderBookWallDepthRatio(action);
 
   rowElement.dataset.wallSide = action.side;
   rowElement.dataset.wallOffset = `${action.offsetPercent}`;
   rowElement.dataset.wallPriceChangePercent = `${action.priceChangePercent}`;
   rowElement.dataset.wallDisabled = action.disabled ? "true" : "false";
   rowElement.dataset.wallActive = action.active ? "true" : "false";
+  rowElement.dataset.wallDepthRatio = `${wallDepthRatio}`;
+  rowElement.dataset.wallRemainingDepth = `${Math.max(0, action.remainingDepthBoost ?? 0)}`;
+  rowElement.dataset.wallRemainingReserve = `${Math.max(0, action.remainingReservedBudget ?? 0)}`;
+  rowElement.style.setProperty("--wall-depth-ratio", `${wallDepthRatio}`);
   rowElement.classList.toggle("wall-disabled", action.disabled);
   rowElement.classList.toggle("wall-active", action.active);
   rowElement.classList.toggle("wall-cooldown", action.cooldownRemainingSec > 0 && !action.active);
-  rowElement.title = label;
+  rowElement.classList.toggle("wall-state-visible", action.active && wallDepthRatio > 0);
+  rowElement.title = getOrderBookWallDetailedTitle(label, action);
   setCell(rowElement, ".mms-orderbook-action", label);
+}
+
+function getOrderBookWallDepthRatio(action: OrderBookOverlayWallAction): number {
+  if (!action.active || action.initialDepthBoost === undefined || action.initialDepthBoost <= 0) {
+    return 0;
+  }
+
+  return clampDepthScale((action.remainingDepthBoost ?? 0) / action.initialDepthBoost);
+}
+
+function getOrderBookWallDetailedTitle(label: string, action: OrderBookOverlayWallAction): string {
+  if (!action.active || action.initialDepthBoost === undefined || action.initialReservedBudget === undefined) {
+    return label;
+  }
+
+  const remainingDepth = Math.max(0, action.remainingDepthBoost ?? 0);
+  const remainingReserve = Math.max(0, action.remainingReservedBudget ?? 0);
+
+  return `${label} · 남은 depth ${formatNumber(remainingDepth)}/${formatNumber(action.initialDepthBoost)} · 환급 ${formatNumber(
+    remainingReserve
+  )}B/${formatNumber(action.initialReservedBudget)}B`;
 }
 
 function hideOrderBookRow(rowElement: HTMLDivElement): void {
@@ -579,10 +611,12 @@ function hideOrderBookRow(rowElement: HTMLDivElement): void {
     "wall-active",
     "wall-disabled",
     "wall-cooldown",
+    "wall-state-visible",
     "wall-activated",
     "wall-depth-growing",
     "wall-depth-melting"
   );
+  rowElement.style.setProperty("--wall-depth-ratio", "0");
 }
 
 function updateOrderBookRowBaseClass(rowElement: HTMLDivElement, side: "ask" | "bid"): void {

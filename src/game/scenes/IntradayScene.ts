@@ -18,6 +18,7 @@ import { canUseManualAction, getManualActionBudgetDelta, manualActions } from ".
 import {
   canUseOrderBookWall,
   findActiveOrderBookWallAtLevel,
+  getOrderBookWallRemainingDepthBoost,
   getOrderBookWallRemainingReservedBudget,
   getOrderBookWallReserveBudget,
   getOrderBookWallValue,
@@ -1124,7 +1125,11 @@ function buildOrderBookWallOverlayAction(
     statusLabel: getOrderBookWallStatusLabel(state, side, activeEffect, cooldownRemainingSec),
     disabled: !active && !canUseOrderBookWall(state, side, offsetPercent, priceChangePercent),
     active,
-    cooldownRemainingSec
+    cooldownRemainingSec,
+    remainingDepthBoost: activeEffect ? getOrderBookWallRemainingDepthBoost(activeEffect) : undefined,
+    initialDepthBoost: activeEffect?.depthBoost,
+    remainingReservedBudget: activeEffect ? getOrderBookWallRemainingReservedBudget(activeEffect) : undefined,
+    initialReservedBudget: activeEffect?.reservedBudget
   };
 }
 

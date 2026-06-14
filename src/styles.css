@@ -298,10 +298,46 @@ canvas {
   background: #00c087;
 }
 
+.mms-orderbook-wall-meter {
+  position: absolute;
+  left: calc(5px * var(--mms-overlay-scale, 1));
+  right: calc(45px * var(--mms-overlay-scale, 1));
+  bottom: 1px;
+  z-index: 1;
+  height: calc(2px * var(--mms-overlay-scale, 1));
+  overflow: hidden;
+  border-radius: 1px;
+  opacity: 0;
+  background: rgb(7 16 21 / 70%);
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+.mms-orderbook-wall-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: scaleX(var(--wall-depth-ratio, 0));
+  transform-origin: left center;
+  transition: transform 280ms ease-out;
+}
+
+.mms-orderbook-row.ask .mms-orderbook-wall-fill {
+  background: #ff9aa8;
+}
+
+.mms-orderbook-row.bid .mms-orderbook-wall-fill {
+  background: #8fe1c5;
+}
+
+.mms-orderbook-row.wall-state-visible .mms-orderbook-wall-meter {
+  opacity: 0.9;
+}
+
 .mms-orderbook-price,
 .mms-orderbook-size {
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 .mms-orderbook-row.ask .mms-orderbook-price {
@@ -323,7 +359,7 @@ canvas {
 .mms-orderbook-action {
   position: absolute;
   inset: 1px calc(3px * var(--mms-overlay-scale, 1));
-  z-index: 2;
+  z-index: 3;
   display: flex;
   align-items: center;
   justify-content: center;

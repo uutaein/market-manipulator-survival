@@ -75,6 +75,7 @@ This document tracks MVP feature scope from PRD decisions through SRS requiremen
 | FEAT-030 | Order-book wall decay | PRD v0.2.3; ADR-0038 | SRS v0.2.3 | - | TC-WALL-DECAY-001 | PRD Approved / SRS Ready / TC Planned | Active order-book walls keep remaining depth and remaining refundable reserve. Opposing fictional pressure and barrier contact melt wall depth, consumed depth spends the matching reserve, barriers only hold while depth remains, and local synthetic depth snapshots use the remaining wall quantity. |
 | FEAT-031 | Order-book wall visual feedback | PRD v0.2.4; ADR-0036; ADR-0038 | SRS v0.2.4 | - | TC-WALL-VIS-001 | PRD Approved / SRS Ready / TC Planned | Order-book rows keep stable DOM/class state while depth bars and SIZE values animate toward wall activation, growth, and melt targets. One-shot cues show activation/growth/melt without restarting every tick. |
 | FEAT-032 | Order-book wall decay feedback | PRD v0.2.5; ADR-0038 | SRS v0.2.5 | - | TC-WALL-FEED-001 | PRD Approved / SRS Ready / TC Planned | Recent order-book wall events summarize formed, melted, collapsed, removed, and expired wall outcomes using fictional depth/reserve/refund terminology. |
+| FEAT-033 | Order-book wall state indicators | PRD v0.2.6; ADR-0036; ADR-0038 | SRS v0.2.6 | - | TC-WALL-STATE-001 | PRD Approved / SRS Ready / TC Planned | Active order-book wall rows expose compact remaining-depth indicators and detailed hover titles for remaining depth and refundable reserve. |
 
 ---
 
@@ -132,6 +133,7 @@ This document tracks MVP feature scope from PRD decisions through SRS requiremen
 | IMP-027 | Order-book wall decay adapter | SRS v0.2.3 | `src/domain/intraday/orderBookWalls.ts`, `src/domain/intraday/orderBook.ts`, `src/domain/intraday/orderBookExecution.ts`, `scripts/verify-run-flow.ts` | Domain Implemented / First Playable Wired | Tracks remaining wall depth and refundable reserve, melts walls under opposing fictional pressure, removes barriers after full melt, and feeds remaining wall quantity into the local synthetic depth snapshot. |
 | IMP-028 | Order-book wall visual feedback | SRS v0.2.4 | `src/game/dom/intradayOverlays.ts`, `src/styles.css` | First Playable Wired | Reuses order-book rows, animates depth bars with transform-based frame interpolation, preserves active row classes across ticks, and adds one-shot activation/growth/melt cues. |
 | IMP-029 | Order-book wall decay feedback | SRS v0.2.5 | `src/domain/intraday/intradayState.ts`, `src/domain/intraday/orderBookWalls.ts`, `src/game/scenes/IntradayScene.ts`, `scripts/verify-run-flow.ts` | Domain Implemented / First Playable Wired | Adds a capped recent wall event log and renders the latest formed/melted/collapsed/removed/expired wall feedback in the Intraday status area. |
+| IMP-030 | Order-book wall state indicators | SRS v0.2.6 | `src/game/dom/intradayOverlays.ts`, `src/game/scenes/IntradayScene.ts`, `src/styles.css` | First Playable Wired | Adds active wall remaining-depth indicator bars and detailed row titles for remaining depth and refundable reserve. |
 
 ---
 
@@ -188,6 +190,7 @@ These steps currently validate that the accepted MVP Gherkin scenarios are execu
 | TC-WALL-DECAY-001 | Order-book wall decay | Partial melt reduces visible depth and refundable reserve, full melt removes the barrier, removal/expiry refund only remaining reserve, and synthetic depth uses remaining wall quantity. | TC Planned |
 | TC-WALL-VIS-001 | Order-book wall visual feedback | Depth bars interpolate smoothly, SIZE text animates with the same target, active classes do not restart every tick, and one-shot activation/growth/melt cues appear only on meaningful wall changes. | TC Planned |
 | TC-WALL-FEED-001 | Order-book wall decay feedback | Formed, melted, collapsed, removed, and expired wall events are capped, state-visible, and rendered with safe fictional terminology. | TC Planned |
+| TC-WALL-STATE-001 | Order-book wall state indicators | Active wall rows show remaining-depth indicator ratio, inactive rows hide indicators, and row titles include remaining depth and refundable reserve. | TC Planned |
 
 ---
 
