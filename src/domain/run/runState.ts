@@ -36,6 +36,8 @@ export interface RunState {
   readonly budget: number;
   readonly cumulativeProfit: number;
   readonly holdingRatio: number;
+  readonly averageEntryPrice: number | null;
+  readonly lastClosePrice: number | null;
   readonly surveillance: number;
   readonly socialCost: number;
   readonly autoCards: readonly AutoCardState[];
@@ -77,6 +79,8 @@ export function createRunState(options: CreateRunStateOptions = {}): RunState {
     budget: runDefaults.startingBudget,
     cumulativeProfit: 0,
     holdingRatio: runDefaults.initialHoldingRatio,
+    averageEntryPrice: null,
+    lastClosePrice: null,
     surveillance: runDefaults.initialSurveillance,
     socialCost: 0,
     autoCards: [{ cardId: startingCard, level: 1 }],

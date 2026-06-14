@@ -38,6 +38,7 @@ export interface DayCarryoverResult {
   readonly budgetCarried: boolean;
   readonly cumulativeProfitCarried: boolean;
   readonly holdingRatioCarried: boolean;
+  readonly averageEntryPriceCarried: boolean;
   readonly socialCostCarried: boolean;
   readonly autoCardsCarried: boolean;
   readonly surveillancePartiallyCarried: boolean;
@@ -83,6 +84,8 @@ export function prepareNextDayCarryover(input: DayCarryoverInput): DayCarryoverR
     budget: ending.budget,
     cumulativeProfit: input.runState.cumulativeProfit + input.daySettlement.actualProfit,
     holdingRatio: ending.holdingRatio,
+    averageEntryPrice: ending.holdingRatio > 0 ? ending.averageEntryPrice : null,
+    lastClosePrice: ending.holdingRatio > 0 ? ending.currentPrice : null,
     surveillance: nextDayInitials.surveillance,
     socialCost: input.daySettlement.socialCostTotal,
     marketAftereffects: aftereffects.map((aftereffect) => aftereffect.id),
@@ -97,6 +100,8 @@ export function prepareNextDayCarryover(input: DayCarryoverInput): DayCarryoverR
     cumulativeProfitCarried:
       nextRunState.cumulativeProfit === input.runState.cumulativeProfit + input.daySettlement.actualProfit,
     holdingRatioCarried: nextRunState.holdingRatio === ending.holdingRatio,
+    averageEntryPriceCarried:
+      ending.holdingRatio <= 0 ? nextRunState.averageEntryPrice === null : nextRunState.averageEntryPrice === ending.averageEntryPrice,
     socialCostCarried: nextRunState.socialCost === input.daySettlement.socialCostTotal,
     autoCardsCarried: JSON.stringify(nextRunState.autoCards) === JSON.stringify(input.runState.autoCards),
     surveillancePartiallyCarried: nextSurveillanceBase < ending.surveillance,
