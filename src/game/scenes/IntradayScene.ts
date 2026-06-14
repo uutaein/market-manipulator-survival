@@ -50,6 +50,7 @@ export class IntradayScene extends BaseDocumentScene {
   private manualActionButtonModes: Partial<Record<ManualActionId, "normal" | "active">> = {};
   private previousMarketBoardRanks = new Map<string, number>();
   private previousMarketTradeValues = new Map<string, number>();
+  private previousMarketTradeValueElapsedSec = 0;
   private autoChoiceObjects: Phaser.GameObjects.GameObject[] = [];
   private documentEventObjects: Phaser.GameObjects.GameObject[] = [];
   private retailSwarmObjects: Phaser.GameObjects.GameObject[] = [];
@@ -67,6 +68,7 @@ export class IntradayScene extends BaseDocumentScene {
     this.manualActionButtonModes = {};
     this.previousMarketBoardRanks = new Map();
     this.previousMarketTradeValues = new Map();
+    this.previousMarketTradeValueElapsedSec = 0;
 
     this.drawDocumentShell("장중 운용 화면", [], undefined, "LIVE SESSION");
     this.ensurePepeMascotTexture();
@@ -370,10 +372,13 @@ export class IntradayScene extends BaseDocumentScene {
           `보유 ${formatUnits(ledger.heldUnits)} / 매물 ${formatUnits(ledger.fictionalFloatUnits)} / 비중 ${formatNumber(
             state.holdingRatio
           )}%`,
-          `총 평가 ${formatBudget(ledger.totalAccountValue)} / 총 손익 ${formatSignedBudget(ledger.estimatedNetProfitLoss)}`,
+          `순자산 ${formatBudget(ledger.totalAccountValue)} / 총손익 ${formatSignedBudget(ledger.estimatedNetProfitLoss)} / Day손익 ${formatSignedBudget(
+            ledger.dayProfitLoss
+          )}`,
           `포지션 평가 ${formatBudget(ledger.positionMarketValue)} / 평가손익 ${formatSignedBudget(
             ledger.unrealizedPositionProfitLoss
           )}`,
+          `기준 Run ${formatBudget(ledger.runStartingBudget)} / Day ${formatBudget(ledger.startingBudget)}`,
           `자금 투입 ${formatBudget(ledger.netBudgetUsed)} / 회수 ${formatBudget(
             ledger.recoveredBudget
           )} / 예산 ${formatBudget(ledger.currentBudget)}`
@@ -393,7 +398,9 @@ export class IntradayScene extends BaseDocumentScene {
         `TIME ${state.timeRemainingSec}s / CHANGE ${formatPercent(state.priceChangePercent)} / TICK ${formatPercent(
           state.priceDeltaPerTick
         )}`,
-        `PARTICIPATION ${formatNumber(state.personalParticipation)} / LIQUIDITY ${formatNumber(state.marketLiquidity)}`,
+        `PARTICIPATION ${formatNumber(state.personalParticipation)} / MADNESS ${formatNumber(
+          state.madness
+        )} / LIQUIDITY ${formatNumber(state.marketLiquidity)}`,
         `SURVEILLANCE ${formatNumber(state.surveillance)} / VOLATILITY ${formatNumber(state.volatility)}`,
         `PRESSURE ${formatNumber(state.marketPressure)} / DOCUMENTS ${state.documentEventHistory.length}/${documentEventRules.maxEventsPerDay}`
       ].join("\n")
@@ -408,7 +415,7 @@ export class IntradayScene extends BaseDocumentScene {
     const pnl = ledger.estimatedNetProfitLoss;
     const isProfit = pnl >= 0;
 
-    this.pnlBadgeText.setText(`손익 ${formatSignedBudget(pnl)}   총 평가 ${formatBudget(ledger.totalAccountValue)}`);
+    this.pnlBadgeText.setText(`총손익 ${formatSignedBudget(pnl)}   순자산 ${formatBudget(ledger.totalAccountValue)}`);
     this.pnlBadgeText.setStyle({
       color: isProfit ? "#00c087" : "#f6465d",
       backgroundColor: isProfit ? "#0b1f19" : "#241316",
@@ -440,6 +447,15 @@ export class IntradayScene extends BaseDocumentScene {
     const playerState = gameSession.intradayState;
     const playerPriceChangePercent = playerState?.priceChangePercent ?? 0;
     const playerVolume = gameSession.priceHistory[gameSession.priceHistory.length - 1]?.fictionalVolume ?? 0;
+    const elapsedSec = playerState ? runDefaults.intradayDurationSec - playerState.timeRemainingSec : 0;
+
+    if (elapsedSec < this.previousMarketTradeValueElapsedSec) {
+      this.previousMarketTradeValues = new Map();
+      this.previousMarketTradeValueElapsedSec = 0;
+    }
+
+    const playerTradeValueImpulse =
+      playerState && gameSession.marketBoardState ? gameSession.consumeMarketDashboardTradeValueImpulse() : 0;
     const model = buildMarketTerminalModel(
       gameSession.marketBoardState,
       playerPriceChangePercent,
@@ -451,10 +467,15 @@ export class IntradayScene extends BaseDocumentScene {
       },
       this.previousMarketBoardRanks,
       this.previousMarketTradeValues,
+      elapsedSec,
+      this.previousMarketTradeValueElapsedSec,
+      playerTradeValueImpulse,
       gameSession.ensureDay().morningNewsItems
     );
     this.previousMarketBoardRanks = model.ranks;
     this.previousMarketTradeValues = model.tradeValues;
+    this.previousMarketTradeValueElapsedSec = elapsedSec;
+    gameSession.updateMarketDashboardSnapshot(model.ranks, model.tradeValues);
     this.marketTerminalOverlay?.update(model);
   }
 
@@ -614,7 +635,9 @@ export class IntradayScene extends BaseDocumentScene {
       .text(
         panelX + 12,
         panelY + 9,
-        `열광도(RSI) ${formatNumber(model.participationNumber)} / ${getPepeSwarmLabel(mood)}`,
+        `MADNESS ${formatNumber(state.madness)} / 열광도 ${formatNumber(model.participationNumber)} / ${getPepeSwarmLabel(
+          mood
+        )}`,
         {
           color: getParticipantMoodTextColor(participantMood.profitLossPercent, model),
           fontFamily: this.fontFamily,
@@ -988,17 +1011,20 @@ function buildMarketTerminalModel(
   },
   previousRanks: ReadonlyMap<string, number> = new Map(),
   previousTradeValues: ReadonlyMap<string, number> = new Map(),
+  elapsedSec = 0,
+  previousTradeValueElapsedSec = 0,
+  playerTradeValueImpulse = 0,
   morningNewsItems: readonly MorningNews[] = []
 ): MarketTerminalModel {
   if (!marketBoardState) {
     return { peerRows: [], sectorRows: [], dashboardRows: [], rankRows: [], ranks: new Map(), tradeValues: new Map() };
   }
 
-  const boardRows = marketBoardState.entries
+  const boardBaseRows = marketBoardState.entries
     .map((entry, index): MarketBoardRankRow =>
       createMarketBoardEntryRow(entry, playerPriceChangePercent, playerVolume, playerQuote, index, previousRanks)
     );
-  const visibleAssetRows = new Map(boardRows.filter((row) => row.key.startsWith("asset:")).map((row) => [row.key, row]));
+  const visibleAssetRows = new Map(boardBaseRows.filter((row) => row.key.startsWith("asset:")).map((row) => [row.key, row]));
   const assetRankBaseRows = assets.map((asset, index) => {
     const key = `asset:${asset.id}`;
     return (
@@ -1015,11 +1041,21 @@ function buildMarketTerminalModel(
       )
     );
   });
+  const accumulatedRows = accumulateMarketTradeValues(
+    uniqueMarketRows([...boardBaseRows, ...assetRankBaseRows]),
+    previousTradeValues,
+    elapsedSec,
+    previousTradeValueElapsedSec,
+    `asset:${marketBoardState.playerAssetId}`,
+    playerTradeValueImpulse
+  );
+  const accumulatedByKey = new Map(accumulatedRows.map((row) => [row.key, row]));
+  const boardRows = boardBaseRows.map((row) => accumulatedByKey.get(row.key) ?? row);
+  const assetRankRows = assetRankBaseRows.map((row) => accumulatedByKey.get(row.key) ?? row);
 
-  const smoothedAssetRows = smoothMarketTradeValues(assetRankBaseRows, previousTradeValues);
-  const rankedAssetRows = applyMarketRanks(smoothedAssetRows, previousRanks);
+  const rankedAssetRows = applyMarketRanks(assetRankRows, previousRanks);
   const ranks = new Map(rankedAssetRows.map((row) => [row.key, row.rank]));
-  const tradeValues = new Map(rankedAssetRows.map((row) => [row.key, row.fictionalTradeValue]));
+  const tradeValues = new Map(accumulatedRows.map((row) => [row.key, row.fictionalTradeValue]));
   const rankByKey = new Map(rankedAssetRows.map((row) => [row.key, row]));
   const playerRankIndex = Math.max(0, rankedAssetRows.findIndex((row) => row.roleLabel === "ME"));
   const dashboardStart = clampRankWindowStart(playerRankIndex, rankedAssetRows.length, 7);
@@ -1103,27 +1139,43 @@ function applyMarketRanks(
     });
 }
 
-const marketDashboardTradeValueEmaAlpha = 0.28;
+function uniqueMarketRows(rows: readonly MarketBoardRankRow[]): readonly MarketBoardRankRow[] {
+  return [...new Map(rows.map((row) => [row.key, row])).values()];
+}
 
-function smoothMarketTradeValues(
+function accumulateMarketTradeValues(
   rows: readonly MarketBoardRankRow[],
-  previousTradeValues: ReadonlyMap<string, number>
+  previousTradeValues: ReadonlyMap<string, number>,
+  elapsedSec: number,
+  previousElapsedSec: number,
+  playerKey: string,
+  playerTradeValueImpulse: number
 ): readonly MarketBoardRankRow[] {
+  const elapsedDeltaSec =
+    previousTradeValues.size === 0
+      ? Math.max(1, elapsedSec)
+      : Math.max(0, elapsedSec - previousElapsedSec);
+
   return rows.map((row) => {
-    const previous = previousTradeValues.get(row.key);
-
-    if (previous === undefined) {
-      return row;
-    }
-
-    const smoothedTradeValue =
-      previous * (1 - marketDashboardTradeValueEmaAlpha) + row.fictionalTradeValue * marketDashboardTradeValueEmaAlpha;
+    const previous = previousTradeValues.get(row.key) ?? 0;
+    const increment = calculateMarketTradeValueIncrement(row.fictionalTradeValue, elapsedDeltaSec);
+    const impulse = row.key === playerKey ? playerTradeValueImpulse : 0;
+    const cumulativeTradeValue = Math.max(previous, previous + increment + impulse);
 
     return {
       ...row,
-      fictionalTradeValue: Math.round(smoothedTradeValue)
+      fictionalVolume: Math.max(row.fictionalVolume, Math.round(cumulativeTradeValue / Math.max(1, row.currentPrice))),
+      fictionalTradeValue: Math.round(cumulativeTradeValue)
     };
   });
+}
+
+function calculateMarketTradeValueIncrement(activityTradeValue: number, elapsedDeltaSec: number): number {
+  if (elapsedDeltaSec <= 0) {
+    return 0;
+  }
+
+  return Math.max(1, (activityTradeValue * elapsedDeltaSec) / runDefaults.intradayDurationSec);
 }
 
 function formatNumber(value: number): string {

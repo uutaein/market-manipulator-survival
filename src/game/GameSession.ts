@@ -30,6 +30,7 @@ import {
   type DocumentEventChoiceResult
 } from "../domain/intraday/documentEvents";
 import { applyRetailSwarmRiskEffects, type RetailSwarmEffectResult } from "../domain/intraday/retailSwarm";
+import { calculatePositionSettlementMadnessEffects } from "../domain/intraday/madness";
 import {
   cancelManualAction,
   tickManualActionCooldowns,
@@ -62,6 +63,7 @@ import {
   type DaySettlementResult,
   type FinalSettlementResult
 } from "../domain/settlement/settlement";
+import { createSeededRandom } from "../domain/random/SeededRandom";
 import type { DayResultCategory } from "../domain/balancing/settlementValues";
 import { getBrowserStorage } from "./browserStorage";
 
@@ -72,6 +74,7 @@ export interface PriceHistoryPoint {
 }
 
 export interface IntradayMoneyLedger {
+  readonly runStartingBudget: number;
   readonly startingBudget: number;
   readonly currentBudget: number;
   readonly openingPrice: number;
@@ -86,6 +89,8 @@ export interface IntradayMoneyLedger {
   readonly recoveredBudget: number;
   readonly netBudgetUsed: number;
   readonly budgetChange: number;
+  readonly dayProfitLoss: number;
+  readonly runProfitLoss: number;
   readonly assessedProfitLoss: number;
   readonly estimatedNetProfitLoss: number;
 }
@@ -136,9 +141,13 @@ export class GameSession {
   lastRetailSwarmEffectResult: RetailSwarmEffectResult | null = null;
   lastFinalSaveUpdatedBest = false;
   priceHistory: PriceHistoryPoint[] = [];
+  marketDashboardPlayerRank: number | null = null;
+  marketDashboardPlayerValue = 0;
   private intradayStartingBudget = 0;
   private intradaySpentBudget = 0;
   private intradayRecoveredBudget = 0;
+  private pendingMarketDashboardTradeValueImpulse = 0;
+  private lastMarketDashboardFeedbackElapsedSec: number | null = null;
   private lastRetailSwarmState: RetailSwarmState | null = null;
   private autoCardLastTriggeredAt: Partial<Record<AutoCardState["cardId"], number>> = {};
 
@@ -168,6 +177,7 @@ export class GameSession {
     this.surveillanceHistory = [];
     this.priceHistory = [];
     this.resetIntradayMoneyLedger(0);
+    this.resetMarketDashboardFeedback();
     this.lastFinalSaveUpdatedBest = false;
     this.resetDayAutoCardSession();
     this.saveCurrentRunProgress();
@@ -189,6 +199,7 @@ export class GameSession {
     this.surveillanceHistory = [];
     this.priceHistory = [];
     this.resetIntradayMoneyLedger(0);
+    this.resetMarketDashboardFeedback();
     this.lastFinalSaveUpdatedBest = false;
     this.resetDayAutoCardSession();
     this.saveCurrentRunProgress();
@@ -226,6 +237,7 @@ export class GameSession {
     this.surveillanceHistory = [];
     this.priceHistory = [];
     this.resetIntradayMoneyLedger(0);
+    this.resetMarketDashboardFeedback();
     this.lastFinalSaveUpdatedBest = false;
     this.resetDayAutoCardSession();
     return true;
@@ -272,6 +284,7 @@ export class GameSession {
     this.finalSettlementResult = null;
     this.priceHistory = [];
     this.resetIntradayMoneyLedger(0);
+    this.resetMarketDashboardFeedback();
     this.resetDayAutoCardSession();
     return this.dayState;
   }
@@ -309,6 +322,7 @@ export class GameSession {
     this.recordBudgetLedgerDelta(dayState.preOpenCardEffect?.budgetDelta ?? 0);
     this.intradayState = createIntradayState(runState, dayState);
     this.marketBoardState = buildMarketBoard(runState, dayState);
+    this.resetMarketDashboardFeedback();
     this.lastAutoCardEffects = [];
     this.lastAutoCardRewardMessage = null;
     this.priceHistory = [createPriceHistoryPoint(this.intradayState)];
@@ -333,7 +347,9 @@ export class GameSession {
 
     const actionProgressState = tickManualActionCooldowns(currentState, 1);
     this.recordBudgetLedgerDelta(actionProgressState.budget - currentState.budget);
-    const tickedState = runPlayerPriceTick(actionProgressState, {
+    this.queueManualActionDashboardTradeValueProgress(currentState, actionProgressState);
+    const dashboardPressureState = this.applyMarketDashboardRankBuyPressure(actionProgressState);
+    const tickedState = runPlayerPriceTick(dashboardPressureState, {
       runSeed: runState.runSeed,
       dayIndex: runState.currentDay
     });
@@ -415,7 +431,9 @@ export class GameSession {
       ...runState,
       selectedSectorId: asset.sectorId,
       selectedAssetId: asset.id,
-      holdingRatio: intradayRepositionStartingHolding
+      holdingRatio: intradayRepositionStartingHolding,
+      averageEntryPrice: null,
+      lastClosePrice: null
     };
     const quote = createFictionalQuoteState(
       this.runState,
@@ -423,6 +441,10 @@ export class GameSession {
       intradayRepositionStartingHolding,
       runDefaults.initialPriceChangePercent
     );
+    this.runState = {
+      ...this.runState,
+      averageEntryPrice: quote.averageEntryPrice
+    };
     this.marketBriefing = createMarketBriefing(this.runState, dayState);
     this.intradayState = clampIntradayState({
       ...state,
@@ -445,6 +467,7 @@ export class GameSession {
       latestPriceComponents: null
     });
     this.marketBoardState = buildMarketBoard(this.runState, dayState);
+    this.resetMarketDashboardFeedback();
     this.priceHistory = [createPriceHistoryPoint(this.intradayState)];
     this.recordBudgetLedgerDelta(-intradayRepositionEntryCost);
     this.saveCurrentRunProgress();
@@ -548,6 +571,7 @@ export class GameSession {
     this.daySettlementResult = null;
     this.priceHistory = [];
     this.resetIntradayMoneyLedger(0);
+    this.resetMarketDashboardFeedback();
     this.beginDay();
     this.saveCurrentRunProgress();
   }
@@ -591,10 +615,12 @@ export class GameSession {
     const positionCostBasis = getNormalizedPositionCostBasis(state);
     const unrealizedPositionProfitLoss = round1(positionMarketValue - positionCostBasis);
     const totalAccountValue = round1(state.budget + positionMarketValue);
-    const assessedProfitLoss = round1(totalAccountValue - this.intradayStartingBudget);
+    const dayProfitLoss = round1(totalAccountValue - this.intradayStartingBudget);
+    const runProfitLoss = round1(totalAccountValue - runDefaults.startingBudget);
     const netBudgetUsed = round1(this.intradaySpentBudget - this.intradayRecoveredBudget);
 
     return {
+      runStartingBudget: runDefaults.startingBudget,
       startingBudget: this.intradayStartingBudget,
       currentBudget: state.budget,
       openingPrice: state.openingPrice,
@@ -609,9 +635,59 @@ export class GameSession {
       recoveredBudget: round1(this.intradayRecoveredBudget),
       netBudgetUsed,
       budgetChange: round1(state.budget - this.intradayStartingBudget),
-      assessedProfitLoss,
-      estimatedNetProfitLoss: assessedProfitLoss
+      dayProfitLoss,
+      runProfitLoss,
+      assessedProfitLoss: runProfitLoss,
+      estimatedNetProfitLoss: runProfitLoss
     };
+  }
+
+  updateMarketDashboardSnapshot(
+    ranks: ReadonlyMap<string, number>,
+    tradeValues: ReadonlyMap<string, number>
+  ): void {
+    const playerKey = `asset:${this.selectedAssetId}`;
+    this.marketDashboardPlayerRank = ranks.get(playerKey) ?? null;
+    this.marketDashboardPlayerValue = tradeValues.get(playerKey) ?? this.marketDashboardPlayerValue;
+  }
+
+  consumeMarketDashboardTradeValueImpulse(): number {
+    const impulse = this.pendingMarketDashboardTradeValueImpulse;
+    this.pendingMarketDashboardTradeValueImpulse = 0;
+    return impulse;
+  }
+
+  private applyMarketDashboardRankBuyPressure(state: IntradayState): IntradayState {
+    const rank = this.marketDashboardPlayerRank;
+    const elapsedSec = getIntradayElapsedSec(state);
+
+    if (!rank || rank > marketDashboardFeedbackMaxRank || this.lastMarketDashboardFeedbackElapsedSec === elapsedSec) {
+      return state;
+    }
+
+    this.lastMarketDashboardFeedbackElapsedSec = elapsedSec;
+
+    const runState = this.ensureRun();
+    const rankScore = (marketDashboardFeedbackMaxRank + 1 - rank) / marketDashboardFeedbackMaxRank;
+    const chance = Math.min(
+      marketDashboardFeedbackMaxChance,
+      marketDashboardFeedbackBaseChance +
+        rankScore * marketDashboardFeedbackRankChanceScale +
+        state.madness * marketDashboardFeedbackMadnessChanceScale
+    );
+    const random = createSeededRandom(
+      `${runState.runSeed}:day:${runState.currentDay}:dashboard-feedback:${elapsedSec}:${rank}`
+    );
+
+    if (random.next() > chance) {
+      return state;
+    }
+
+    return clampIntradayState({
+      ...state,
+      marketPressure: state.marketPressure + round1(0.5 + rankScore * 1.8),
+      personalParticipation: state.personalParticipation + round1(0.4 + rankScore * 1.2)
+    });
   }
 
   private applyDueAutoCardEffects(state: IntradayState): IntradayState {
@@ -732,7 +808,7 @@ export class GameSession {
       return;
     }
 
-    const response = getManualActionChartResponse(result.action.id);
+    const response = getManualActionChartResponse(result.action.id, result.state);
     const basePrice = this.intradayState.priceChangePercent;
 
     for (const point of response.points) {
@@ -781,6 +857,8 @@ export class GameSession {
       phase: "final_settlement",
       budget: state.budget,
       holdingRatio: state.holdingRatio,
+      averageEntryPrice: state.holdingRatio > 0 ? state.averageEntryPrice : null,
+      lastClosePrice: state.holdingRatio > 0 ? state.currentPrice : null,
       surveillance: state.surveillance,
       socialCost: runState.socialCost + state.pendingSocialCostDelta,
       failedReason: reason
@@ -882,6 +960,30 @@ export class GameSession {
     this.intradayRecoveredBudget = 0;
   }
 
+  private resetMarketDashboardFeedback(): void {
+    this.marketDashboardPlayerRank = null;
+    this.marketDashboardPlayerValue = 0;
+    this.pendingMarketDashboardTradeValueImpulse = 0;
+    this.lastMarketDashboardFeedbackElapsedSec = null;
+  }
+
+  private queueManualActionDashboardTradeValueProgress(previousState: IntradayState, nextState: IntradayState): void {
+    const impulse = previousState.activeManualActionEffects.reduce((total, effect) => {
+      const nextRemainingSec = nextState.activeManualActionEffects.find(
+        (nextEffect) => nextEffect.actionId === effect.actionId
+      )?.remainingSec ?? 0;
+      const progress = 1 - nextRemainingSec / Math.max(1, effect.totalSec);
+
+      return total + getManualActionDashboardTradeValueProgressImpulse(effect.actionId, nextState, progress);
+    }, 0);
+
+    if (impulse > 0) {
+      this.pendingMarketDashboardTradeValueImpulse = Math.round(
+        this.pendingMarketDashboardTradeValueImpulse + impulse
+      );
+    }
+  }
+
   private recordBudgetLedgerDelta(delta: number): void {
     if (delta < 0) {
       this.intradaySpentBudget = round1(this.intradaySpentBudget + Math.abs(delta));
@@ -899,8 +1001,18 @@ export const gameSession = new GameSession();
 export const intradayRepositionEntryCost = 5;
 export const intradayRepositionStartingHolding = 12;
 
+const marketDashboardFeedbackMaxRank = 8;
+const marketDashboardFeedbackBaseChance = 0.01;
+const marketDashboardFeedbackRankChanceScale = 0.13;
+const marketDashboardFeedbackMadnessChanceScale = 0.0008;
+const marketDashboardFeedbackMaxChance = 0.22;
+
 function round1(value: number): number {
   return Math.round(value * 10) / 10;
+}
+
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
 }
 
 function getNormalizedPositionMarketValue(state: IntradayState): number {
@@ -941,11 +1053,14 @@ function calculateFictionalVolume(state: IntradayState): number {
   const participation = state.personalParticipation * 2.2;
   const liquidity = state.marketLiquidity * 1.4;
   const volatility = state.volatility * 1.1;
+  const madness = state.madness * 1.35;
   const pressure = Math.abs(state.marketPressure) * 0.9;
   const tickImpulse = Math.abs(state.priceDeltaPerTick) * 260;
   const simulatorVolumeFactor = state.latestPriceComponents?.externalSimulatorVolumeFactor ?? 1;
 
-  return Math.round((80 + participation + liquidity + volatility + pressure + tickImpulse) * simulatorVolumeFactor);
+  return Math.round(
+    (80 + participation + liquidity + volatility + madness + pressure + tickImpulse) * simulatorVolumeFactor
+  );
 }
 
 function getRecentPriceHighPercent(history: readonly PriceHistoryPoint[], lookbackSec: number): number {
@@ -970,10 +1085,6 @@ function getDefaultPreOpenChoice(runState: RunState): string {
 }
 
 function getImmediateFailureReason(state: IntradayState): string | null {
-  if (state.budget <= runDefaults.minimumBudgetFailureThreshold) {
-    return "budget exhaustion";
-  }
-
   if (state.surveillance >= 100) {
     return "surveillance reached 100";
   }
@@ -985,47 +1096,85 @@ function getImmediateFailureReason(state: IntradayState): string | null {
   return null;
 }
 
-function getManualActionChartResponse(actionId: ManualActionId): ManualActionChartResponse {
+function getManualActionDashboardTradeValueProgressImpulse(
+  actionId: ManualActionId,
+  state: IntradayState,
+  progress: number
+): number {
+  const progress01 = Math.min(1, Math.max(0, progress));
+  const baseNotional = state.openingPrice * state.fictionalFloatUnits;
+
+  switch (actionId) {
+    case "liquidity_supply":
+      return Math.round(baseNotional * (0.0045 + progress01 * 0.0145));
+    case "price_push":
+      return Math.round(baseNotional * (0.0038 + progress01 * 0.012));
+    case "overheat_cooldown":
+      return Math.round(baseNotional * (0.0032 + progress01 * 0.009));
+    case "position_settlement": {
+      const madnessIntensity = calculatePositionSettlementMadnessEffects(state.madness).intensity;
+
+      return Math.round(baseNotional * (0.006 + progress01 * 0.02 + madnessIntensity * 0.006));
+    }
+  }
+}
+
+function getManualActionChartResponse(actionId: ManualActionId, state: IntradayState): ManualActionChartResponse {
   switch (actionId) {
     case "liquidity_supply":
       return {
-        finalPriceDelta: 0.18,
+        finalPriceDelta: 0.02,
         finalElapsedOffsetSec: 0.45,
-        finalVolumeMultiplier: 4.2,
+        finalVolumeMultiplier: 1.08,
         points: [
-          { elapsedOffsetSec: 0.12, priceDelta: 0.16, volumeMultiplier: 3.2 },
-          { elapsedOffsetSec: 0.28, priceDelta: -0.04, volumeMultiplier: 4.6 }
+          { elapsedOffsetSec: 0.12, priceDelta: 0.01, volumeMultiplier: 1.04 },
+          { elapsedOffsetSec: 0.28, priceDelta: 0.01, volumeMultiplier: 1.08 }
         ]
       };
     case "price_push":
       return {
-        finalPriceDelta: 0.32,
+        finalPriceDelta: 0.05,
         finalElapsedOffsetSec: 0.52,
-        finalVolumeMultiplier: 2.2,
+        finalVolumeMultiplier: 1.12,
         points: [
-          { elapsedOffsetSec: 0.16, priceDelta: 0.08, volumeMultiplier: 1.6 },
-          { elapsedOffsetSec: 0.34, priceDelta: 0.19, volumeMultiplier: 1.9 }
+          { elapsedOffsetSec: 0.16, priceDelta: 0.02, volumeMultiplier: 1.06 },
+          { elapsedOffsetSec: 0.34, priceDelta: 0.04, volumeMultiplier: 1.1 }
         ]
       };
     case "overheat_cooldown":
       return {
-        finalPriceDelta: -1.25,
+        finalPriceDelta: -0.04,
         finalElapsedOffsetSec: 0.38,
-        finalVolumeMultiplier: 2.4,
+        finalVolumeMultiplier: 1.1,
         points: [
-          { elapsedOffsetSec: 0.12, priceDelta: 0.08, volumeMultiplier: 1.8 },
-          { elapsedOffsetSec: 0.25, priceDelta: -0.62, volumeMultiplier: 2.2 }
+          { elapsedOffsetSec: 0.12, priceDelta: 0.01, volumeMultiplier: 1.05 },
+          { elapsedOffsetSec: 0.25, priceDelta: -0.03, volumeMultiplier: 1.09 }
         ]
       };
     case "position_settlement":
+      const madnessEffects = calculatePositionSettlementMadnessEffects(state.madness);
+      const shockScale = madnessEffects.chartShockScale;
+      const recoveryBounce = madnessEffects.chartRecoveryBounce;
       return {
-        finalPriceDelta: -7.8,
+        finalPriceDelta: round2(-0.22 * shockScale + recoveryBounce * 0.04),
         finalElapsedOffsetSec: 0.48,
-        finalVolumeMultiplier: 8.6,
+        finalVolumeMultiplier: round2(1.16 + madnessEffects.intensity * 0.16),
         points: [
-          { elapsedOffsetSec: 0.1, priceDelta: -1.1, volumeMultiplier: 3.2 },
-          { elapsedOffsetSec: 0.24, priceDelta: -3.4, volumeMultiplier: 5.6 },
-          { elapsedOffsetSec: 0.38, priceDelta: -6.2, volumeMultiplier: 7.8 }
+          {
+            elapsedOffsetSec: 0.1,
+            priceDelta: round2(-0.05 * shockScale),
+            volumeMultiplier: round2(1.06 + madnessEffects.intensity * 0.06)
+          },
+          {
+            elapsedOffsetSec: 0.24,
+            priceDelta: round2(-0.12 * shockScale + recoveryBounce * 0.01),
+            volumeMultiplier: round2(1.1 + madnessEffects.intensity * 0.1)
+          },
+          {
+            elapsedOffsetSec: 0.38,
+            priceDelta: round2(-0.18 * shockScale + recoveryBounce * 0.025),
+            volumeMultiplier: round2(1.14 + madnessEffects.intensity * 0.14)
+          }
         ]
       };
   }

@@ -6,6 +6,7 @@ import { retailSwarmValues } from "../balancing/retailSwarmValues";
 import { runDefaults } from "../balancing/runDefaults";
 import { createSeededRandom } from "../random/SeededRandom";
 import type { RunState } from "../run/runState";
+import { calculateMadnessIndex } from "./madness";
 import { getActiveNewsPricePressure, getActiveNewsStatImpact } from "./newsPressure";
 
 export type RetailSwarmState = "interest" | "overheated" | "panic";
@@ -59,6 +60,7 @@ export interface IntradayState {
   readonly marketPressure: number;
   readonly holdingRatio: number;
   readonly personalParticipation: number;
+  readonly madness: number;
   readonly marketLiquidity: number;
   readonly surveillance: number;
   readonly volatility: number;
@@ -95,6 +97,7 @@ export interface DocumentEventHistoryEntry {
 export type BoundedIntradayStat =
   | "holdingRatio"
   | "personalParticipation"
+  | "madness"
   | "marketLiquidity"
   | "surveillance"
   | "volatility"
@@ -106,6 +109,10 @@ export function createIntradayState(runState: RunState, dayState: DayState): Int
   const influenceResistance = getAssetInfluenceResistanceById(runState.selectedAssetId);
   const holdingRatio = applyEffect(runState.holdingRatio, effect, "holdingRatioDelta");
   const quote = createFictionalQuoteState(runState, dayState, holdingRatio, runDefaults.initialPriceChangePercent);
+  const personalParticipation = runDefaults.initialPersonalParticipation + newsImpact.personalParticipationDelta;
+  const marketPressure =
+    applyEffect(runDefaults.initialMarketPressure, effect, "marketPressureDelta") - (influenceResistance - 1) * 6;
+  const volatility = applyEffect(runDefaults.initialVolatility, effect, "volatilityDelta") + newsImpact.volatilityDelta;
 
   return clampIntradayState({
     timeRemainingSec: runDefaults.intradayDurationSec,
@@ -119,15 +126,21 @@ export function createIntradayState(runState: RunState, dayState: DayState): Int
     priceChangePercent: runDefaults.initialPriceChangePercent,
     priceDeltaPerTick: 0,
     budget: applyEffect(runState.budget, effect, "budgetDelta"),
-    marketPressure: applyEffect(runDefaults.initialMarketPressure, effect, "marketPressureDelta") - (influenceResistance - 1) * 6,
+    marketPressure,
     holdingRatio,
-    personalParticipation: runDefaults.initialPersonalParticipation + newsImpact.personalParticipationDelta,
+    personalParticipation,
+    madness: calculateMadnessIndex({
+      personalParticipation,
+      priceChangePercent: runDefaults.initialPriceChangePercent,
+      marketPressure,
+      volatility
+    }),
     marketLiquidity:
       applyEffect(runDefaults.initialMarketLiquidity, effect, "marketLiquidityDelta") +
       newsImpact.marketLiquidityDelta +
       (influenceResistance - 1) * 8,
     surveillance: applyEffect(runState.surveillance, effect, "surveillanceDelta") + newsImpact.surveillanceDelta,
-    volatility: applyEffect(runDefaults.initialVolatility, effect, "volatilityDelta") + newsImpact.volatilityDelta,
+    volatility,
     competitionPressure: runDefaults.initialCompetitionPressure + (influenceResistance - 1) * 12,
     activeNewsPricePressure: getActiveNewsPricePressure(runState, dayState.morningNewsItems),
     marketAftereffectPressure: 0,
@@ -189,6 +202,7 @@ export function clampIntradayState(state: IntradayState): IntradayState {
     marketPressure: clamp(state.marketPressure, -100, 100),
     holdingRatio: clamp01To100(state.holdingRatio),
     personalParticipation: clamp01To100(state.personalParticipation),
+    madness: clamp01To100(state.madness),
     marketLiquidity: clamp01To100(state.marketLiquidity),
     surveillance: clamp01To100(state.surveillance),
     volatility: clamp01To100(state.volatility),
@@ -198,9 +212,11 @@ export function clampIntradayState(state: IntradayState): IntradayState {
   const currentPrice = calculateCurrentPrice(clamped.openingPrice, clamped.priceChangePercent);
   const fictionalFloatUnits = Math.max(1, Math.round(clamped.fictionalFloatUnits));
   const heldUnits = Math.round((fictionalFloatUnits * clamped.holdingRatio) / 100);
+  const madness = calculateMadnessIndex(clamped);
 
   return {
     ...clamped,
+    madness,
     currentPrice,
     fictionalFloatUnits,
     heldUnits,
@@ -217,16 +233,17 @@ export interface FictionalQuoteState {
 }
 
 export function createFictionalQuoteState(
-  runState: Pick<RunState, "runSeed" | "selectedAssetId">,
+  runState: Pick<RunState, "runSeed" | "selectedAssetId" | "holdingRatio" | "averageEntryPrice" | "lastClosePrice">,
   dayState: Pick<DayState, "dayIndex" | "preOpenCardId">,
   holdingRatio: number,
   priceChangePercent: number
 ): FictionalQuoteState {
   const random = createSeededRandom(`${runState.runSeed}:day:${dayState.dayIndex}:quote:${runState.selectedAssetId}`);
-  const openingPrice = roundedToTick(
+  const seededOpeningPrice = roundedToTick(
     random.nextInt(runDefaults.openingPriceMin, runDefaults.openingPriceMax + runDefaults.openingPriceTick),
     runDefaults.openingPriceTick
   );
+  const openingPrice = getOpeningPriceForDay(runState, dayState, seededOpeningPrice);
   const fictionalFloatUnits = roundedToTick(
     random.nextInt(runDefaults.fictionalFloatUnitMin, runDefaults.fictionalFloatUnitMax + runDefaults.fictionalFloatUnitTick),
     runDefaults.fictionalFloatUnitTick
@@ -235,7 +252,8 @@ export function createFictionalQuoteState(
     dayState.preOpenCardId === "early_positioning"
       ? -getEarlyPositioningEntryPremiumPercent(runState)
       : runDefaults.baselineEntryDiscountPercent;
-  const averageEntryPrice = roundedToTick(openingPrice * (1 - entryDiscount / 100), runDefaults.openingPriceTick);
+  const newEntryPrice = roundedToTick(openingPrice * (1 - entryDiscount / 100), runDefaults.openingPriceTick);
+  const averageEntryPrice = calculateAverageEntryPriceForDay(runState, holdingRatio, newEntryPrice);
   const heldUnits = Math.round((fictionalFloatUnits * clamp(holdingRatio, 0, 100)) / 100);
 
   return {
@@ -245,6 +263,43 @@ export function createFictionalQuoteState(
     heldUnits,
     fictionalFloatUnits
   };
+}
+
+function getOpeningPriceForDay(
+  runState: Pick<RunState, "holdingRatio" | "lastClosePrice">,
+  dayState: Pick<DayState, "dayIndex">,
+  seededOpeningPrice: number
+): number {
+  if (dayState.dayIndex > 1 && runState.holdingRatio > 0 && runState.lastClosePrice && runState.lastClosePrice > 0) {
+    return roundedToTick(runState.lastClosePrice, runDefaults.openingPriceTick);
+  }
+
+  return seededOpeningPrice;
+}
+
+function calculateAverageEntryPriceForDay(
+  runState: Pick<RunState, "holdingRatio" | "averageEntryPrice">,
+  nextHoldingRatio: number,
+  newEntryPrice: number
+): number {
+  const previousHoldingRatio = clamp(runState.holdingRatio, 0, 100);
+  const previousAverageEntryPrice = runState.averageEntryPrice;
+
+  if (!previousAverageEntryPrice || previousHoldingRatio <= 0) {
+    return newEntryPrice;
+  }
+
+  const clampedNextHoldingRatio = clamp(nextHoldingRatio, 0, 100);
+  const addedHoldingRatio = Math.max(0, clampedNextHoldingRatio - previousHoldingRatio);
+
+  if (addedHoldingRatio <= 0 || clampedNextHoldingRatio <= 0) {
+    return previousAverageEntryPrice;
+  }
+
+  return roundedToTick(
+    (previousAverageEntryPrice * previousHoldingRatio + newEntryPrice * addedHoldingRatio) / clampedNextHoldingRatio,
+    runDefaults.openingPriceTick
+  );
 }
 
 export function getEarlyPositioningEntryPremiumPercent(

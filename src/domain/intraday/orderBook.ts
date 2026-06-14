@@ -37,6 +37,7 @@ export function buildOrderBookProfile(state: IntradayState, context: OrderBookCo
     const baseDepth = 38 + state.marketLiquidity * 0.42 + distance * 7 + assetDepth + (random.next() * 24 - 12);
     const pressure = state.marketPressure;
     const participation = state.personalParticipation;
+    const madness = state.madness;
     const holding = state.holdingRatio;
     const askDepth = clamp(
       baseDepth + Math.max(0, -pressure) * 0.25 + Math.max(0, state.priceChangePercent) * 1.4 - Math.max(0, pressure) * 0.36,
@@ -44,7 +45,12 @@ export function buildOrderBookProfile(state: IntradayState, context: OrderBookCo
       100
     );
     const bidDepth = clamp(
-      baseDepth + Math.max(0, pressure) * 0.18 + holding * 0.12 - state.volatility * 0.08 + participation * 0.04,
+      baseDepth +
+        Math.max(0, pressure) * 0.18 +
+        holding * 0.12 -
+        state.volatility * 0.08 +
+        participation * 0.04 +
+        madness * 0.12,
       8,
       100
     );

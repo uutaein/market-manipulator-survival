@@ -7,6 +7,7 @@ import {
 } from "../balancing/manualActionValues";
 import { runDefaults } from "../balancing/runDefaults";
 import { applyIntradayStatUpdate, clamp, clampIntradayState, type IntradayState } from "./intradayState";
+import { calculatePositionSettlementMadnessEffects } from "./madness";
 
 export interface ManualActionResult {
   readonly state: IntradayState;
@@ -19,6 +20,17 @@ export interface ManualActionResult {
 export const manualActions = Object.values(manualActionValues);
 
 const acquisitionPricePremiumPercent = 6;
+
+const noPositionSettlementMadnessEffects = {
+  intensity: 0,
+  sellPressureAbsorption: 0,
+  retailParticipationBoost: 0,
+  bidLiquidityBoost: 0,
+  volatilityBoost: 0,
+  budgetRecoveryMultiplier: 1,
+  chartShockScale: 1,
+  chartRecoveryBounce: 0
+} as const;
 
 export function getManualActionDisplayNames(): readonly string[] {
   return manualActions.map((action) => action.displayName);
@@ -183,19 +195,31 @@ export function tickManualActionCooldowns(state: IntradayState, seconds: number 
     const cardMultiplier = getActionEffectMultiplier(state, effect.actionId);
     const surveillanceMultiplier = getActionSurveillanceMultiplier(state, effect.actionId);
     const impactMultiplier = getActionImpactMultiplier(state, effect.actionId);
+    const madnessEffects =
+      effect.actionId === "position_settlement"
+        ? calculatePositionSettlementMadnessEffects(state.madness)
+        : noPositionSettlementMadnessEffects;
 
     const pressureBonus = effect.actionId === "liquidity_supply" ? state.liquiditySupplyPressureBonus : 0;
+    const baseMarketPressureDelta = (action.marketPressureDelta + pressureBonus) * cardMultiplier * impactMultiplier;
+    const marketPressureDelta =
+      baseMarketPressureDelta < 0
+        ? baseMarketPressureDelta * (1 - madnessEffects.sellPressureAbsorption)
+        : baseMarketPressureDelta;
 
     if (appliedSeconds > 0) {
       appliedActionIds.add(effect.actionId);
     }
 
-    effectDelta.marketPressure += (action.marketPressureDelta + pressureBonus) * cardMultiplier * impactMultiplier * fraction;
-    effectDelta.marketLiquidity += action.marketLiquidityDelta * cardMultiplier * fraction;
-    effectDelta.personalParticipation += action.personalParticipationDelta * cardMultiplier * impactMultiplier * fraction;
+    effectDelta.marketPressure += marketPressureDelta * fraction;
+    effectDelta.marketLiquidity += (action.marketLiquidityDelta * cardMultiplier + madnessEffects.bidLiquidityBoost) * fraction;
+    effectDelta.personalParticipation +=
+      (action.personalParticipationDelta * cardMultiplier * impactMultiplier + madnessEffects.retailParticipationBoost) *
+      fraction;
     effectDelta.holdingRatio += action.holdingRatioDelta * fraction;
     effectDelta.surveillance += action.surveillanceDelta * surveillanceMultiplier * fraction;
-    effectDelta.volatility += action.volatilityDelta * cardMultiplier * impactMultiplier * fraction;
+    effectDelta.volatility +=
+      (action.volatilityDelta * cardMultiplier * impactMultiplier + madnessEffects.volatilityBoost) * fraction;
 
     return remainingSec > 0 ? [{ ...effect, remainingSec }] : [];
   });
@@ -227,7 +251,8 @@ export function getManualActionBudgetDelta(state: IntradayState, actionId: Manua
 
   const positionMarketValue = getNormalizedPositionMarketValue(state);
   const settlementRatio = getPositionSettlementRatio(state, action);
-  return round1(clamp(positionMarketValue * settlementRatio * 0.92, 0, 24));
+  const madnessEffects = calculatePositionSettlementMadnessEffects(state.madness);
+  return round1(clamp(positionMarketValue * settlementRatio * 0.92 * madnessEffects.budgetRecoveryMultiplier, 0, 24));
 }
 
 function getActionEffectMultiplier(state: IntradayState, actionId: ManualActionId): number {

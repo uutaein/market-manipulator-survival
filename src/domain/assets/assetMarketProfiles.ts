@@ -30,49 +30,49 @@ export interface AssetMarketProfile {
 const sectorMarketProfiles = {
   food_agri: {
     sectorId: "food_agri",
-    baseTradeValue: 8800000,
+    baseTradeValue: 16000000,
     newsSensitivity: 1.06,
     capitalTier: "entry",
     recommendation: "초반 추천"
   },
   energy_grid: {
     sectorId: "energy_grid",
-    baseTradeValue: 38000000,
+    baseTradeValue: 160000000,
     newsSensitivity: 0.96,
     capitalTier: "large",
     recommendation: "대형 체급"
   },
   bio_trial: {
     sectorId: "bio_trial",
-    baseTradeValue: 3700000,
+    baseTradeValue: 5000000,
     newsSensitivity: 1.28,
     capitalTier: "speculative",
     recommendation: "고변동"
   },
   automation_ai: {
     sectorId: "automation_ai",
-    baseTradeValue: 22000000,
+    baseTradeValue: 70000000,
     newsSensitivity: 1.18,
     capitalTier: "growth",
     recommendation: "성장 체급"
   },
   chip_equipment: {
     sectorId: "chip_equipment",
-    baseTradeValue: 64000000,
+    baseTradeValue: 360000000,
     newsSensitivity: 0.92,
     capitalTier: "large",
     recommendation: "최대 체급"
   },
   payment_fintech: {
     sectorId: "payment_fintech",
-    baseTradeValue: 13500000,
+    baseTradeValue: 30000000,
     newsSensitivity: 1.0,
     capitalTier: "entry",
     recommendation: "초반 추천"
   },
   media_game: {
     sectorId: "media_game",
-    baseTradeValue: 5800000,
+    baseTradeValue: 9000000,
     newsSensitivity: 1.16,
     capitalTier: "entry",
     recommendation: "초반 추천"
@@ -88,9 +88,9 @@ const sectorMarketProfiles = {
 
 const roleProfiles = {
   sector_leader: {
-    tradeValueMultiplier: 2.4,
+    tradeValueMultiplier: 4.2,
     newsSensitivityMultiplier: 0.74,
-    influenceResistance: 2.7,
+    influenceResistance: 3.2,
     volumeStability: 0.95
   },
   standard: {
@@ -100,9 +100,9 @@ const roleProfiles = {
     volumeStability: 0.72
   },
   theme_mover: {
-    tradeValueMultiplier: 0.38,
+    tradeValueMultiplier: 0.18,
     newsSensitivityMultiplier: 1.65,
-    influenceResistance: 0.72,
+    influenceResistance: 0.52,
     volumeStability: 0.38
   }
 } as const satisfies Record<AssetMarketRole, Omit<AssetMarketProfile, "assetId" | "role">>;
@@ -174,11 +174,14 @@ export function getAssetNewsSensitivity(asset: AssetDefinition): number {
   return round2(sectorProfile.newsSensitivity * assetProfile.newsSensitivityMultiplier);
 }
 
-export function getSectorAverageBaselineTradeValue(sectorId: SectorId): number {
+export function getSectorBaselineTradeValue(sectorId: SectorId): number {
   const sectorAssets = assets.filter((asset) => asset.sectorId === sectorId);
-  const total = sectorAssets.reduce((sum, asset) => sum + getAssetBaselineTradeValue(asset), 0);
 
-  return Math.round(total / Math.max(1, sectorAssets.length));
+  return Math.round(sectorAssets.reduce((sum, asset) => sum + getAssetBaselineTradeValue(asset), 0));
+}
+
+export function getSectorAverageBaselineTradeValue(sectorId: SectorId): number {
+  return getSectorBaselineTradeValue(sectorId);
 }
 
 function round2(value: number): number {

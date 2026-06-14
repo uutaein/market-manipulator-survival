@@ -11,6 +11,20 @@ export const retailSwarmValues = {
     minSpeed: 0.55,
     maxSpeed: 1.85
   },
+  madness: {
+    participationWeight: 0.72,
+    positivePriceWeight: 2.1,
+    positivePressureWeight: 0.18,
+    volatilityWeight: 0.08,
+    positionSettlementStart: 55,
+    maxSellPressureAbsorption: 0.86,
+    maxRetailParticipationBoost: 16,
+    maxBidLiquidityBoost: 7,
+    maxVolatilityBoost: 5,
+    maxBudgetRecoveryBonus: 0.18,
+    minChartShockScale: 0.08,
+    maxChartRecoveryBounce: 1.8
+  },
   stateEffects: {
     interest: {
       marketPressureDelta: 0,
