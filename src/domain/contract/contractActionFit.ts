@@ -58,6 +58,10 @@ export function getContractRecommendedManualActionLabels(mandate: ContractMandat
   return getFavoredActionIds(mandate.direction).map((actionId) => actionLabels[actionId]);
 }
 
+export function getContractRiskyManualActionLabels(mandate: ContractMandate): readonly string[] {
+  return getRiskyActionIds(mandate.direction).map((actionId) => actionLabels[actionId]);
+}
+
 function getContractManualActionFit(
   mandate: ContractMandate,
   actionId: ManualActionId,

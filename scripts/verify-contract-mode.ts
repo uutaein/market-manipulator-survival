@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
-import { evaluateContractObjectives } from "../src/domain/contract";
+import {
+  createSampleContractMandates,
+  evaluateContractObjectives,
+  getContractRecommendedManualActionLabels,
+  getContractRiskyManualActionLabels
+} from "../src/domain/contract";
 import { createMapStorage, persistenceKeys } from "../src/domain/persistence/localPersistence";
 import { clampIntradayState } from "../src/domain/intraday/intradayState";
 import { GameSession } from "../src/game/GameSession";
@@ -120,6 +125,17 @@ runScenario("contract action fit marks mismatched tools risky", () => {
   assert.match(session.lastContractActionFitResult?.message ?? "", /위험/);
 
   return session.lastContractActionFitResult?.message ?? "";
+});
+
+runScenario("contract desk exposes action fit labels", () => {
+  const mandates = createSampleContractMandates();
+
+  for (const mandate of mandates) {
+    assert.ok(getContractRecommendedManualActionLabels(mandate).length > 0, mandate.id);
+    assert.ok(getContractRiskyManualActionLabels(mandate).length > 0, mandate.id);
+  }
+
+  return `${mandates.length} contract label sets`;
 });
 
 runScenario("contract save restores mode, observations, and duration", () => {
