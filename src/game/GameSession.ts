@@ -57,11 +57,14 @@ import { runDefaults } from "../domain/balancing/runDefaults";
 import { createRunState, restartRunWithSameSeed, type AutoCardState, type RunState } from "../domain/run/runState";
 import { prepareNextDayCarryover } from "../domain/settlement/carryover";
 import {
+  applyContractManualActionFit,
   createContractObservation,
   createSampleContractMandates,
   evaluateContractObjectives,
+  getContractRecommendedManualActionLabels,
   getSampleContractMandate,
   settleContract,
+  type ContractManualActionFitResult,
   type ContractEvaluationResult,
   type ContractMandate,
   type ContractObservation,
@@ -157,6 +160,7 @@ export class GameSession {
   lastDocumentEventChoiceResult: DocumentEventChoiceResult | null = null;
   lastDocumentEventMessage: string | null = null;
   lastRetailSwarmEffectResult: RetailSwarmEffectResult | null = null;
+  lastContractActionFitResult: ContractManualActionFitResult | null = null;
   lastFinalSaveUpdatedBest = false;
   priceHistory: PriceHistoryPoint[] = [];
   marketDashboardPlayerRank: number | null = null;
@@ -165,6 +169,8 @@ export class GameSession {
   private intradaySpentBudget = 0;
   private intradayRecoveredBudget = 0;
   private contractBudgetSpent = 0;
+  private contractActionMistakePenalty = 0;
+  private contractActionEfficiencyBonus = 0;
   private pendingMarketDashboardTradeValueImpulse = 0;
   private lastMarketDashboardFeedbackElapsedSec: number | null = null;
   private lastRetailSwarmState: RetailSwarmState | null = null;
@@ -468,6 +474,7 @@ export class GameSession {
     this.intradayState = this.lastManualActionResult.state;
     if (this.lastManualActionResult.applied && this.lastManualActionResult.action) {
       this.recordBudgetLedgerDelta(this.lastManualActionResult.budgetDelta);
+      this.applyContractActionFit(this.lastManualActionResult.action.id);
     }
     this.applyManualActionChartResponse(this.lastManualActionResult);
     this.checkImmediateRunFailure(this.intradayState);
@@ -765,7 +772,10 @@ export class GameSession {
       ...evaluation.objectiveResults.map((result) => {
         const objective = mandate.objectives.find((candidate) => candidate.id === result.objectiveId);
         return `${getContractStatusLabel(result.status)} ${formatContractObjectiveLabel(objective)} ${formatContractProgress(result.progress, result.required)}`;
-      })
+      }),
+      this.lastContractActionFitResult
+        ? this.lastContractActionFitResult.message
+        : `추천 도구: ${getContractRecommendedManualActionLabels(mandate).join(" / ")}`
     ];
   }
 
@@ -794,6 +804,7 @@ export class GameSession {
       `OBJECTIVES: ${evaluation.completedObjectives}/${mandate.objectives.length}`,
       `REWARD: ${formatContractNumber(settlement.fixedRewardPaid)} / ${formatContractNumber(settlement.fixedReward)}`,
       `SPENT: ${formatContractNumber(settlement.budgetSpent)}`,
+      `ACTION FIT: +${formatContractNumber(this.contractActionEfficiencyBonus)} / RISK ${formatContractNumber(this.contractActionMistakePenalty)}`,
       `NET: ${formatContractSigned(settlement.netPerformance)} / GRADE ${settlement.efficiencyGrade}`
     ];
   }
@@ -1101,6 +1112,33 @@ export class GameSession {
     this.autoCardLastTriggeredAt = {};
   }
 
+  private applyContractActionFit(actionId: ManualActionId): void {
+    const mandate = this.contractMandate;
+    const state = this.intradayState;
+
+    if (this.gameMode !== "contract" || !mandate || !state) {
+      this.lastContractActionFitResult = null;
+      return;
+    }
+
+    const evaluation = this.contractEvaluationResult ?? this.refreshContractEvaluation();
+    const result = applyContractManualActionFit(state, mandate, actionId, evaluation);
+    this.intradayState = result.state;
+    this.lastManualActionResult = this.lastManualActionResult
+      ? {
+          ...this.lastManualActionResult,
+          state: result.state
+        }
+      : null;
+    this.lastContractActionFitResult = result;
+    this.contractActionMistakePenalty = round1(
+      this.contractActionMistakePenalty + result.sideEffectPenaltyDelta
+    );
+    this.contractActionEfficiencyBonus = round1(
+      this.contractActionEfficiencyBonus + result.efficiencyBonusDelta
+    );
+  }
+
   private recordContractObservation(kind: ContractObservationKind, state: IntradayState | null = null): void {
     const mandate = this.contractMandate;
 
@@ -1164,7 +1202,15 @@ export class GameSession {
       budgetSpent: this.contractBudgetSpent,
       surveillanceCost: round1(finalSettlement.finalSurveillance * 0.08),
       socialCost: round1(finalSettlement.socialCost * 0.5),
-      sideEffectPenalty: round1(maxMadness * 0.04 + (finalSettlement.forcedFailure ? 12 : 0))
+      sideEffectPenalty: round1(
+        Math.max(
+          0,
+          maxMadness * 0.04 +
+            (finalSettlement.forcedFailure ? 12 : 0) +
+            this.contractActionMistakePenalty -
+            this.contractActionEfficiencyBonus
+        )
+      )
     });
   }
 
@@ -1172,7 +1218,10 @@ export class GameSession {
     this.contractObservations = [];
     this.contractEvaluationResult = null;
     this.contractSettlementResult = null;
+    this.lastContractActionFitResult = null;
     this.contractBudgetSpent = 0;
+    this.contractActionMistakePenalty = 0;
+    this.contractActionEfficiencyBonus = 0;
   }
 
   private resetIntradayMoneyLedger(startingBudget: number): void {

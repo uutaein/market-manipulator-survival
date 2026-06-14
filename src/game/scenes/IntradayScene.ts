@@ -193,7 +193,14 @@ export class IntradayScene extends BaseDocumentScene {
         if (result.applied) {
           this.startManualActionFeedback(action.id);
         }
-        this.actionStatusText?.setText(`수동 액션: ${getManualActionDisplayLabel(action.id, gameSession.intradayState)} / ${result.reason}`);
+        this.actionStatusText?.setText(
+          [
+            `수동 액션: ${getManualActionDisplayLabel(action.id, gameSession.intradayState)} / ${result.reason}`,
+            gameSession.lastContractActionFitResult?.message ?? null
+          ]
+            .filter(Boolean)
+            .join("\n")
+        );
         this.refreshIntradayUi();
         this.routeIfRunFailed();
       });
