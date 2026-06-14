@@ -103,12 +103,22 @@ export type BoundedIntradayStat =
   | "volatility"
   | "competitionPressure";
 
-export function createIntradayState(runState: RunState, dayState: DayState): IntradayState {
+export interface CreateIntradayStateOptions {
+  readonly openingPriceOverride?: number;
+}
+
+export function createIntradayState(
+  runState: RunState,
+  dayState: DayState,
+  options: CreateIntradayStateOptions = {}
+): IntradayState {
   const effect = dayState.preOpenCardEffect;
   const newsImpact = getActiveNewsStatImpact(runState, dayState.morningNewsItems);
   const influenceResistance = getAssetInfluenceResistanceById(runState.selectedAssetId);
   const holdingRatio = applyEffect(runState.holdingRatio, effect, "holdingRatioDelta");
-  const quote = createFictionalQuoteState(runState, dayState, holdingRatio, runDefaults.initialPriceChangePercent);
+  const quote = createFictionalQuoteState(runState, dayState, holdingRatio, runDefaults.initialPriceChangePercent, {
+    openingPriceOverride: options.openingPriceOverride
+  });
   const personalParticipation = runDefaults.initialPersonalParticipation + newsImpact.personalParticipationDelta;
   const marketPressure =
     applyEffect(runDefaults.initialMarketPressure, effect, "marketPressureDelta") - (influenceResistance - 1) * 6;
@@ -232,18 +242,23 @@ export interface FictionalQuoteState {
   readonly fictionalFloatUnits: number;
 }
 
+export interface CreateFictionalQuoteStateOptions {
+  readonly openingPriceOverride?: number;
+}
+
 export function createFictionalQuoteState(
   runState: Pick<RunState, "runSeed" | "selectedAssetId" | "holdingRatio" | "averageEntryPrice" | "lastClosePrice">,
   dayState: Pick<DayState, "dayIndex" | "preOpenCardId">,
   holdingRatio: number,
-  priceChangePercent: number
+  priceChangePercent: number,
+  options: CreateFictionalQuoteStateOptions = {}
 ): FictionalQuoteState {
   const random = createSeededRandom(`${runState.runSeed}:day:${dayState.dayIndex}:quote:${runState.selectedAssetId}`);
   const seededOpeningPrice = roundedToTick(
     random.nextInt(runDefaults.openingPriceMin, runDefaults.openingPriceMax + runDefaults.openingPriceTick),
     runDefaults.openingPriceTick
   );
-  const openingPrice = getOpeningPriceForDay(runState, dayState, seededOpeningPrice);
+  const openingPrice = getOpeningPriceForDay(runState, dayState, seededOpeningPrice, options.openingPriceOverride);
   const fictionalFloatUnits = roundedToTick(
     random.nextInt(runDefaults.fictionalFloatUnitMin, runDefaults.fictionalFloatUnitMax + runDefaults.fictionalFloatUnitTick),
     runDefaults.fictionalFloatUnitTick
@@ -268,10 +283,15 @@ export function createFictionalQuoteState(
 function getOpeningPriceForDay(
   runState: Pick<RunState, "holdingRatio" | "lastClosePrice">,
   dayState: Pick<DayState, "dayIndex">,
-  seededOpeningPrice: number
+  seededOpeningPrice: number,
+  openingPriceOverride?: number
 ): number {
   if (dayState.dayIndex > 1 && runState.holdingRatio > 0 && runState.lastClosePrice && runState.lastClosePrice > 0) {
     return roundedToTick(runState.lastClosePrice, runDefaults.openingPriceTick);
+  }
+
+  if (openingPriceOverride && Number.isFinite(openingPriceOverride) && openingPriceOverride > 0) {
+    return roundedToTick(openingPriceOverride, runDefaults.openingPriceTick);
   }
 
   return seededOpeningPrice;

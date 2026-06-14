@@ -49,7 +49,7 @@ export function resolveManualActionId(actionIdOrDisplayName: string): ManualActi
 }
 
 export function areManualActionsAvailable(state: IntradayState): boolean {
-  return !state.isPaused;
+  return !state.isPaused && state.holdingRatio > 0;
 }
 
 export function canUseManualAction(state: IntradayState, actionId: ManualActionId): boolean {
@@ -90,6 +90,16 @@ export function useManualAction(state: IntradayState, actionIdOrDisplayName: str
       applied: false,
       budgetDelta: 0,
       reason: "paused"
+    };
+  }
+
+  if (state.holdingRatio <= 0) {
+    return {
+      state,
+      action,
+      applied: false,
+      budgetDelta: 0,
+      reason: "no_position"
     };
   }
 

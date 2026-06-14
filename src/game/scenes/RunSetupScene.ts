@@ -1,6 +1,6 @@
 import { BaseDocumentScene } from "./BaseDocumentScene";
 import { SceneKeys } from "./SceneKeys";
-import { getAssetById, getAssetsBySector, getSectorById, sectors } from "../../domain/assets/assetCatalog";
+import { getAssetById, getAssetsBySector, getSectorById, sectors, type AssetId, type SectorId } from "../../domain/assets/assetCatalog";
 import {
   getAssetBaselineTradeValue,
   getAssetMarketProfile,
@@ -10,16 +10,48 @@ import {
 } from "../../domain/assets/assetMarketProfiles";
 import { gameSession } from "../GameSession";
 
+type RunSetupMode = "new_run" | "next_day_asset";
+
+interface RunSetupSceneData {
+  readonly mode?: RunSetupMode;
+  readonly sectorId?: SectorId;
+  readonly assetId?: AssetId;
+}
+
 export class RunSetupScene extends BaseDocumentScene {
+  private mode: RunSetupMode = "new_run";
+  private pendingSectorId: SectorId = gameSession.selectedSectorId;
+  private pendingAssetId: AssetId = gameSession.selectedAssetId;
+
   constructor() {
     super(SceneKeys.RunSetup);
   }
 
+  init(data: RunSetupSceneData = {}): void {
+    const sectorId = data.sectorId ?? gameSession.selectedSectorId;
+    const sectorAssets = getAssetsBySector(sectorId);
+    const requestedAsset = data.assetId ? getAssetById(data.assetId) : null;
+
+    this.mode = data.mode ?? "new_run";
+    this.pendingSectorId = sectorId;
+    this.pendingAssetId = requestedAsset?.sectorId === sectorId ? requestedAsset.id : sectorAssets[0].id;
+  }
+
   create(): void {
-    this.drawDocumentShell("Run 시작 / 종목 선택", [], undefined, "ASSET REGISTRY");
+    const isNextDayAssetSelection = this.mode === "next_day_asset";
+    const selectedAsset = getAssetById(this.pendingAssetId);
+    const selectedSector = getSectorById(selectedAsset.sectorId);
+    const selectedAssetProfile = getAssetMarketProfile(selectedAsset.id);
+
+    this.drawDocumentShell(
+      isNextDayAssetSelection ? "다음 Day / 종목 선택" : "Run 시작 / 종목 선택",
+      [],
+      undefined,
+      "ASSET REGISTRY"
+    );
 
     this.add
-      .text(96, 126, `선택: ${gameSession.getSelectedAssetLabel()}`, {
+      .text(96, 126, `선택: ${selectedSector.displayName} / ${selectedAsset.displayName}`, {
         color: "#111417",
         backgroundColor: "#d9c58b",
         fontFamily: this.fontFamily,
@@ -46,10 +78,9 @@ export class RunSetupScene extends BaseDocumentScene {
         208 + index * 42,
         `${sector.displayName} · ${recommended ? "추천" : profile.recommendation}`,
         () => {
-          gameSession.setSelectedSector(sector.id);
-          this.scene.restart();
+          this.scene.restart({ mode: this.mode, sectorId: sector.id });
         },
-        gameSession.selectedSectorId === sector.id
+        this.pendingSectorId === sector.id
       );
     });
 
@@ -81,8 +112,8 @@ export class RunSetupScene extends BaseDocumentScene {
       })
       .setOrigin(0, 0);
 
-    getAssetsBySector(gameSession.selectedSectorId).forEach((asset, index) => {
-      const selected = gameSession.selectedAssetId === asset.id;
+    getAssetsBySector(this.pendingSectorId).forEach((asset, index) => {
+      const selected = this.pendingAssetId === asset.id;
       const assetProfile = getAssetMarketProfile(asset.id);
       this.addAssetChoiceCard(
         382,
@@ -91,15 +122,11 @@ export class RunSetupScene extends BaseDocumentScene {
         `${asset.shortBriefing}\n기본대금 ${formatTradeValue(getAssetBaselineTradeValue(asset))}`,
         selected,
         () => {
-          gameSession.setSelectedAsset(asset.id);
-          this.scene.restart();
+          this.scene.restart({ mode: this.mode, sectorId: this.pendingSectorId, assetId: asset.id });
         }
       );
     });
 
-    const selectedAsset = getAssetById(gameSession.selectedAssetId);
-    const selectedSector = getSectorById(selectedAsset.sectorId);
-    const selectedAssetProfile = getAssetMarketProfile(selectedAsset.id);
     this.add
       .rectangle(790, 176, 360, 318, 0x090d10, 0.96)
       .setOrigin(0, 0)
@@ -164,9 +191,15 @@ export class RunSetupScene extends BaseDocumentScene {
       .setOrigin(0, 0);
 
     this.addActionButton({
-      label: "Run 시작",
+      label: isNextDayAssetSelection ? "다음 Day 준비" : "Run 시작",
       target: SceneKeys.PreOpenCard,
       onClick: () => {
+        if (isNextDayAssetSelection) {
+          gameSession.selectNextDayAsset(this.pendingAssetId);
+          return;
+        }
+
+        gameSession.setSelectedAsset(this.pendingAssetId);
         gameSession.startNewRun();
         gameSession.beginDay();
       }

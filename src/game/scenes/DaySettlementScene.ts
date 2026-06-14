@@ -11,8 +11,9 @@ export class DaySettlementScene extends BaseDocumentScene {
     const settlement = gameSession.daySettlementResult ?? gameSession.calculateDaySettlement();
     const runState = gameSession.ensureRun();
     const runLengthDays = gameSession.getRunLengthDays();
-    const nextScene = runState.currentDay >= runLengthDays ? SceneKeys.FinalSettlement : SceneKeys.PreOpenCard;
-    const nextLabel = runState.currentDay >= runLengthDays ? "Final 정산" : "다음 Day";
+    const isFinalDay = runState.currentDay >= runLengthDays;
+    const shouldSelectAsset = gameSession.shouldSelectAssetBeforeNextDay();
+    const nextLabel = isFinalDay ? "Final 정산" : shouldSelectAsset ? "다음 Day 종목 선택" : "다음 Day";
     const contractLines = gameSession.getContractProgressLines();
 
     this.drawDocumentShell(
@@ -37,9 +38,20 @@ export class DaySettlementScene extends BaseDocumentScene {
       ],
       {
         label: nextLabel,
-        target: nextScene,
         onClick: () => {
           gameSession.continueAfterDaySettlement();
+
+          if (isFinalDay) {
+            this.scene.start(SceneKeys.FinalSettlement);
+            return;
+          }
+
+          if (shouldSelectAsset) {
+            this.scene.start(SceneKeys.RunSetup, { mode: "next_day_asset" });
+            return;
+          }
+
+          this.scene.start(SceneKeys.PreOpenCard);
         }
       }
     );

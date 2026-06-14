@@ -14,7 +14,7 @@ import {
 import { runDefaults } from "../../domain/balancing/runDefaults";
 import { getAutoCardPeriodSec } from "../../domain/intraday/autoCards";
 import type { IntradayState } from "../../domain/intraday/intradayState";
-import { getManualActionBudgetDelta, manualActions } from "../../domain/intraday/manualActions";
+import { canUseManualAction, getManualActionBudgetDelta, manualActions } from "../../domain/intraday/manualActions";
 import { calculateRetailSwarmModel, type RetailSwarmModel } from "../../domain/intraday/retailSwarm";
 import { buildOrderBookProfile } from "../../domain/intraday/orderBook";
 import type { MorningNews } from "../../domain/day/morningNews";
@@ -216,9 +216,7 @@ export class IntradayScene extends BaseDocumentScene {
     this.addDocumentButton(1040, 618, "Day 정산", () => {
       this.scene.start(SceneKeys.DaySettlement);
     });
-    this.repositionButton = this.addDocumentButton(760, 618, "운용 데스크 재배치", () => {
-      this.scene.start(SceneKeys.IntradayReposition);
-    });
+    this.repositionButton = null;
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.destroyDomOverlays());
     this.events.once(Phaser.Scenes.Events.DESTROY, () => this.destroyDomOverlays());
     this.refreshIntradayUi();
@@ -326,6 +324,13 @@ export class IntradayScene extends BaseDocumentScene {
 
       this.setManualActionButtonMode(button, action.id, "normal");
       button.setText(label);
+      if (!state || !canUseManualAction(state, action.id)) {
+        button.disableInteractive();
+        button.setText(state?.holdingRatio === 0 ? `${getManualActionDisplayLabel(action.id, state)}\n관망` : label);
+        button.setAlpha(0.38);
+        continue;
+      }
+
       button.setInteractive({ useHandCursor: true });
       button.setAlpha(1);
     }

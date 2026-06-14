@@ -29,6 +29,28 @@ runScenario("selection starts a contract run", () => {
   return `${mandate.id} on ${mandate.assetId}`;
 });
 
+runScenario("contract opening price starts below or above touch targets as intended", () => {
+  const upward = startContract("contract_upward_touch_food");
+  const upwardState = upward.startIntraday();
+  const upwardObjective = upward.contractMandate?.objectives[0];
+
+  assert.equal(upwardState.openingPrice, upward.contractMandate?.referencePrice);
+  assert.ok(upwardObjective?.type === "touch");
+  assert.ok(upwardState.openingPrice < upwardObjective.targetPrice);
+  assert.equal(upward.contractEvaluationResult?.objectiveResults[0]?.status, "pending");
+
+  const downward = startContract("contract_downward_touch_bio");
+  const downwardState = downward.startIntraday();
+  const downwardObjective = downward.contractMandate?.objectives[0];
+
+  assert.equal(downwardState.openingPrice, downward.contractMandate?.referencePrice);
+  assert.ok(downwardObjective?.type === "touch");
+  assert.ok(downwardState.openingPrice > downwardObjective.targetPrice);
+  assert.equal(downward.contractEvaluationResult?.objectiveResults[0]?.status, "pending");
+
+  return `up ${upwardState.openingPrice}, down ${downwardState.openingPrice}`;
+});
+
 runScenario("upward touch can complete before deadline", () => {
   const session = startContract("contract_upward_touch_food");
   closeDayAtPrice(session, 12_500);

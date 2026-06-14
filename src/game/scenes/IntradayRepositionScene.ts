@@ -1,5 +1,5 @@
 import { getAssetById, getAssetsBySector, sectors, type AssetId, type SectorId } from "../../domain/assets/assetCatalog";
-import { gameSession, intradayRepositionEntryCost, intradayRepositionStartingHolding } from "../GameSession";
+import { gameSession } from "../GameSession";
 import { BaseDocumentScene } from "./BaseDocumentScene";
 import { SceneKeys } from "./SceneKeys";
 
@@ -27,14 +27,14 @@ export class IntradayRepositionScene extends BaseDocumentScene {
 
   create(): void {
     this.drawDocumentShell("운용 데스크 재배치", [
-      "포지션을 여러 번 나눠 정리한 뒤 다른 섹터와 종목으로 재진입할 수 있다.",
-      `재진입 비용: ${intradayRepositionEntryCost}B / 초기 보유 비중: ${intradayRepositionStartingHolding}%`,
-      "Run, Day, 예산, 감시 리스크는 유지된다."
+      "장중에 포지션을 전량 정리한 뒤에는 같은 Day에 다른 종목으로 재진입할 수 없다.",
+      "남은 Day는 관망하거나 Day 정산으로 넘긴다.",
+      "다음 Day 시작 전에 새 섹터와 종목을 선택할 수 있다."
     ]);
 
     if (!gameSession.canRepositionIntradayAsset()) {
       this.add
-        .text(96, 210, "현재는 재배치 조건이 아니다. 포지션 정리를 반복해 보유 비중을 0%까지 낮춘 뒤 사용할 수 있다.", {
+        .text(96, 210, "장중 재배치는 비활성화됐다. 다음 Day 종목 선택 단계에서 새 종목을 고를 수 있다.", {
           color: "#c46b5b",
           fontFamily: this.fontFamily,
           fontSize: "18px",

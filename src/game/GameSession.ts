@@ -188,6 +188,40 @@ export class GameSession {
     this.selectedAssetId = asset.id;
   }
 
+  selectNextDayAsset(assetId: AssetId): DayState {
+    if (this.gameMode !== "free") {
+      throw new Error("Next-Day asset selection is only available in free mode.");
+    }
+
+    const asset = getAssetById(assetId);
+    const runState = this.ensureRun();
+
+    if (runState.runStatus !== "active") {
+      throw new Error("Next-Day asset selection requires an active Run.");
+    }
+
+    if (this.intradayState) {
+      throw new Error("Next-Day asset selection is available only after Day Settlement.");
+    }
+
+    if (runState.holdingRatio > 0) {
+      throw new Error("Next-Day asset selection is available only after ending the previous Day with no position.");
+    }
+
+    this.selectedSectorId = asset.sectorId;
+    this.selectedAssetId = asset.id;
+    this.runState = {
+      ...runState,
+      selectedSectorId: asset.sectorId,
+      selectedAssetId: asset.id,
+      averageEntryPrice: null,
+      lastClosePrice: null
+    };
+    const dayState = this.beginDay();
+    this.saveCurrentRunProgress();
+    return dayState;
+  }
+
   prepareFreeMode(): void {
     this.gameMode = "free";
     this.contractMandate = null;
@@ -406,7 +440,9 @@ export class GameSession {
     const dayState = this.approveOpening();
     this.resetIntradayMoneyLedger(dayState.startingBudgetForDay);
     this.recordBudgetLedgerDelta(dayState.preOpenCardEffect?.budgetDelta ?? 0);
-    this.intradayState = createIntradayState(runState, dayState);
+    this.intradayState = createIntradayState(runState, dayState, {
+      openingPriceOverride: this.gameMode === "contract" ? this.contractMandate?.referencePrice : undefined
+    });
     this.marketBoardState = buildMarketBoard(runState, dayState);
     this.resetMarketDashboardFeedback();
     this.lastAutoCardEffects = [];
@@ -491,17 +527,7 @@ export class GameSession {
   }
 
   canRepositionIntradayAsset(): boolean {
-    const runState = this.runState;
-    const state = this.intradayState;
-
-    return Boolean(
-      runState?.runStatus === "active" &&
-        state &&
-        !state.isPaused &&
-        state.holdingRatio <= 0 &&
-        state.activeManualActionEffects.length === 0 &&
-        state.budget >= intradayRepositionEntryCost
-    );
+    return false;
   }
 
   repositionIntradayAsset(assetId: AssetId): IntradayState {
@@ -511,7 +537,7 @@ export class GameSession {
     const state = this.intradayState ?? this.startIntraday();
 
     if (!this.canRepositionIntradayAsset()) {
-      throw new Error("Intraday reposition is available only after the position is fully settled.");
+      throw new Error("Intraday reposition is disabled. Choose a new asset before the next Day.");
     }
 
     this.selectedSectorId = asset.sectorId;
@@ -627,6 +653,21 @@ export class GameSession {
       failureReason: runState.failedReason
     });
     return this.daySettlementResult;
+  }
+
+  shouldSelectAssetBeforeNextDay(): boolean {
+    const runState = this.runState;
+
+    if (!runState || this.gameMode !== "free" || runState.currentDay >= this.getRunLengthDays()) {
+      return false;
+    }
+
+    const holdingRatio =
+      this.daySettlementResult?.supportingRiskMetrics.holdingRatio ??
+      this.intradayState?.holdingRatio ??
+      runState.holdingRatio;
+
+    return holdingRatio <= 0;
   }
 
   continueAfterDaySettlement(): void {
