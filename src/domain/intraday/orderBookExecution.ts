@@ -1,5 +1,7 @@
 import { createLocalMatchingEngine, type BookDepthSnapshot, type ExecutionOrderRequest } from "../execution/localMatchingEngine";
+import { getOrderBookWallLevelKey } from "../balancing/orderBookWallValues";
 import type { IntradayState } from "./intradayState";
+import { getOrderBookWallRemainingDepthBoost, isActiveOrderBookWallEffect } from "./orderBookWalls";
 
 export interface SyntheticExecutionOrderBookLevel {
   readonly offsetPercent: number;
@@ -55,7 +57,7 @@ function buildSyntheticOrderBookOrders(
   return [
     ...levels.flatMap((level) => buildBaseDepthOrders(level, state.openingPrice)),
     ...state.activeOrderBookWallEffects.flatMap((effect, index) => {
-      if (effect.remainingSec <= 0) {
+      if (!isActiveOrderBookWallEffect(effect)) {
         return [];
       }
 
@@ -63,7 +65,8 @@ function buildSyntheticOrderBookOrders(
         (level) =>
           level.offsetPercent !== 0 &&
           (effect.side === "buy" ? level.offsetPercent < 0 : level.offsetPercent > 0) &&
-          Math.abs(effect.priceChangePercent - level.priceChangePercent) < 0.5
+          getOrderBookWallLevelKey(effect.side, effect.priceChangePercent) ===
+            getOrderBookWallLevelKey(effect.side, level.priceChangePercent)
       );
 
       if (!matchingLevel) {
@@ -75,7 +78,7 @@ function buildSyntheticOrderBookOrders(
         side: effect.side,
         type: "limit",
         price: getSyntheticExecutionPrice(state.openingPrice, matchingLevel.priceChangePercent),
-        quantity: effect.depthBoost,
+        quantity: getOrderBookWallRemainingDepthBoost(effect),
         tag: "order-book-wall"
       };
 

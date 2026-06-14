@@ -1,7 +1,7 @@
 import {
   getOrderBookWallLevelKey,
-  getOrderBookWallLevelKeys,
   isOrderBookWallLevel,
+  normalizeOrderBookWallPriceLevel,
   orderBookWallSides,
   orderBookWallValues,
   type OrderBookWallLevelKey,
@@ -12,6 +12,8 @@ import { runDefaults } from "../balancing/runDefaults";
 import { applyIntradayStatUpdate, clampIntradayState, type IntradayState } from "./intradayState";
 
 export type { OrderBookWallSide };
+
+type ActiveOrderBookWallEffect = IntradayState["activeOrderBookWallEffects"][number];
 
 export interface OrderBookWallResult {
   readonly state: IntradayState;
@@ -41,7 +43,12 @@ export function areOrderBookWallActionsAvailable(state: IntradayState): boolean 
   return !state.isPaused && state.holdingRatio > 0;
 }
 
-export function canUseOrderBookWall(state: IntradayState, side: OrderBookWallSide, offsetPercent: number): boolean {
+export function canUseOrderBookWall(
+  state: IntradayState,
+  side: OrderBookWallSide,
+  offsetPercent: number,
+  priceChangePercent = offsetPercent
+): boolean {
   if (!areOrderBookWallActionsAvailable(state)) {
     return false;
   }
@@ -50,13 +57,13 @@ export function canUseOrderBookWall(state: IntradayState, side: OrderBookWallSid
     return false;
   }
 
-  const levelKey = getOrderBookWallLevelKey(side, offsetPercent);
+  const levelKey = getOrderBookWallLevelKey(side, priceChangePercent);
 
-  if (hasActiveOrderBookWall(state, side, offsetPercent)) {
+  if (hasActiveOrderBookWallAtPriceLevel(state, side, priceChangePercent)) {
     return true;
   }
 
-  if (state.orderBookWallCooldowns[levelKey] > 0) {
+  if ((state.orderBookWallCooldowns[levelKey] ?? 0) > 0) {
     return false;
   }
 
@@ -100,7 +107,7 @@ export function useOrderBookWall(
     };
   }
 
-  const levelKey = getOrderBookWallLevelKey(side, offsetPercent);
+  const levelKey = getOrderBookWallLevelKey(side, priceChangePercent);
 
   if (state.isPaused) {
     return {
@@ -133,9 +140,11 @@ export function useOrderBookWall(
   const activeEffect = findActiveOrderBookWallAtLevel(state, side, priceChangePercent);
 
   if (activeEffect) {
+    const refundBudget = getOrderBookWallRemainingReservedBudget(activeEffect);
+    const remainingDepthBoost = getOrderBookWallRemainingDepthBoost(activeEffect);
     const nextState = clampIntradayState({
       ...state,
-      budget: state.budget + activeEffect.reservedBudget,
+      budget: state.budget + refundBudget,
       activeOrderBookWallEffects: state.activeOrderBookWallEffects.filter((effect) => effect !== activeEffect)
     });
 
@@ -145,14 +154,14 @@ export function useOrderBookWall(
       side,
       offsetPercent,
       applied: true,
-      budgetDelta: activeEffect.reservedBudget,
-      reservedBudget: activeEffect.reservedBudget,
-      depthBoost: activeEffect.depthBoost,
+      budgetDelta: refundBudget,
+      reservedBudget: refundBudget,
+      depthBoost: remainingDepthBoost,
       reason: "removed"
     };
   }
 
-  if (state.orderBookWallCooldowns[levelKey] > 0) {
+  if ((state.orderBookWallCooldowns[levelKey] ?? 0) > 0) {
     return {
       state,
       action,
@@ -195,9 +204,11 @@ export function useOrderBookWall(
       {
         side,
         offsetPercent,
-        priceChangePercent,
+        priceChangePercent: normalizeOrderBookWallPriceLevel(priceChangePercent),
         reservedBudget,
         depthBoost,
+        remainingReservedBudget: reservedBudget,
+        remainingDepthBoost: depthBoost,
         remainingSec: action.durationSec,
         totalSec: action.durationSec
       }
@@ -226,10 +237,9 @@ export function tickOrderBookWallEffects(
   }
 
   const cooldowns = Object.fromEntries(
-    getOrderBookWallLevelKeys().map((levelKey) => [
-      levelKey,
-      Math.max(0, (state.orderBookWallCooldowns[levelKey] ?? 0) - seconds)
-    ])
+    Object.entries(state.orderBookWallCooldowns)
+      .map(([levelKey, remainingSec]) => [levelKey, Math.max(0, (remainingSec ?? 0) - seconds)] as const)
+      .filter(([, remainingSec]) => remainingSec > 0)
   ) as Record<OrderBookWallLevelKey, number>;
   const effectDelta = {
     budget: 0,
@@ -244,17 +254,37 @@ export function tickOrderBookWallEffects(
     const appliedSeconds = Math.min(seconds, effect.remainingSec);
     const fraction = effect.totalSec > 0 ? appliedSeconds / effect.totalSec : 1;
     const remainingSec = Math.max(0, effect.remainingSec - seconds);
+    const remainingDepthBoost = getOrderBookWallRemainingDepthBoost(effect);
+    const remainingReservedBudget = getOrderBookWallRemainingReservedBudget(effect);
+    const depthDecay = getOrderBookWallDepthDecay(effect, state, action, appliedSeconds);
+    const nextRemainingDepthBoost = round1(Math.max(0, remainingDepthBoost - depthDecay));
+    const reserveDecay =
+      remainingDepthBoost > 0
+        ? round1(Math.min(remainingReservedBudget, remainingReservedBudget * (depthDecay / remainingDepthBoost)))
+        : remainingReservedBudget;
+    const nextRemainingReservedBudget = round1(Math.max(0, remainingReservedBudget - reserveDecay));
 
     effectDelta.marketPressure += action.marketPressureDelta * fraction;
     effectDelta.marketLiquidity += action.marketLiquidityDelta * fraction;
     effectDelta.personalParticipation += action.personalParticipationDelta * fraction;
     effectDelta.surveillance += action.surveillanceDelta * fraction;
     effectDelta.volatility += action.volatilityDelta * fraction;
-    if (remainingSec <= 0 && effect.reservedBudget > 0) {
-      effectDelta.budget += effect.reservedBudget;
+    if (remainingSec <= 0 && nextRemainingReservedBudget > 0) {
+      effectDelta.budget += nextRemainingReservedBudget;
     }
 
-    return remainingSec > 0 ? [{ ...effect, remainingSec }] : [];
+    if (remainingSec <= 0 || nextRemainingDepthBoost <= 0) {
+      return [];
+    }
+
+    return [
+      {
+        ...effect,
+        remainingSec,
+        remainingDepthBoost: nextRemainingDepthBoost,
+        remainingReservedBudget: nextRemainingReservedBudget
+      }
+    ];
   });
 
   return applyIntradayStatUpdate(
@@ -275,7 +305,7 @@ export function tickOrderBookWallEffects(
 }
 
 export function applyOrderBookWallPriceBarriers(previousState: IntradayState, nextState: IntradayState): IntradayState {
-  const activeEffects = previousState.activeOrderBookWallEffects.filter((effect) => effect.remainingSec > 0);
+  const activeEffects = previousState.activeOrderBookWallEffects.filter(isActiveOrderBookWallEffect);
 
   if (activeEffects.length === 0) {
     return nextState;
@@ -321,7 +351,10 @@ export function clearOrderBookWallEffects(state: IntradayState): IntradayState {
     return state;
   }
 
-  const refund = state.activeOrderBookWallEffects.reduce((total, effect) => total + effect.reservedBudget, 0);
+  const refund = state.activeOrderBookWallEffects.reduce(
+    (total, effect) => total + getOrderBookWallRemainingReservedBudget(effect),
+    0
+  );
 
   return clampIntradayState({
     ...state,
@@ -335,11 +368,16 @@ export function getActiveOrderBookWallDepthBoost(
   side: OrderBookWallSide,
   levelPriceChangePercent: number
 ): number {
-  const matchingEffects = state.activeOrderBookWallEffects
-    .filter((effect) => effect.side === side && isSameVisibleOrderBookLevel(effect.priceChangePercent, levelPriceChangePercent));
+  const levelKey = getOrderBookWallLevelKey(side, levelPriceChangePercent);
+  const matchingEffects = state.activeOrderBookWallEffects.filter(
+    (effect) =>
+      effect.side === side &&
+      isActiveOrderBookWallEffect(effect) &&
+      getOrderBookWallLevelKey(effect.side, effect.priceChangePercent) === levelKey
+  );
 
   return matchingEffects
-    .reduce((total, effect) => total + (effect.remainingSec > 0 ? effect.depthBoost : 0), 0);
+    .reduce((total, effect) => total + getOrderBookWallRemainingDepthBoost(effect), 0);
 }
 
 export function getOrderBookWallValue(side: OrderBookWallSide): OrderBookWallValue {
@@ -355,10 +393,24 @@ export function getOrderBookWallDepthBoostForReserve(side: OrderBookWallSide, re
   return round1(Math.max(0, reservedBudget) * orderBookWallValues[side].depthBoostPerBudget);
 }
 
-function hasActiveOrderBookWall(state: IntradayState, side: OrderBookWallSide, offsetPercent: number): boolean {
-  return state.activeOrderBookWallEffects.some(
-    (effect) => effect.side === side && effect.offsetPercent === offsetPercent && effect.remainingSec > 0
-  );
+export function getOrderBookWallRemainingDepthBoost(effect: ActiveOrderBookWallEffect): number {
+  return round1(Math.max(0, effect.remainingDepthBoost ?? effect.depthBoost));
+}
+
+export function getOrderBookWallRemainingReservedBudget(effect: ActiveOrderBookWallEffect): number {
+  return round1(Math.max(0, effect.remainingReservedBudget ?? effect.reservedBudget));
+}
+
+export function isActiveOrderBookWallEffect(effect: ActiveOrderBookWallEffect): boolean {
+  return effect.remainingSec > 0 && getOrderBookWallRemainingDepthBoost(effect) > 0;
+}
+
+function hasActiveOrderBookWallAtPriceLevel(
+  state: IntradayState,
+  side: OrderBookWallSide,
+  priceChangePercent: number
+): boolean {
+  return Boolean(findActiveOrderBookWallAtLevel(state, side, priceChangePercent));
 }
 
 export function findActiveOrderBookWallAtLevel(
@@ -366,16 +418,47 @@ export function findActiveOrderBookWallAtLevel(
   side: OrderBookWallSide,
   levelPriceChangePercent: number
 ): IntradayState["activeOrderBookWallEffects"][number] | undefined {
+  const levelKey = getOrderBookWallLevelKey(side, levelPriceChangePercent);
+
   return state.activeOrderBookWallEffects.find(
     (effect) =>
       effect.side === side &&
-      effect.remainingSec > 0 &&
-      isSameVisibleOrderBookLevel(effect.priceChangePercent, levelPriceChangePercent)
+      isActiveOrderBookWallEffect(effect) &&
+      getOrderBookWallLevelKey(effect.side, effect.priceChangePercent) === levelKey
   );
 }
 
-function isSameVisibleOrderBookLevel(left: number, right: number): boolean {
-  return Math.abs(left - right) < 0.5;
+function getOrderBookWallDepthDecay(
+  effect: ActiveOrderBookWallEffect,
+  state: IntradayState,
+  action: OrderBookWallValue,
+  seconds: number
+): number {
+  if (seconds <= 0) {
+    return 0;
+  }
+
+  const remainingDepthBoost = getOrderBookWallRemainingDepthBoost(effect);
+  const opposingPressure = effect.side === "buy" ? Math.max(0, -state.marketPressure) : Math.max(0, state.marketPressure);
+
+  if (opposingPressure <= 0) {
+    return 0;
+  }
+
+  const touchMultiplier = isOrderBookWallTouched(effect, state.priceChangePercent)
+    ? action.barrierTouchDecayMultiplier
+    : 1;
+  const depthDecay = opposingPressure * action.depthDecayPerPressureSecond * seconds * touchMultiplier;
+
+  return round1(Math.min(remainingDepthBoost, depthDecay));
+}
+
+function isOrderBookWallTouched(effect: ActiveOrderBookWallEffect, priceChangePercent: number): boolean {
+  if (effect.side === "buy") {
+    return priceChangePercent <= effect.priceChangePercent;
+  }
+
+  return priceChangePercent >= effect.priceChangePercent;
 }
 
 function getMaxOrNull(values: readonly number[]): number | null {

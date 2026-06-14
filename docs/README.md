@@ -23,6 +23,8 @@ This directory contains the product, requirement, decision, and design documents
 
 | Type | Document |
 | --- | --- |
+| Post-MVP PRD | [market-manipulator-survival-prd-v0.2.4.md](prd/market-manipulator-survival-prd-v0.2.4.md) |
+| Post-MVP PRD | [market-manipulator-survival-prd-v0.2.3.md](prd/market-manipulator-survival-prd-v0.2.3.md) |
 | Post-MVP PRD | [market-manipulator-survival-prd-v0.2.2.md](prd/market-manipulator-survival-prd-v0.2.2.md) |
 | Post-MVP PRD | [market-manipulator-survival-prd-v0.2.1.md](prd/market-manipulator-survival-prd-v0.2.1.md) |
 | Post-MVP PRD | [market-manipulator-survival-prd-v0.2.0.md](prd/market-manipulator-survival-prd-v0.2.0.md) |
@@ -38,6 +40,8 @@ This directory contains the product, requirement, decision, and design documents
 | Post-MVP SRS | [market-manipulator-survival-srs-v0.2.0-contract-mode.md](srs/market-manipulator-survival-srs-v0.2.0-contract-mode.md) |
 | Post-MVP SRS | [market-manipulator-survival-srs-v0.2.1-order-book-wall-interactions.md](srs/market-manipulator-survival-srs-v0.2.1-order-book-wall-interactions.md) |
 | Post-MVP SRS | [market-manipulator-survival-srs-v0.2.2-local-synthetic-execution-engine.md](srs/market-manipulator-survival-srs-v0.2.2-local-synthetic-execution-engine.md) |
+| Post-MVP SRS | [market-manipulator-survival-srs-v0.2.3-order-book-wall-decay.md](srs/market-manipulator-survival-srs-v0.2.3-order-book-wall-decay.md) |
+| Post-MVP SRS | [market-manipulator-survival-srs-v0.2.4-order-book-wall-visual-feedback.md](srs/market-manipulator-survival-srs-v0.2.4-order-book-wall-visual-feedback.md) |
 | SDD | [market-manipulator-survival-sdd-v0.1.0-simulation-modularity.md](sdd/market-manipulator-survival-sdd-v0.1.0-simulation-modularity.md) |
 | SPEC | [market-manipulator-survival-mvp-spec-v0.1.0.md](spec/market-manipulator-survival-mvp-spec-v0.1.0.md) |
 | Implementation Scaffold | [../src/README.md](../src/README.md) |
@@ -48,4 +52,4 @@ This directory contains the product, requirement, decision, and design documents
 
 ADR files are stored in [`adr/`](adr/).  
 The MVP baseline PRD, MVP Freeze Candidate, and MVP SPEC reference ADR-0001 through ADR-0029.
-The Post-MVP PRD references ADR-0030 through ADR-0035 for 자유모드 / 의뢰모드 scope, ADR-0036 for order-book wall interactions, and ADR-0037 for the local synthetic execution engine.
+The Post-MVP PRD references ADR-0030 through ADR-0035 for 자유모드 / 의뢰모드 scope, ADR-0036 for order-book wall interactions, ADR-0037 for the local synthetic execution engine, and ADR-0038 for order-book wall decay.

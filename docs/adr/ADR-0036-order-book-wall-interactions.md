@@ -22,8 +22,8 @@ Add order-book wall interactions as contextual actions inside the existing order
 2. Hovering BID rows exposes `매수벽 세우기`.
 3. Clicking the hovered row starts a short-lived fictional wall effect for that side.
 4. These wall actions are not counted as MVP manual action buttons.
-5. The actions reserve budget in proportion to the wall volume, enter level-specific cooldown, modify fictional order-book depth and price responsiveness, and create a temporary price barrier at the clicked level.
-6. Each visible ASK/BID row can have its own active wall and cooldown.
+5. The actions reserve budget in proportion to the wall volume, enter price-level-specific cooldown, modify fictional order-book depth and price responsiveness, and create a temporary price barrier at the clicked price level.
+6. Each visible ASK/BID row can have its own active wall and cooldown, keyed by the clicked fictional quote level rather than the row's moving offset from the current price.
 7. Clicking an active wall removes that wall and refunds its reserved budget.
 8. The actions are unavailable while intraday is paused, while the player has no position, while reserve budget is insufficient, or while the same inactive price level is on cooldown.
 9. The UI must show the action affordance in the order-book row itself, not as separate side buttons.
@@ -52,7 +52,7 @@ Rejected. The existing order-book depth already affects the price formula, so ma
 
 1. The order-book DOM overlay must accept pointer events on rows.
 2. Intraday state needs level-specific active wall effects, reserved budget, and cooldowns.
-3. The order-book profile must include active wall boosts when calculating visible depth and responsiveness, and the clicked row's displayed volume must increase immediately.
+3. The order-book profile must include active wall boosts when calculating visible depth and responsiveness, and the clicked price level's displayed volume must increase immediately while it remains in visible depth.
 4. The price tick must respect active wall barriers: buy walls block downside crossing and sell walls block upside crossing until the wall is removed or expires.
 4. Tests must cover activation, cooldown, no-position blocking, and depth/responsiveness impact.
 5. Copy must avoid real-world procedural language and remain a fictional game interaction.

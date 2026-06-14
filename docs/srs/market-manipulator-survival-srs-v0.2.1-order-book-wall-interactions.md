@@ -31,6 +31,8 @@ type ActiveOrderBookWallEffect = {
   priceChangePercent: number;
   reservedBudget: number;
   depthBoost: number;
+  remainingReservedBudget: number;
+  remainingDepthBoost: number;
   remainingSec: number;
   totalSec: number;
 };
@@ -39,10 +41,11 @@ type ActiveOrderBookWallEffect = {
 | ID | Requirement |
 | --- | --- |
 | SRS-WALL-MODEL-001 | Intraday state must represent level-specific active order-book wall effects. |
-| SRS-WALL-MODEL-002 | Intraday state must represent level-specific order-book wall cooldowns. |
+| SRS-WALL-MODEL-002 | Intraday state must represent price-level-specific order-book wall cooldowns keyed by the clicked fictional quote level. |
 | SRS-WALL-MODEL-003 | Order-book wall effects must be cleared when a new Intraday Day starts. |
 | SRS-WALL-MODEL-004 | Order-book wall effects must not carry into Day Settlement, Final Settlement, or the next Day. |
-| SRS-WALL-MODEL-005 | ASK +1/+2/+3 and BID -1/-2/-3 levels must be independently actionable. |
+| SRS-WALL-MODEL-005 | A wall's identity must be the clicked `priceChangePercent` level, not the row's moving offset from the current price. |
+| SRS-WALL-MODEL-006 | ASK +1/+2/+3 and BID -1/-2/-3 levels must be independently actionable. |
 
 ---
 
@@ -61,7 +64,7 @@ First implementation baseline values are:
 | SRS-WALL-BASE-002 | Non-budget stat effects must apply gradually over the active duration. |
 | SRS-WALL-BASE-003 | The depth boost must apply immediately to the clicked level while its effect is active. |
 | SRS-WALL-BASE-004 | Values must live in an order-book wall balancing group or equivalent local constants that can be tuned without changing the price formula structure. |
-| SRS-WALL-BASE-005 | Removing a wall or letting it expire must refund exactly the reserved budget for that wall. |
+| SRS-WALL-BASE-005 | Removing a wall or letting it expire must refund the remaining reserved budget for that wall after any later decay model has consumed part of the reserve. |
 | SRS-WALL-BASE-006 | If available budget is below the minimum reserve, the wall action must be blocked. |
 
 ---
@@ -86,8 +89,8 @@ The existing fictional order-book profile must include active wall effects.
 
 | ID | Requirement |
 | --- | --- |
-| SRS-WALL-BOOK-001 | An active buy wall must increase visible buy-side depth on its clicked BID level immediately. |
-| SRS-WALL-BOOK-002 | An active sell wall must increase visible sell-side depth on its clicked ASK level immediately. |
+| SRS-WALL-BOOK-001 | An active buy wall must increase visible buy-side depth on its clicked BID price level immediately. |
+| SRS-WALL-BOOK-002 | An active sell wall must increase visible sell-side depth on its clicked ASK price level immediately. |
 | SRS-WALL-BOOK-003 | Increased buy-side depth must reduce downward responsiveness through the existing order-book multiplier path. |
 | SRS-WALL-BOOK-004 | Increased sell-side depth must reduce upward responsiveness through the existing order-book multiplier path. |
 | SRS-WALL-BOOK-005 | Wall effects must not directly overwrite `priceChangePercent`; price movement must still pass through the price tick formula. |
@@ -95,7 +98,8 @@ The existing fictional order-book profile must include active wall effects.
 | SRS-WALL-BOOK-007 | Multiple active levels on the same side must all contribute to the side's average wall depth and responsiveness. |
 | SRS-WALL-BOOK-008 | An active buy wall must prevent the final tick price from moving below its stored `priceChangePercent` barrier. |
 | SRS-WALL-BOOK-009 | An active sell wall must prevent the final tick price from moving above its stored `priceChangePercent` barrier. |
-| SRS-WALL-BOOK-010 | The barrier must be based on the clicked row's price level at action start, not a moving offset from the current price. |
+| SRS-WALL-BOOK-010 | If the current price shifts while a wall remains active, the order-book display must keep matching/removal/cooldown state on the stored price level rather than the original row offset. |
+| SRS-WALL-BOOK-011 | The barrier must be based on the clicked row's price level at action start, not a moving offset from the current price. |
 
 ---
 
@@ -131,12 +135,12 @@ The feature must be embedded into the existing order-book panel.
 | --- | --- |
 | SRS-WALL-AC-001 | Hovering BID rows exposes `매수벽 세우기`; clicking starts a buy wall if available. |
 | SRS-WALL-AC-002 | Hovering ASK rows exposes `매도벽 세우기`; clicking starts a sell wall if available. |
-| SRS-WALL-AC-003 | Starting a buy wall reserves budget, immediately increases the clicked BID row's visible SIZE/depth according to the reserve, and lowers downward responsiveness while active. |
-| SRS-WALL-AC-004 | Starting a sell wall reserves budget, immediately increases the clicked ASK row's visible SIZE/depth according to the reserve, and lowers upward responsiveness while active. |
+| SRS-WALL-AC-003 | Starting a buy wall reserves budget, immediately increases the clicked BID price level's visible SIZE/depth according to the reserve, and lowers downward responsiveness while active. |
+| SRS-WALL-AC-004 | Starting a sell wall reserves budget, immediately increases the clicked ASK price level's visible SIZE/depth according to the reserve, and lowers upward responsiveness while active. |
 | SRS-WALL-AC-005 | While active, a buy wall prevents price ticks from closing below the clicked level. |
 | SRS-WALL-AC-006 | While active, a sell wall prevents price ticks from closing above the clicked level. |
-| SRS-WALL-AC-007 | Clicking an active wall removes it and refunds exactly its reserved budget. |
+| SRS-WALL-AC-007 | Clicking an active wall removes it and refunds its remaining reserved budget. |
 | SRS-WALL-AC-008 | When holding ratio is 0, both wall actions are blocked and the player can only observe for the rest of the Day. |
-| SRS-WALL-AC-009 | Wall effects expire after their duration, refund their reserve on expiry, and cooldown reaches 0 after its timer. |
+| SRS-WALL-AC-009 | Wall effects expire after their duration, refund their remaining reserve on expiry, and cooldown reaches 0 after its timer. |
 | SRS-WALL-AC-010 | The same level cannot be restarted during active duration or cooldown, but other visible levels can be used independently. |
-| SRS-WALL-AC-011 | The implementation passes typecheck and domain regression checks for activation, removal refund, expiry refund, cooldown, barrier clamping, depth impact, and no-position blocking. |
+| SRS-WALL-AC-011 | The implementation passes typecheck and domain regression checks for activation, remaining-reserve refund, expiry refund, cooldown, barrier clamping, depth impact, and no-position blocking. |

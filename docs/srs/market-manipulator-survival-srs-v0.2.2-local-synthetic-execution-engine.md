@@ -94,7 +94,7 @@ interface ExecutionGateway {
 | SRS-EXEC-INT-004 | Future chart/volume integration should consume execution reports through a game adapter, not from the engine directly in a Phaser scene. |
 | SRS-EXEC-INT-005 | The displayed order-book depth may continue to use the existing seeded game formulas for base liquidity, but the final visible active-level depth must come from the local execution depth snapshot. |
 | SRS-EXEC-INT-006 | The first integration slice must preserve existing wall budget, cooldown, barrier, and removal behavior. |
-| SRS-EXEC-INT-007 | Stateful wall quantity decay from opposing synthetic flow is deferred until a later integration slice. |
+| SRS-EXEC-INT-007 | Stateful wall quantity decay may be implemented by a game-domain wall adapter while preserving the execution gateway boundary. |
 
 ---
 
@@ -109,4 +109,4 @@ interface ExecutionGateway {
 | SRS-EXEC-AC-005 | A market order expires unfilled remainder instead of resting. |
 | SRS-EXEC-AC-006 | Cancel removes known resting orders and rejects unknown order ids. |
 | SRS-EXEC-AC-007 | Order-book wall depth increases are represented in the local execution depth snapshot with more than one order at the active level. |
-| SRS-EXEC-AC-008 | The implementation passes typecheck, execution-engine regression checks, and order-book wall regression checks. |
+| SRS-EXEC-AC-008 | The implementation passes typecheck, execution-engine regression checks, and order-book wall regression checks, including remaining wall depth when decay is enabled. |

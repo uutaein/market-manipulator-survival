@@ -390,11 +390,7 @@ export class IntradayOrderBookOverlay {
     this.scene.scale.off("resize", this.syncLayout);
     [...this.askRows, ...this.bidRows].forEach((row) => {
       row.removeEventListener("click", this.handleOrderBookRowClick);
-      const animationFrame = orderBookSizeAnimationFrames.get(row);
-
-      if (animationFrame !== undefined) {
-        cancelAnimationFrame(animationFrame);
-      }
+      cancelOrderBookRowAnimations(row);
     });
     this.container.remove();
   }
@@ -527,7 +523,7 @@ function updateOrderBookRows(
     const level = levels[index];
 
     if (!level) {
-      rowElement.hidden = true;
+      hideOrderBookRow(rowElement);
       return;
     }
 
@@ -540,16 +536,24 @@ function updateOrderBookRows(
     );
 
     if (!wallAction) {
-      rowElement.hidden = true;
+      hideOrderBookRow(rowElement);
       return;
     }
 
+    const previousDepth = Number(rowElement.dataset.targetDepth ?? depth);
+    const previousWallKey = rowElement.dataset.wallKey ?? "";
+    const wallKey = `${wallAction.side}:${wallAction.priceChangePercent}`;
+    const wasActive = rowElement.dataset.wallActive === "true" && previousWallKey === wallKey;
+
     rowElement.hidden = false;
-    rowElement.className = `mms-orderbook-row ${side}`;
-    rowElement.style.setProperty("--depth-width", `${Math.max(5, (depth / maxDepth) * 100)}%`);
+    updateOrderBookRowBaseClass(rowElement, side);
+    rowElement.dataset.wallKey = wallKey;
+    rowElement.dataset.targetDepth = `${depth}`;
     setCell(rowElement, ".mms-orderbook-price", formatCompactPrice(price));
+    animateOrderBookDepth(rowElement, Math.max(0.05, depth / maxDepth));
     animateOrderBookSize(rowElement, Math.round(depth * 13));
     updateOrderBookRowAction(rowElement, wallAction);
+    updateOrderBookWallTransitionCues(rowElement, wallAction, previousDepth, depth, wasActive);
   });
 }
 
@@ -560,6 +564,7 @@ function updateOrderBookRowAction(rowElement: HTMLDivElement, action: OrderBookO
   rowElement.dataset.wallOffset = `${action.offsetPercent}`;
   rowElement.dataset.wallPriceChangePercent = `${action.priceChangePercent}`;
   rowElement.dataset.wallDisabled = action.disabled ? "true" : "false";
+  rowElement.dataset.wallActive = action.active ? "true" : "false";
   rowElement.classList.toggle("wall-disabled", action.disabled);
   rowElement.classList.toggle("wall-active", action.active);
   rowElement.classList.toggle("wall-cooldown", action.cooldownRemainingSec > 0 && !action.active);
@@ -567,7 +572,97 @@ function updateOrderBookRowAction(rowElement: HTMLDivElement, action: OrderBookO
   setCell(rowElement, ".mms-orderbook-action", label);
 }
 
+function hideOrderBookRow(rowElement: HTMLDivElement): void {
+  rowElement.hidden = true;
+  rowElement.dataset.wallActive = "false";
+  rowElement.classList.remove(
+    "wall-active",
+    "wall-disabled",
+    "wall-cooldown",
+    "wall-activated",
+    "wall-depth-growing",
+    "wall-depth-melting"
+  );
+}
+
+function updateOrderBookRowBaseClass(rowElement: HTMLDivElement, side: "ask" | "bid"): void {
+  rowElement.classList.add("mms-orderbook-row");
+  rowElement.classList.toggle("ask", side === "ask");
+  rowElement.classList.toggle("bid", side === "bid");
+}
+
+function updateOrderBookWallTransitionCues(
+  rowElement: HTMLDivElement,
+  action: OrderBookOverlayWallAction,
+  previousDepth: number,
+  nextDepth: number,
+  wasActive: boolean
+): void {
+  if (!action.active) {
+    return;
+  }
+
+  if (!wasActive) {
+    restartOrderBookTransientClass(rowElement, "wall-activated", 900);
+    restartOrderBookTransientClass(rowElement, "wall-depth-growing", 760);
+    return;
+  }
+
+  if (!Number.isFinite(previousDepth)) {
+    return;
+  }
+
+  if (nextDepth > previousDepth + 1) {
+    restartOrderBookTransientClass(rowElement, "wall-depth-growing", 760);
+    return;
+  }
+
+  if (nextDepth < previousDepth - 1) {
+    restartOrderBookTransientClass(rowElement, "wall-depth-melting", 760);
+  }
+}
+
 const orderBookSizeAnimationFrames = new WeakMap<HTMLDivElement, number>();
+const orderBookDepthAnimationFrames = new WeakMap<HTMLDivElement, number>();
+const orderBookTransientClassTimers = new WeakMap<HTMLDivElement, Map<string, number>>();
+
+function animateOrderBookDepth(rowElement: HTMLDivElement, targetScale: number): void {
+  const previousFrame = orderBookDepthAnimationFrames.get(rowElement);
+
+  if (previousFrame !== undefined) {
+    cancelAnimationFrame(previousFrame);
+  }
+
+  const clampedTargetScale = clampDepthScale(targetScale);
+  const currentScale = Number(rowElement.dataset.displayDepthScale ?? clampedTargetScale);
+
+  if (!Number.isFinite(currentScale) || Math.abs(currentScale - clampedTargetScale) < 0.002) {
+    rowElement.dataset.displayDepthScale = `${clampedTargetScale}`;
+    rowElement.style.setProperty("--depth-scale", `${clampedTargetScale}`);
+    return;
+  }
+
+  const startedAt = performance.now();
+  const growing = clampedTargetScale > currentScale;
+  const durationMs = growing ? 820 : 620;
+  const updateFrame = (time: number): void => {
+    const progress = Math.min(1, (time - startedAt) / durationMs);
+    const easedProgress = growing ? easeOutQuart(progress) : easeInOutCubic(progress);
+    const displayScale = clampDepthScale(currentScale + (clampedTargetScale - currentScale) * easedProgress);
+
+    rowElement.dataset.displayDepthScale = `${displayScale}`;
+    rowElement.style.setProperty("--depth-scale", `${displayScale}`);
+
+    if (progress < 1) {
+      orderBookDepthAnimationFrames.set(rowElement, requestAnimationFrame(updateFrame));
+      return;
+    }
+
+    orderBookDepthAnimationFrames.delete(rowElement);
+  };
+
+  orderBookDepthAnimationFrames.set(rowElement, requestAnimationFrame(updateFrame));
+}
 
 function animateOrderBookSize(rowElement: HTMLDivElement, targetSize: number): void {
   const cell = rowElement.querySelector<HTMLElement>(".mms-orderbook-size");
@@ -609,6 +704,64 @@ function animateOrderBookSize(rowElement: HTMLDivElement, targetSize: number): v
   };
 
   orderBookSizeAnimationFrames.set(rowElement, requestAnimationFrame(updateFrame));
+}
+
+function restartOrderBookTransientClass(rowElement: HTMLDivElement, className: string, durationMs: number): void {
+  let timers = orderBookTransientClassTimers.get(rowElement);
+
+  if (!timers) {
+    timers = new Map<string, number>();
+    orderBookTransientClassTimers.set(rowElement, timers);
+  }
+
+  const previousTimer = timers.get(className);
+
+  if (previousTimer !== undefined) {
+    window.clearTimeout(previousTimer);
+  }
+
+  rowElement.classList.remove(className);
+  void rowElement.offsetWidth;
+  rowElement.classList.add(className);
+
+  const timer = window.setTimeout(() => {
+    rowElement.classList.remove(className);
+    timers?.delete(className);
+  }, durationMs);
+  timers.set(className, timer);
+}
+
+function cancelOrderBookRowAnimations(rowElement: HTMLDivElement): void {
+  const sizeFrame = orderBookSizeAnimationFrames.get(rowElement);
+  const depthFrame = orderBookDepthAnimationFrames.get(rowElement);
+  const transientTimers = orderBookTransientClassTimers.get(rowElement);
+
+  if (sizeFrame !== undefined) {
+    cancelAnimationFrame(sizeFrame);
+  }
+
+  if (depthFrame !== undefined) {
+    cancelAnimationFrame(depthFrame);
+  }
+
+  transientTimers?.forEach((timer) => window.clearTimeout(timer));
+  transientTimers?.clear();
+}
+
+function clampDepthScale(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(1, value));
+}
+
+function easeOutQuart(value: number): number {
+  return 1 - Math.pow(1 - value, 4);
+}
+
+function easeInOutCubic(value: number): number {
+  return value < 0.5 ? 4 * value * value * value : 1 - Math.pow(-2 * value + 2, 3) / 2;
 }
 
 function positionOverlayElement(

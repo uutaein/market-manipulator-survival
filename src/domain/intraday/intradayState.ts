@@ -3,7 +3,6 @@ import { getAssetInfluenceResistanceById } from "../assets/assetMarketProfiles";
 import type { DocumentEventChoiceType, DocumentEventId } from "../balancing/documentEventValues";
 import { manualActionIds, type ManualActionId } from "../balancing/manualActionValues";
 import {
-  getOrderBookWallLevelKeys,
   type OrderBookWallLevelKey,
   type OrderBookWallSide
 } from "../balancing/orderBookWallValues";
@@ -56,6 +55,8 @@ export interface ActiveOrderBookWallEffect {
   readonly priceChangePercent: number;
   readonly reservedBudget: number;
   readonly depthBoost: number;
+  readonly remainingReservedBudget?: number;
+  readonly remainingDepthBoost?: number;
   readonly remainingSec: number;
   readonly totalSec: number;
 }
@@ -360,7 +361,7 @@ export function createEmptyManualActionCooldowns(): Readonly<Record<ManualAction
 }
 
 export function createEmptyOrderBookWallCooldowns(): Readonly<Record<OrderBookWallLevelKey, number>> {
-  return Object.fromEntries(getOrderBookWallLevelKeys().map((key) => [key, 0])) as Record<OrderBookWallLevelKey, number>;
+  return {} as Record<OrderBookWallLevelKey, number>;
 }
 
 export function applyIntradayStatUpdate(

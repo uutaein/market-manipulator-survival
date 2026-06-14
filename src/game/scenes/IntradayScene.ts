@@ -18,6 +18,7 @@ import { canUseManualAction, getManualActionBudgetDelta, manualActions } from ".
 import {
   canUseOrderBookWall,
   findActiveOrderBookWallAtLevel,
+  getOrderBookWallRemainingReservedBudget,
   getOrderBookWallReserveBudget,
   getOrderBookWallValue,
   type OrderBookWallResult,
@@ -1087,7 +1088,7 @@ function buildOrderBookWallOverlayAction(
 ): OrderBookOverlayWallAction {
   const action = getOrderBookWallValue(side);
   const activeEffect = findActiveOrderBookWallAtLevel(state, side, priceChangePercent);
-  const cooldownRemainingSec = state.orderBookWallCooldowns[getOrderBookWallLevelKey(side, offsetPercent)] ?? 0;
+  const cooldownRemainingSec = state.orderBookWallCooldowns[getOrderBookWallLevelKey(side, priceChangePercent)] ?? 0;
   const active = Boolean(activeEffect);
 
   return {
@@ -1096,7 +1097,7 @@ function buildOrderBookWallOverlayAction(
     priceChangePercent,
     label: action.displayName,
     statusLabel: getOrderBookWallStatusLabel(state, side, activeEffect, cooldownRemainingSec),
-    disabled: !active && !canUseOrderBookWall(state, side, offsetPercent),
+    disabled: !active && !canUseOrderBookWall(state, side, offsetPercent, priceChangePercent),
     active,
     cooldownRemainingSec
   };
@@ -1111,7 +1112,7 @@ function getOrderBookWallStatusLabel(
   const action = getOrderBookWallValue(side);
 
   if (activeEffect && activeEffect.remainingSec > 0) {
-    return `벽 빼기 +${formatNumber(activeEffect.reservedBudget)}B`;
+    return `벽 빼기 +${formatNumber(getOrderBookWallRemainingReservedBudget(activeEffect))}B`;
   }
 
   if (cooldownRemainingSec > 0) {

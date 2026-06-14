@@ -4,6 +4,8 @@ import { buildOrderBookProfile } from "../src/domain/intraday/orderBook";
 import {
   applyOrderBookWallPriceBarriers,
   canUseOrderBookWall,
+  getOrderBookWallRemainingDepthBoost,
+  getOrderBookWallRemainingReservedBudget,
   tickOrderBookWallEffects
 } from "../src/domain/intraday/orderBookWalls";
 import { canUseManualAction } from "../src/domain/intraday/manualActions";
@@ -82,17 +84,129 @@ runScenario("order-book walls change visible depth and responsiveness", () => {
     )
   );
 
-  const removeBuyResult = buySession.useOrderBookWall("buy", -1, buyWallPrice);
+  const shiftedBuyState = clampIntradayState({
+    ...buyResult.state,
+    priceChangePercent: buyWallPrice + 1.2
+  });
+  const shiftedBuyProfile = buildOrderBookProfile(shiftedBuyState, {
+    runSeed: buyRun.runSeed,
+    dayIndex: buyDay.dayIndex
+  });
+  const shiftedBuyLevel = shiftedBuyProfile.levels.find(
+    (level) => Math.abs(level.priceChangePercent - buyWallPrice) < 0.01
+  );
+  assert.ok(shiftedBuyLevel);
+  assert.ok(shiftedBuyLevel.bidDepth > buyLevelBefore.bidDepth);
+  assert.ok(
+    shiftedBuyProfile.executionDepth.bids.some(
+      (level) => level.quantity === shiftedBuyLevel.bidDepth && level.orderCount > 1
+    )
+  );
+
+  const decaySession = startFreeIntraday();
+  decaySession.intradayState = tuneOrderBookTestState(decaySession.intradayState ?? decaySession.startIntraday());
+  const decayState = decaySession.intradayState;
+  assert.ok(decayState);
+  const decayRun = decaySession.ensureRun();
+  const decayDay = decaySession.ensureDay();
+  const decayProfileBefore = buildOrderBookProfile(decayState, {
+    runSeed: decayRun.runSeed,
+    dayIndex: decayDay.dayIndex
+  });
+  const decayWallPrice = getLevelPriceChangePercent(decayProfileBefore, -1);
+  const decayResult = decaySession.useOrderBookWall("buy", -1, decayWallPrice);
+  assert.equal(decayResult.applied, true);
+  const decayProfileAfter = buildOrderBookProfile(decayResult.state, {
+    runSeed: decayRun.runSeed,
+    dayIndex: decayDay.dayIndex
+  });
+  const decayLevelAfter = decayProfileAfter.levels.find((level) => level.offsetPercent === -1);
+  assert.ok(decayLevelAfter);
+
+  const pressuredWallState = clampIntradayState({
+    ...decayResult.state,
+    marketPressure: -100,
+    priceChangePercent: decayWallPrice
+  });
+  const partiallyMeltedState = tickOrderBookWallEffects(pressuredWallState, 5);
+  const partiallyMeltedEffect = partiallyMeltedState.activeOrderBookWallEffects.find(
+    (effect) => effect.side === "buy" && Math.abs(effect.priceChangePercent - decayWallPrice) < 0.01
+  );
+  assert.ok(partiallyMeltedEffect);
+  assert.ok(getOrderBookWallRemainingDepthBoost(partiallyMeltedEffect) < decayResult.depthBoost);
+  assert.ok(getOrderBookWallRemainingReservedBudget(partiallyMeltedEffect) < decayResult.reservedBudget);
+  assert.ok(getOrderBookWallRemainingReservedBudget(partiallyMeltedEffect) > 0);
+
+  const partiallyMeltedProfile = buildOrderBookProfile(partiallyMeltedState, {
+    runSeed: decayRun.runSeed,
+    dayIndex: decayDay.dayIndex
+  });
+  const partiallyMeltedLevel = partiallyMeltedProfile.levels.find(
+    (level) => Math.abs(level.priceChangePercent - decayWallPrice) < 0.01
+  );
+  assert.ok(partiallyMeltedLevel);
+  assert.ok(partiallyMeltedLevel.bidDepth < decayLevelAfter.bidDepth);
+  decaySession.intradayState = partiallyMeltedState;
+  const removePartialWallResult = decaySession.useOrderBookWall(
+    "buy",
+    partiallyMeltedLevel.offsetPercent,
+    decayWallPrice
+  );
+  assert.equal(removePartialWallResult.applied, true);
+  assert.equal(removePartialWallResult.reason, "removed");
+  assert.equal(removePartialWallResult.budgetDelta, getOrderBookWallRemainingReservedBudget(partiallyMeltedEffect));
+  assert.ok(removePartialWallResult.budgetDelta > 0);
+  assert.ok(removePartialWallResult.budgetDelta < decayResult.reservedBudget);
+
+  const meltSession = startFreeIntraday();
+  meltSession.intradayState = tuneOrderBookTestState(meltSession.intradayState ?? meltSession.startIntraday());
+  const meltState = meltSession.intradayState;
+  assert.ok(meltState);
+  const meltRun = meltSession.ensureRun();
+  const meltDay = meltSession.ensureDay();
+  const meltProfileBefore = buildOrderBookProfile(meltState, {
+    runSeed: meltRun.runSeed,
+    dayIndex: meltDay.dayIndex
+  });
+  const meltWallPrice = getLevelPriceChangePercent(meltProfileBefore, -1);
+  const meltResult = meltSession.useOrderBookWall("buy", -1, meltWallPrice);
+  assert.equal(meltResult.applied, true);
+  const fullMeltPressureState = clampIntradayState({
+    ...meltResult.state,
+    marketPressure: -100,
+    priceChangePercent: meltWallPrice
+  });
+  const fullyMeltedState = tickOrderBookWallEffects(fullMeltPressureState, 14);
+  assert.equal(
+    fullyMeltedState.activeOrderBookWallEffects.some(
+      (effect) => effect.side === "buy" && Math.abs(effect.priceChangePercent - meltWallPrice) < 0.01
+    ),
+    false
+  );
+  const postMeltDownsideAttempt = clampIntradayState({
+    ...fullyMeltedState,
+    priceChangePercent: meltWallPrice - 4,
+    priceDeltaPerTick: -4
+  });
+  const postMeltBarrierState = applyOrderBookWallPriceBarriers(fullyMeltedState, postMeltDownsideAttempt);
+  assert.equal(postMeltBarrierState.priceChangePercent, meltWallPrice - 4);
+
+  buySession.intradayState = shiftedBuyState;
+  const removeBuyResult = buySession.useOrderBookWall("buy", shiftedBuyLevel.offsetPercent, buyWallPrice);
   assert.equal(removeBuyResult.applied, true);
   assert.equal(removeBuyResult.reason, "removed");
   assert.equal(removeBuyResult.budgetDelta, 10);
   assert.equal(removeBuyResult.state.budget, buyState.budget);
 
-  const repeatBuyResult = buySession.useOrderBookWall("buy", -1, buyWallPrice);
+  const repeatBuyResult = buySession.useOrderBookWall("buy", shiftedBuyLevel.offsetPercent, buyWallPrice);
   assert.equal(repeatBuyResult.applied, false);
   assert.equal(repeatBuyResult.reason, "cooldown");
 
-  const secondLevelBuyPrice = getLevelPriceChangePercent(buyProfileAfter, -2);
+  const postRemoveBuyProfile = buildOrderBookProfile(removeBuyResult.state, {
+    runSeed: buyRun.runSeed,
+    dayIndex: buyDay.dayIndex
+  });
+  const secondLevelBuyPrice = getLevelPriceChangePercent(postRemoveBuyProfile, -2);
   const secondLevelBuyResult = buySession.useOrderBookWall("buy", -2, secondLevelBuyPrice);
   assert.equal(secondLevelBuyResult.applied, true);
   assert.equal(secondLevelBuyResult.reason, "applied");
@@ -151,6 +265,19 @@ runScenario("order-book walls change visible depth and responsiveness", () => {
   });
   const sellBarrierState = applyOrderBookWallPriceBarriers(sellResult.state, upsideAttempt);
   assert.equal(sellBarrierState.priceChangePercent, sellWallPrice);
+
+  const pressuredSellWallState = clampIntradayState({
+    ...sellResult.state,
+    marketPressure: 100,
+    priceChangePercent: sellWallPrice
+  });
+  const partiallyMeltedSellState = tickOrderBookWallEffects(pressuredSellWallState, 5);
+  const partiallyMeltedSellEffect = partiallyMeltedSellState.activeOrderBookWallEffects.find(
+    (effect) => effect.side === "sell" && Math.abs(effect.priceChangePercent - sellWallPrice) < 0.01
+  );
+  assert.ok(partiallyMeltedSellEffect);
+  assert.ok(getOrderBookWallRemainingDepthBoost(partiallyMeltedSellEffect) < sellResult.depthBoost);
+  assert.ok(getOrderBookWallRemainingReservedBudget(partiallyMeltedSellEffect) < sellResult.reservedBudget);
 
   return `buy depth ${buyProfileBefore.buyWallDepth}->${buyProfileAfter.buyWallDepth}, sell depth ${sellProfileBefore.sellWallDepth}->${sellProfileAfter.sellWallDepth}`;
 });

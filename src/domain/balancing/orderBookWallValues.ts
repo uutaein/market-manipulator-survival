@@ -16,6 +16,8 @@ export interface OrderBookWallValue {
   readonly durationSec: number;
   readonly cooldownSec: number;
   readonly depthBoostPerBudget: number;
+  readonly depthDecayPerPressureSecond: number;
+  readonly barrierTouchDecayMultiplier: number;
   readonly marketPressureDelta: number;
   readonly personalParticipationDelta: number;
   readonly marketLiquidityDelta: number;
@@ -32,6 +34,8 @@ export const orderBookWallValues = {
     durationSec: 14,
     cooldownSec: 24,
     depthBoostPerBudget: 16,
+    depthDecayPerPressureSecond: 0.05,
+    barrierTouchDecayMultiplier: 2.4,
     marketPressureDelta: 10,
     personalParticipationDelta: 4,
     marketLiquidityDelta: -2,
@@ -46,6 +50,8 @@ export const orderBookWallValues = {
     durationSec: 14,
     cooldownSec: 24,
     depthBoostPerBudget: 16,
+    depthDecayPerPressureSecond: 0.05,
+    barrierTouchDecayMultiplier: 2.4,
     marketPressureDelta: -10,
     personalParticipationDelta: 4,
     marketLiquidityDelta: -2,
@@ -56,9 +62,9 @@ export const orderBookWallValues = {
 
 export function getOrderBookWallLevelKey(
   side: OrderBookWallSide,
-  offsetPercent: number
+  priceChangePercent: number
 ): OrderBookWallLevelKey {
-  return `${side}:${offsetPercent}` as OrderBookWallLevelKey;
+  return `${side}:${normalizeOrderBookWallPriceLevel(priceChangePercent)}` as OrderBookWallLevelKey;
 }
 
 export function getOrderBookWallLevelKeys(): readonly OrderBookWallLevelKey[] {
@@ -69,4 +75,8 @@ export function getOrderBookWallLevelKeys(): readonly OrderBookWallLevelKey[] {
 
 export function isOrderBookWallLevel(side: OrderBookWallSide, offsetPercent: number): boolean {
   return (orderBookWallLevelOffsets[side] as readonly number[]).includes(offsetPercent);
+}
+
+export function normalizeOrderBookWallPriceLevel(priceChangePercent: number): number {
+  return Math.round(priceChangePercent * 10) / 10;
 }

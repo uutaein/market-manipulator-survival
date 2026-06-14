@@ -51,7 +51,7 @@ Rejected as the long-term direction. Direct boosts are simple, but they do not m
 2. Order-book wall visible depth is migrated from direct depth boost to synthetic local execution depth without changing the UI contract.
 3. Tests must cover matching priority, partial fill, market-order expiry, cancel, and depth snapshots.
 4. C++/WASM integration must implement the existing gateway rather than leaking engine-specific APIs into game scenes.
-5. Stateful wall quantity decay, if added later, must be implemented through a game adapter around execution reports.
+5. Stateful wall quantity decay is implemented through a game adapter around the execution gateway boundary and may later consume execution reports directly.
 6. Safety copy must continue to describe this as fictional local simulation, not real market access.
 
 ## PRD Impact
@@ -66,4 +66,4 @@ SRS v0.2.2 defines gateway behavior, local-only constraints, deterministic depth
 
 1. Whether the first C++ candidate should be Liquibook or a smaller C++ limit-order-book project.
 2. Whether the C++ implementation should run as WASM in-browser or as a local sidecar during development.
-3. How much of the order-book wall feature should migrate to synthetic order consumption in the first integration slice.
+3. How much of the order-book wall feature should later migrate from pressure-based decay to execution-report-driven synthetic consumption.

@@ -1,7 +1,9 @@
 import type { BookDepthSnapshot } from "../execution/executionGateway";
+import { getOrderBookWallLevelKey, normalizeOrderBookWallPriceLevel } from "../balancing/orderBookWallValues";
 import { createSeededRandom } from "../random/SeededRandom";
 import { clamp, type IntradayState } from "./intradayState";
 import { applySyntheticExecutionOrderBook } from "./orderBookExecution";
+import { isActiveOrderBookWallEffect } from "./orderBookWalls";
 
 export interface OrderBookContext {
   readonly runSeed: string;
@@ -68,7 +70,8 @@ export function buildOrderBookProfile(state: IntradayState, context: OrderBookCo
       askDepth: round1(offsetPercent >= 0 ? askDepth : askDepth * 0.25)
     };
   });
-  const syntheticExecution = applySyntheticExecutionOrderBook(baseLevels, state);
+  const visibleLevels = pinActiveOrderBookWallLevels(baseLevels, state);
+  const syntheticExecution = applySyntheticExecutionOrderBook(visibleLevels, state);
   const levels = syntheticExecution.levels;
   const sellWallDepth = round1(getAverage(levels.filter((level) => level.offsetPercent > 0).map((level) => level.askDepth)));
   const buyWallDepth = round1(getAverage(levels.filter((level) => level.offsetPercent < 0).map((level) => level.bidDepth)));
@@ -83,6 +86,89 @@ export function buildOrderBookProfile(state: IntradayState, context: OrderBookCo
     sellWallLabel: getDepthLabel(sellWallDepth),
     buyWallLabel: getDepthLabel(buyWallDepth)
   };
+}
+
+function pinActiveOrderBookWallLevels(
+  baseLevels: readonly OrderBookLevel[],
+  state: IntradayState
+): readonly OrderBookLevel[] {
+  const bidLevels = selectVisibleSideLevels(baseLevels, state, "buy");
+  const midLevel = baseLevels.find((level) => level.offsetPercent === 0);
+  const askLevels = selectVisibleSideLevels(baseLevels, state, "sell");
+
+  return midLevel ? [...bidLevels, midLevel, ...askLevels] : [...bidLevels, ...askLevels];
+}
+
+function selectVisibleSideLevels(
+  baseLevels: readonly OrderBookLevel[],
+  state: IntradayState,
+  side: "buy" | "sell"
+): readonly OrderBookLevel[] {
+  const sideLevels = baseLevels.filter((level) => (side === "buy" ? level.offsetPercent < 0 : level.offsetPercent > 0));
+  const levelsByPrice = new Map(sideLevels.map((level) => [getOrderBookWallLevelKey(side, level.priceChangePercent), level]));
+
+  state.activeOrderBookWallEffects
+    .filter((effect) => effect.side === side && isActiveOrderBookWallEffect(effect))
+    .forEach((effect) => {
+      if (!isWallPriceLevelInVisibleSide(state.priceChangePercent, effect.priceChangePercent, side)) {
+        return;
+      }
+
+      const referenceLevel = getNearestLevel(sideLevels, effect.priceChangePercent);
+      if (!referenceLevel) {
+        return;
+      }
+
+      levelsByPrice.set(getOrderBookWallLevelKey(side, effect.priceChangePercent), {
+        ...referenceLevel,
+        priceChangePercent: normalizeOrderBookWallPriceLevel(effect.priceChangePercent)
+      });
+    });
+
+  const sortedLevels = [...levelsByPrice.values()].sort((left, right) =>
+    side === "buy"
+      ? right.priceChangePercent - left.priceChangePercent
+      : left.priceChangePercent - right.priceChangePercent
+  );
+
+  return sortedLevels.slice(0, 3).map((level, index) => ({
+    ...level,
+    offsetPercent: side === "buy" ? -(index + 1) : index + 1
+  }));
+}
+
+function isWallPriceLevelInVisibleSide(
+  currentPriceChangePercent: number,
+  wallPriceChangePercent: number,
+  side: "buy" | "sell"
+): boolean {
+  const distance = Math.abs(wallPriceChangePercent - currentPriceChangePercent);
+
+  if (distance > 3.5) {
+    return false;
+  }
+
+  if (side === "buy") {
+    return wallPriceChangePercent <= currentPriceChangePercent;
+  }
+
+  return wallPriceChangePercent >= currentPriceChangePercent;
+}
+
+function getNearestLevel(
+  levels: readonly OrderBookLevel[],
+  priceChangePercent: number
+): OrderBookLevel | undefined {
+  return levels.reduce<OrderBookLevel | undefined>((nearest, level) => {
+    if (!nearest) {
+      return level;
+    }
+
+    return Math.abs(level.priceChangePercent - priceChangePercent) <
+      Math.abs(nearest.priceChangePercent - priceChangePercent)
+      ? level
+      : nearest;
+  }, undefined);
 }
 
 function getDepthLabel(depth: number): "thin" | "normal" | "heavy" {
