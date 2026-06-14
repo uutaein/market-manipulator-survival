@@ -23,7 +23,8 @@ This directory contains the product, requirement, decision, and design documents
 
 | Type | Document |
 | --- | --- |
-| PRD | [market-manipulator-survival-prd-v0.1.5.md](prd/market-manipulator-survival-prd-v0.1.5.md) |
+| Post-MVP PRD | [market-manipulator-survival-prd-v0.2.0.md](prd/market-manipulator-survival-prd-v0.2.0.md) |
+| MVP Baseline PRD | [market-manipulator-survival-prd-v0.1.5.md](prd/market-manipulator-survival-prd-v0.1.5.md) |
 | Freeze | [market-manipulator-survival-mvp-freeze-candidate.md](prd/market-manipulator-survival-mvp-freeze-candidate.md) |
 | SRS | [market-manipulator-survival-srs-v0.1.0-core-game-state.md](srs/market-manipulator-survival-srs-v0.1.0-core-game-state.md) |
 | SRS | [market-manipulator-survival-srs-v0.1.1-tick-price-formula.md](srs/market-manipulator-survival-srs-v0.1.1-tick-price-formula.md) |
@@ -41,4 +42,5 @@ This directory contains the product, requirement, decision, and design documents
 ## ADRs
 
 ADR files are stored in [`adr/`](adr/).  
-The latest PRD, MVP Freeze Candidate, and MVP SPEC reference ADR-0001 through ADR-0028.
+The MVP baseline PRD, MVP Freeze Candidate, and MVP SPEC reference ADR-0001 through ADR-0029.
+The Post-MVP PRD references ADR-0030 through ADR-0035 for 자유모드 / 의뢰모드 scope.
