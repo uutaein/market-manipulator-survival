@@ -2,6 +2,11 @@ import type { DayState, PreOpenCardEffect } from "../day/daySetup";
 import { getAssetInfluenceResistanceById } from "../assets/assetMarketProfiles";
 import type { DocumentEventChoiceType, DocumentEventId } from "../balancing/documentEventValues";
 import { manualActionIds, type ManualActionId } from "../balancing/manualActionValues";
+import {
+  getOrderBookWallLevelKeys,
+  type OrderBookWallLevelKey,
+  type OrderBookWallSide
+} from "../balancing/orderBookWallValues";
 import { retailSwarmValues } from "../balancing/retailSwarmValues";
 import { runDefaults } from "../balancing/runDefaults";
 import { createSeededRandom } from "../random/SeededRandom";
@@ -45,6 +50,16 @@ export interface ActiveManualActionEffect {
   readonly totalSec: number;
 }
 
+export interface ActiveOrderBookWallEffect {
+  readonly side: OrderBookWallSide;
+  readonly offsetPercent: number;
+  readonly priceChangePercent: number;
+  readonly reservedBudget: number;
+  readonly depthBoost: number;
+  readonly remainingSec: number;
+  readonly totalSec: number;
+}
+
 export interface IntradayState {
   readonly timeRemainingSec: number;
   readonly isPaused: boolean;
@@ -78,6 +93,8 @@ export interface IntradayState {
   readonly retailSwarmState: RetailSwarmState;
   readonly manualActionCooldowns: Readonly<Record<ManualActionId, number>>;
   readonly activeManualActionEffects: readonly ActiveManualActionEffect[];
+  readonly orderBookWallCooldowns: Readonly<Record<OrderBookWallLevelKey, number>>;
+  readonly activeOrderBookWallEffects: readonly ActiveOrderBookWallEffect[];
   readonly lastManualActionId: ManualActionId | null;
   readonly activeDocumentEventId: DocumentEventId | null;
   readonly documentEventChoices: readonly DocumentEventChoiceType[];
@@ -165,6 +182,8 @@ export function createIntradayState(
     retailSwarmState: "interest",
     manualActionCooldowns: createEmptyManualActionCooldowns(),
     activeManualActionEffects: [],
+    orderBookWallCooldowns: createEmptyOrderBookWallCooldowns(),
+    activeOrderBookWallEffects: [],
     lastManualActionId: null,
     activeDocumentEventId: null,
     documentEventChoices: [],
@@ -338,6 +357,10 @@ export function calculateCurrentPrice(openingPrice: number, priceChangePercent: 
 
 export function createEmptyManualActionCooldowns(): Readonly<Record<ManualActionId, number>> {
   return Object.fromEntries(manualActionIds.map((actionId) => [actionId, 0])) as Record<ManualActionId, number>;
+}
+
+export function createEmptyOrderBookWallCooldowns(): Readonly<Record<OrderBookWallLevelKey, number>> {
+  return Object.fromEntries(getOrderBookWallLevelKeys().map((key) => [key, 0])) as Record<OrderBookWallLevelKey, number>;
 }
 
 export function applyIntradayStatUpdate(

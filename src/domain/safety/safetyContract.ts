@@ -2,6 +2,7 @@ import { assets, sectors } from "../assets/assetCatalog";
 import { autoCardValues } from "../balancing/autoCardValues";
 import { documentEventValues } from "../balancing/documentEventValues";
 import { manualActionValues } from "../balancing/manualActionValues";
+import { orderBookWallValues } from "../balancing/orderBookWallValues";
 import { preOpenCardValues } from "../balancing/preOpenCardValues";
 import { morningNewsTemplates } from "../day/morningNews";
 
@@ -19,7 +20,10 @@ export const approvedSafeTerms = [
   "가격 안정화",
   "포지션 정리",
   "신호 주문",
-  "관심 신호"
+  "관심 신호",
+  "호가 깊이",
+  "매수벽 세우기",
+  "매도벽 세우기"
 ] as const;
 
 export const forbiddenProcedureTerms = [
@@ -78,6 +82,7 @@ export function collectPlayerFacingContent(): readonly string[] {
     ...morningNewsTemplates.flatMap((template) => [template.displayName, template.designLabel, template.role]),
     ...Object.values(preOpenCardValues).flatMap((card) => [card.displayName, card.role]),
     ...Object.values(manualActionValues).map((action) => action.displayName),
+    ...Object.values(orderBookWallValues).map((action) => action.displayName),
     ...Object.values(autoCardValues).map((card) => card.displayName),
     ...Object.values(documentEventValues).flatMap((event) => [
       event.displayName,
@@ -100,6 +105,7 @@ export function collectTerminologyContent(): readonly string[] {
   return [
     ...Object.values(preOpenCardValues).map((card) => card.displayName),
     ...Object.values(manualActionValues).map((action) => action.displayName),
+    ...Object.values(orderBookWallValues).map((action) => action.displayName),
     ...Object.values(autoCardValues).map((card) => card.displayName),
     ...Object.values(documentEventValues).flatMap((event) => [
       event.displayName,

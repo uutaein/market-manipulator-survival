@@ -7,9 +7,11 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
     "bdd": "tsx ./node_modules/@cucumber/cucumber/bin/cucumber.js --config cucumber.mjs",
+    "bdd:execution": "tsx ./node_modules/@cucumber/cucumber/bin/cucumber.js --config cucumber.mjs --profile execution",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "verify:run": "tsx scripts/verify-run-flow.ts",
+    "verify:execution": "tsx scripts/verify-execution-engine.ts",
     "verify:contract": "tsx scripts/verify-contract-mode.ts"
   },
   "dependencies": {

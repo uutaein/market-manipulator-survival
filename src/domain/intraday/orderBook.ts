@@ -1,5 +1,7 @@
+import type { BookDepthSnapshot } from "../execution/executionGateway";
 import { createSeededRandom } from "../random/SeededRandom";
 import { clamp, type IntradayState } from "./intradayState";
+import { applySyntheticExecutionOrderBook } from "./orderBookExecution";
 
 export interface OrderBookContext {
   readonly runSeed: string;
@@ -15,6 +17,7 @@ export interface OrderBookLevel {
 
 export interface OrderBookProfile {
   readonly levels: readonly OrderBookLevel[];
+  readonly executionDepth: BookDepthSnapshot;
   readonly sellWallDepth: number;
   readonly buyWallDepth: number;
   readonly upwardResponsiveness: number;
@@ -27,7 +30,7 @@ const orderBookOffsets = [-3, -2, -1, 0, 1, 2, 3] as const;
 
 export function buildOrderBookProfile(state: IntradayState, context: OrderBookContext): OrderBookProfile {
   const tickBucket = Math.floor(state.priceTickIndex / 4);
-  const levels = orderBookOffsets.map((offsetPercent) => {
+  const baseLevels = orderBookOffsets.map((offsetPercent) => {
     const random = createSeededRandom(
       `${context.runSeed}:day:${context.dayIndex}:order-book:${tickBucket}:${offsetPercent}`
     );
@@ -40,9 +43,12 @@ export function buildOrderBookProfile(state: IntradayState, context: OrderBookCo
     const madness = state.madness;
     const holding = state.holdingRatio;
     const askDepth = clamp(
-      baseDepth + Math.max(0, -pressure) * 0.25 + Math.max(0, state.priceChangePercent) * 1.4 - Math.max(0, pressure) * 0.36,
+      baseDepth +
+        Math.max(0, -pressure) * 0.25 +
+        Math.max(0, state.priceChangePercent) * 1.4 -
+        Math.max(0, pressure) * 0.36,
       8,
-      100
+      260
     );
     const bidDepth = clamp(
       baseDepth +
@@ -52,7 +58,7 @@ export function buildOrderBookProfile(state: IntradayState, context: OrderBookCo
         participation * 0.04 +
         madness * 0.12,
       8,
-      100
+      260
     );
 
     return {
@@ -62,11 +68,14 @@ export function buildOrderBookProfile(state: IntradayState, context: OrderBookCo
       askDepth: round1(offsetPercent >= 0 ? askDepth : askDepth * 0.25)
     };
   });
+  const syntheticExecution = applySyntheticExecutionOrderBook(baseLevels, state);
+  const levels = syntheticExecution.levels;
   const sellWallDepth = round1(getAverage(levels.filter((level) => level.offsetPercent > 0).map((level) => level.askDepth)));
   const buyWallDepth = round1(getAverage(levels.filter((level) => level.offsetPercent < 0).map((level) => level.bidDepth)));
 
   return {
     levels,
+    executionDepth: syntheticExecution.depth,
     sellWallDepth,
     buyWallDepth,
     upwardResponsiveness: round2(clamp(1.5 - sellWallDepth / 100, 0.65, 1.55)),

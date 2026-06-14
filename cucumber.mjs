@@ -1,6 +1,16 @@
-export default {
-  paths: ["feature/**/*.feature"],
+const common = {
   import: ["feature/support/**/*.ts", "feature/steps/**/*.ts"],
+  paths: ["feature/**/*.feature"],
   format: ["progress"],
-  publishQuiet: true
+  publish: false,
+  exit: true
 };
+
+export const execution = {
+  ...common,
+  paths: ["feature/intraday/local_synthetic_execution.feature"],
+  format: ["summary"],
+  failFast: true
+};
+
+export default common;

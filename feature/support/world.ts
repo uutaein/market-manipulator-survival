@@ -2,6 +2,12 @@ import { World, setWorldConstructor } from "@cucumber/cucumber";
 import type { DayState, MarketBriefing } from "../../src/domain/day/daySetup";
 import { createDayState, createMarketBriefing } from "../../src/domain/day/daySetup";
 import type { AutoCardId } from "../../src/domain/balancing/runDefaults";
+import type {
+  BookDepthSnapshot,
+  ExecutionGateway,
+  ExecutionReport
+} from "../../src/domain/execution/executionGateway";
+import type { OrderBookProfile } from "../../src/domain/intraday/orderBook";
 import {
   advanceIntradayTime,
   applyIntradayStatUpdate,
@@ -176,6 +182,12 @@ export class MmsWorld extends World {
   highMadnessSettlementBudgetDelta = 0;
   lowMadnessSettlementPressureDelta = 0;
   highMadnessSettlementPressureDelta = 0;
+  executionGateway?: ExecutionGateway;
+  executionReports: readonly ExecutionReport[] = [];
+  executionDepth?: BookDepthSnapshot;
+  orderBookProfileBeforeWall?: OrderBookProfile;
+  orderBookProfileAfterWall?: OrderBookProfile;
+  activeSyntheticWallPriceChangePercent = 0;
 
   startNewRun(): void {
     this.previousRunSeed = this.runSeed || "mms-seed-001";

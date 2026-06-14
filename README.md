@@ -72,6 +72,7 @@ npm install
 npm run dev
 npm run bdd
 npm run typecheck
+npm run verify:execution
 npm run build
 ```
 
@@ -85,6 +86,7 @@ Current implementation status:
 - Pre-open Card domain module: present
 - Market Board domain module: present
 - Intraday State / Price Tick domain module: present
+- Local Synthetic Execution domain module: reference engine present and wired into fictional order-book depth
 - Manual Action domain module: present
 - Auto Card domain module: present
 - Document Event domain module: present
@@ -137,6 +139,8 @@ docs/
 
 Key current documents:
 
+- [Post-MVP PRD v0.2.1 — Order Book Wall Interactions](docs/prd/market-manipulator-survival-prd-v0.2.1.md)
+- [Post-MVP PRD v0.2.2 — Local Synthetic Execution Engine](docs/prd/market-manipulator-survival-prd-v0.2.2.md)
 - [Post-MVP PRD v0.2.0 — Contract Mode](docs/prd/market-manipulator-survival-prd-v0.2.0.md)
 - [PRD v0.1.5](docs/prd/market-manipulator-survival-prd-v0.1.5.md)
 - [MVP Freeze Candidate](docs/prd/market-manipulator-survival-mvp-freeze-candidate.md)
@@ -150,6 +154,8 @@ Key current documents:
 - [SRS v0.1.5 — Freeze Readiness Review](docs/srs/market-manipulator-survival-srs-v0.1.5-freeze-readiness-review.md)
 - [SRS v0.1.6 — Baseline Values and Triggers](docs/srs/market-manipulator-survival-srs-v0.1.6-baseline-values-and-triggers.md)
 - [SRS v0.2.0 — Contract Mode](docs/srs/market-manipulator-survival-srs-v0.2.0-contract-mode.md)
+- [SRS v0.2.1 — Order Book Wall Interactions](docs/srs/market-manipulator-survival-srs-v0.2.1-order-book-wall-interactions.md)
+- [SRS v0.2.2 — Local Synthetic Execution Engine](docs/srs/market-manipulator-survival-srs-v0.2.2-local-synthetic-execution-engine.md)
 - [SDD v0.1.0 — Simulation Modularity](docs/sdd/market-manipulator-survival-sdd-v0.1.0-simulation-modularity.md)
 - [MVP SPEC v0.1.0 — First Playable Build](docs/spec/market-manipulator-survival-mvp-spec-v0.1.0.md)
 - [MEMORY](MEMORY.md)

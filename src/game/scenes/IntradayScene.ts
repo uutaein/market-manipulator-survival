@@ -15,8 +15,17 @@ import { runDefaults } from "../../domain/balancing/runDefaults";
 import { getAutoCardPeriodSec } from "../../domain/intraday/autoCards";
 import type { IntradayState } from "../../domain/intraday/intradayState";
 import { canUseManualAction, getManualActionBudgetDelta, manualActions } from "../../domain/intraday/manualActions";
+import {
+  canUseOrderBookWall,
+  findActiveOrderBookWallAtLevel,
+  getOrderBookWallReserveBudget,
+  getOrderBookWallValue,
+  type OrderBookWallResult,
+  type OrderBookWallSide
+} from "../../domain/intraday/orderBookWalls";
+import { getOrderBookWallLevelKey } from "../../domain/balancing/orderBookWallValues";
 import { calculateRetailSwarmModel, type RetailSwarmModel } from "../../domain/intraday/retailSwarm";
-import { buildOrderBookProfile } from "../../domain/intraday/orderBook";
+import { buildOrderBookProfile, type OrderBookLevel } from "../../domain/intraday/orderBook";
 import type { MorningNews } from "../../domain/day/morningNews";
 import type { ManualActionId } from "../../domain/balancing/manualActionValues";
 import type { MarketBoardState } from "../../domain/market/marketBoard";
@@ -27,7 +36,8 @@ import {
   IntradayPriceChartOverlay,
   buildPriceCandles,
   type MarketBoardRankRow,
-  type MarketTerminalModel
+  type MarketTerminalModel,
+  type OrderBookOverlayWallAction
 } from "../dom/intradayOverlays";
 
 export class IntradayScene extends BaseDocumentScene {
@@ -116,7 +126,9 @@ export class IntradayScene extends BaseDocumentScene {
       y: 160,
       width: 122,
       height: 150
-    });
+    }, (side, offsetPercent, priceChangePercent) =>
+      this.handleOrderBookWallAction(side, offsetPercent, priceChangePercent)
+    );
     this.marketTerminalOverlay = new IntradayMarketTerminalOverlay(this, {
       x: 610,
       y: 152,
@@ -334,6 +346,18 @@ export class IntradayScene extends BaseDocumentScene {
       button.setInteractive({ useHandCursor: true });
       button.setAlpha(1);
     }
+  }
+
+  private handleOrderBookWallAction(
+    side: OrderBookWallSide,
+    offsetPercent: number,
+    priceChangePercent: number
+  ): void {
+    const result = gameSession.useOrderBookWall(side, offsetPercent, priceChangePercent);
+
+    this.actionStatusText?.setText(`호가벽: ${getOrderBookWallDisplayLabel(side)} / ${getOrderBookWallResultLabel(result.reason)}`);
+    this.refreshIntradayUi();
+    this.routeIfRunFailed();
   }
 
   private refreshManualActionGauge(actionId: ManualActionId, progress: number, visible: boolean): void {
@@ -849,7 +873,8 @@ export class IntradayScene extends BaseDocumentScene {
       priceChangePercent: state.priceChangePercent,
       levels: orderBook.levels,
       sellWallLabel: orderBook.sellWallLabel,
-      buyWallLabel: orderBook.buyWallLabel
+      buyWallLabel: orderBook.buyWallLabel,
+      wallActions: buildOrderBookWallOverlayActions(state, orderBook.levels)
     });
 
     const latestVolume = history[history.length - 1]?.fictionalVolume ?? 0;
@@ -1036,6 +1061,102 @@ interface ModalShell {
   readonly choiceStartY: number;
   readonly choiceWidth: number;
   readonly objects: readonly Phaser.GameObjects.GameObject[];
+}
+
+function buildOrderBookWallOverlayActions(
+  state: IntradayState,
+  levels: readonly OrderBookLevel[]
+): readonly OrderBookOverlayWallAction[] {
+  return levels
+    .filter((level) => level.offsetPercent !== 0)
+    .map((level) =>
+      buildOrderBookWallOverlayAction(
+        state,
+        level.offsetPercent > 0 ? "sell" : "buy",
+        level.offsetPercent,
+        level.priceChangePercent
+      )
+    );
+}
+
+function buildOrderBookWallOverlayAction(
+  state: IntradayState,
+  side: OrderBookWallSide,
+  offsetPercent: number,
+  priceChangePercent: number
+): OrderBookOverlayWallAction {
+  const action = getOrderBookWallValue(side);
+  const activeEffect = findActiveOrderBookWallAtLevel(state, side, priceChangePercent);
+  const cooldownRemainingSec = state.orderBookWallCooldowns[getOrderBookWallLevelKey(side, offsetPercent)] ?? 0;
+  const active = Boolean(activeEffect);
+
+  return {
+    side,
+    offsetPercent,
+    priceChangePercent,
+    label: action.displayName,
+    statusLabel: getOrderBookWallStatusLabel(state, side, activeEffect, cooldownRemainingSec),
+    disabled: !active && !canUseOrderBookWall(state, side, offsetPercent),
+    active,
+    cooldownRemainingSec
+  };
+}
+
+function getOrderBookWallStatusLabel(
+  state: IntradayState,
+  side: OrderBookWallSide,
+  activeEffect: IntradayState["activeOrderBookWallEffects"][number] | undefined,
+  cooldownRemainingSec: number
+): string {
+  const action = getOrderBookWallValue(side);
+
+  if (activeEffect && activeEffect.remainingSec > 0) {
+    return `벽 빼기 +${formatNumber(activeEffect.reservedBudget)}B`;
+  }
+
+  if (cooldownRemainingSec > 0) {
+    return `대기 ${Math.ceil(cooldownRemainingSec)}s`;
+  }
+
+  if (state.isPaused) {
+    return "보류";
+  }
+
+  if (state.holdingRatio <= 0) {
+    return "관망";
+  }
+
+  const reserveBudget = getOrderBookWallReserveBudget(state, side);
+
+  if (reserveBudget < action.minReserveBudget) {
+    return "예산 부족";
+  }
+
+  return `${action.displayName} ${formatNumber(reserveBudget)}B`;
+}
+
+function getOrderBookWallDisplayLabel(side: OrderBookWallSide): string {
+  return getOrderBookWallValue(side).displayName;
+}
+
+function getOrderBookWallResultLabel(reason: OrderBookWallResult["reason"]): string {
+  switch (reason) {
+    case "applied":
+      return "실행";
+    case "removed":
+      return "환급";
+    case "paused":
+      return "보류";
+    case "cooldown":
+      return "대기 중";
+    case "insufficient_budget":
+      return "예산 부족";
+    case "no_position":
+      return "관망";
+    case "unknown_side":
+    case "unknown_level":
+      return "알 수 없음";
+  }
 }
 
 function buildMarketTerminalModel(

@@ -70,6 +70,20 @@ export interface OrderBookOverlayUpdate {
   readonly levels: readonly OrderBookOverlayLevel[];
   readonly sellWallLabel: string;
   readonly buyWallLabel: string;
+  readonly wallActions: readonly OrderBookOverlayWallAction[];
+}
+
+export type OrderBookOverlayWallSide = "buy" | "sell";
+
+export interface OrderBookOverlayWallAction {
+  readonly side: OrderBookOverlayWallSide;
+  readonly offsetPercent: number;
+  readonly priceChangePercent: number;
+  readonly label: string;
+  readonly statusLabel: string;
+  readonly disabled: boolean;
+  readonly active: boolean;
+  readonly cooldownRemainingSec: number;
 }
 
 export function buildPriceCandles(history: readonly { readonly elapsedSec: number; readonly priceChangePercent: number; readonly fictionalVolume: number }[], secondsPerCandle = 6): readonly PriceCandle[] {
@@ -293,10 +307,36 @@ export class IntradayOrderBookOverlay {
   private readonly askRows: HTMLDivElement[];
   private readonly bidRows: HTMLDivElement[];
   private readonly syncLayout: () => void;
+  private readonly handleOrderBookRowClick = (event: MouseEvent): void => {
+    const row = event.currentTarget as HTMLDivElement;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (row.hidden || row.dataset.wallDisabled === "true") {
+      return;
+    }
+
+    const wallSide = row.dataset.wallSide;
+
+    if (wallSide === "buy" || wallSide === "sell") {
+      const offsetPercent = Number(row.dataset.wallOffset);
+      const priceChangePercent = Number(row.dataset.wallPriceChangePercent);
+
+      if (Number.isFinite(offsetPercent) && Number.isFinite(priceChangePercent)) {
+        this.onWallAction?.(wallSide, offsetPercent, priceChangePercent);
+      }
+    }
+  };
 
   constructor(
     private readonly scene: Phaser.Scene,
-    private readonly bounds: GameOverlayBounds
+    private readonly bounds: GameOverlayBounds,
+    private readonly onWallAction?: (
+      side: OrderBookOverlayWallSide,
+      offsetPercent: number,
+      priceChangePercent: number
+    ) => void
   ) {
     this.container = createOverlayElement("mms-orderbook-overlay");
     const title = document.createElement("div");
@@ -315,6 +355,8 @@ export class IntradayOrderBookOverlay {
     this.imbalance.className = "mms-orderbook-imbalance";
     this.askRows = createOrderBookRows(this.askBody, 3);
     this.bidRows = createOrderBookRows(this.bidBody, 3);
+    this.bindOrderBookRows(this.askRows, "sell");
+    this.bindOrderBookRows(this.bidRows, "buy");
     this.container.append(title, header, this.askBody, this.midPrice, this.bidBody, this.imbalance);
     this.syncLayout = () => positionOverlayElement(this.scene, this.container, this.bounds);
     window.addEventListener("resize", this.syncLayout);
@@ -332,8 +374,8 @@ export class IntradayOrderBookOverlay {
       .sort((left, right) => right.priceChangePercent - left.priceChangePercent);
     const maxDepth = Math.max(...update.levels.flatMap((level) => [level.askDepth, level.bidDepth]), 1);
 
-    updateOrderBookRows(this.askRows, askLevels, "ask", update.openingPrice, maxDepth);
-    updateOrderBookRows(this.bidRows, bidLevels, "bid", update.openingPrice, maxDepth);
+    updateOrderBookRows(this.askRows, askLevels, "ask", update.openingPrice, maxDepth, update.wallActions);
+    updateOrderBookRows(this.bidRows, bidLevels, "bid", update.openingPrice, maxDepth, update.wallActions);
     this.midPrice.textContent = `${formatCompactPrice(update.currentPrice)}  ${formatPercent(update.priceChangePercent)}`;
     this.midPrice.className = `mms-orderbook-mid ${update.priceChangePercent >= 0 ? "price-up" : "price-down"}`;
     this.imbalance.textContent = `ASK ${update.sellWallLabel.toUpperCase()} / BID ${update.buyWallLabel.toUpperCase()}`;
@@ -346,7 +388,22 @@ export class IntradayOrderBookOverlay {
   destroy(): void {
     window.removeEventListener("resize", this.syncLayout);
     this.scene.scale.off("resize", this.syncLayout);
+    [...this.askRows, ...this.bidRows].forEach((row) => {
+      row.removeEventListener("click", this.handleOrderBookRowClick);
+      const animationFrame = orderBookSizeAnimationFrames.get(row);
+
+      if (animationFrame !== undefined) {
+        cancelAnimationFrame(animationFrame);
+      }
+    });
     this.container.remove();
+  }
+
+  private bindOrderBookRows(rows: readonly HTMLDivElement[], wallSide: OrderBookOverlayWallSide): void {
+    rows.forEach((row) => {
+      row.dataset.wallSide = wallSide;
+      row.addEventListener("click", this.handleOrderBookRowClick);
+    });
   }
 }
 
@@ -451,7 +508,8 @@ function createOrderBookRows(parent: HTMLElement, count: number): HTMLDivElement
     row.innerHTML =
       `<span class="mms-orderbook-depth"></span>` +
       `<span class="mms-orderbook-price"></span>` +
-      `<span class="mms-orderbook-size"></span>`;
+      `<span class="mms-orderbook-size"></span>` +
+      `<span class="mms-orderbook-action"></span>`;
     parent.append(row);
     return row;
   });
@@ -462,7 +520,8 @@ function updateOrderBookRows(
   levels: readonly OrderBookOverlayLevel[],
   side: "ask" | "bid",
   openingPrice: number,
-  maxDepth: number
+  maxDepth: number,
+  wallActions: readonly OrderBookOverlayWallAction[]
 ): void {
   rows.forEach((rowElement, index) => {
     const level = levels[index];
@@ -474,12 +533,82 @@ function updateOrderBookRows(
 
     const depth = side === "ask" ? level.askDepth : level.bidDepth;
     const price = openingPrice * (1 + level.priceChangePercent / 100);
+    const wallAction = wallActions.find(
+      (action) =>
+        action.offsetPercent === level.offsetPercent &&
+        ((side === "ask" && action.side === "sell") || (side === "bid" && action.side === "buy"))
+    );
+
+    if (!wallAction) {
+      rowElement.hidden = true;
+      return;
+    }
+
     rowElement.hidden = false;
     rowElement.className = `mms-orderbook-row ${side}`;
     rowElement.style.setProperty("--depth-width", `${Math.max(5, (depth / maxDepth) * 100)}%`);
     setCell(rowElement, ".mms-orderbook-price", formatCompactPrice(price));
-    setCell(rowElement, ".mms-orderbook-size", `${Math.round(depth * 13).toLocaleString("ko-KR")}`);
+    animateOrderBookSize(rowElement, Math.round(depth * 13));
+    updateOrderBookRowAction(rowElement, wallAction);
   });
+}
+
+function updateOrderBookRowAction(rowElement: HTMLDivElement, action: OrderBookOverlayWallAction): void {
+  const label = action.statusLabel || action.label;
+
+  rowElement.dataset.wallSide = action.side;
+  rowElement.dataset.wallOffset = `${action.offsetPercent}`;
+  rowElement.dataset.wallPriceChangePercent = `${action.priceChangePercent}`;
+  rowElement.dataset.wallDisabled = action.disabled ? "true" : "false";
+  rowElement.classList.toggle("wall-disabled", action.disabled);
+  rowElement.classList.toggle("wall-active", action.active);
+  rowElement.classList.toggle("wall-cooldown", action.cooldownRemainingSec > 0 && !action.active);
+  rowElement.title = label;
+  setCell(rowElement, ".mms-orderbook-action", label);
+}
+
+const orderBookSizeAnimationFrames = new WeakMap<HTMLDivElement, number>();
+
+function animateOrderBookSize(rowElement: HTMLDivElement, targetSize: number): void {
+  const cell = rowElement.querySelector<HTMLElement>(".mms-orderbook-size");
+
+  if (!cell) {
+    return;
+  }
+
+  const previousFrame = orderBookSizeAnimationFrames.get(rowElement);
+
+  if (previousFrame !== undefined) {
+    cancelAnimationFrame(previousFrame);
+  }
+
+  const currentSize = Number(rowElement.dataset.displaySize ?? targetSize);
+
+  if (!Number.isFinite(currentSize) || Math.abs(currentSize - targetSize) < 1) {
+    rowElement.dataset.displaySize = `${targetSize}`;
+    cell.textContent = targetSize.toLocaleString("ko-KR");
+    return;
+  }
+
+  const startedAt = performance.now();
+  const durationMs = Math.abs(targetSize - currentSize) > 850 ? 760 : 430;
+  const updateFrame = (time: number): void => {
+    const progress = Math.min(1, (time - startedAt) / durationMs);
+    const easedProgress = 1 - Math.pow(1 - progress, 3);
+    const displaySize = Math.round(currentSize + (targetSize - currentSize) * easedProgress);
+
+    rowElement.dataset.displaySize = `${displaySize}`;
+    cell.textContent = displaySize.toLocaleString("ko-KR");
+
+    if (progress < 1) {
+      orderBookSizeAnimationFrames.set(rowElement, requestAnimationFrame(updateFrame));
+      return;
+    }
+
+    orderBookSizeAnimationFrames.delete(rowElement);
+  };
+
+  orderBookSizeAnimationFrames.set(rowElement, requestAnimationFrame(updateFrame));
 }
 
 function positionOverlayElement(

@@ -2,6 +2,7 @@ import { priceTickValues } from "../balancing/priceTickValues";
 import { createSeededRandom } from "../random/SeededRandom";
 import { clamp, clampIntradayState, type IntradayState, type PriceTickComponents } from "./intradayState";
 import { buildOrderBookProfile } from "./orderBook";
+import { applyOrderBookWallPriceBarriers } from "./orderBookWalls";
 import { simulatePriceMotion } from "./priceMotionSimulator";
 
 export interface PriceTickContext {
@@ -16,13 +17,15 @@ export function runPlayerPriceTick(state: IntradayState, context: PriceTickConte
 
   const components = calculatePriceTickComponents(state, context);
 
-  return clampIntradayState({
+  const tickedState = clampIntradayState({
     ...state,
     priceTickIndex: state.priceTickIndex + 1,
     priceDeltaPerTick: components.clampedDelta,
     priceChangePercent: state.priceChangePercent + components.clampedDelta,
     latestPriceComponents: components
   });
+
+  return applyOrderBookWallPriceBarriers(state, tickedState);
 }
 
 export function calculatePriceTickComponents(

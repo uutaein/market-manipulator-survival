@@ -134,6 +134,7 @@ When("upward pressure meets a thin sell wall", function (this: MmsWorld) {
     marketPressure: 100,
     marketLiquidity: 5,
     personalParticipation: 70,
+    assetInfluenceResistance: 1,
     priceTickIndex: 0
   };
   this.runPriceTick();
@@ -659,7 +660,8 @@ When("the player settles a position into high MADNESS", function (this: MmsWorld
     marketPressure: 40,
     personalParticipation: 82,
     marketLiquidity: 48,
-    volatility: 58
+    volatility: 58,
+    assetInfluenceResistance: 1
   });
   const lowMadnessState = clampIntradayState({
     ...highMadnessState,

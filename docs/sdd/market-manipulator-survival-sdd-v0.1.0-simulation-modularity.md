@@ -39,6 +39,7 @@
 | `DaySetup` | Morning News, Today Condition, 목표 밴드 생성 | Day 시작 조건 |
 | `PriceTick` | 대상 종목 가격 Tick 계산 | 가격 컴포넌트 계수 |
 | `OrderBookDepth` | 대상 종목 fictional 호가창/매물대 깊이 생성 | 깊이 배수와 표시 모델 |
+| `ExecutionGateway` | 로컬 합성 주문 생명주기, 부분체결, 취소, depth snapshot 경계 | TypeScript reference engine, C++/WASM, local sidecar 구현체 |
 | `MarketBoardTick` | 같은 섹터 경쟁 종목, 타 섹터 평균, 24개 종목 거래대금 대시보드 간략 계산 | 간략 등락/거래대금 공식 |
 | `ChartMotionAdapter` | seeded fake OHLCV와 차트 모션 보정 | 평균회귀, 저항, 되돌림, 볼륨 임펄스 |
 | `ActionEffect` | 수동 액션 효과 생성 | 비용, 쿨다운, 효과량 |
@@ -66,6 +67,7 @@ MVP에서 자주 바뀔 수치는 코드 로직이 아니라 밸런싱 데이터
 | Clamp Values | Tick당 최대 상승/하락, 상태 최소/최대 |
 | Asset Market Profiles | 종목별 baseline trade value, 시장 역할, influence resistance |
 | Order Book / Depth Values | fictional 호가창 깊이, 매물대 반응 배수 |
+| Execution Values | 합성 주문 단위, depth snapshot 레벨 수, 엔진 어댑터별 호환 옵션 |
 | Manual Action Values | 비용, 쿨다운, 상태 변화량, 지속 시간 |
 | Account Valuation Values | 포지션 평가 정규화, 회수율, 표시 반올림 |
 | Auto Card Values | 발동 주기, Lv.1~Lv.3 효과, 성장 방식 |
@@ -99,6 +101,7 @@ The implementation should keep the following conceptual balancing modules separa
 | `marketBoardRules` | SRS v0.1.6 section 4 | Market Board |
 | `preOpenCardValues` | SRS v0.1.6 section 5 | Pre-open flow, Day setup |
 | `manualActionValues` | SRS v0.1.6 section 6 | ActionEffect |
+| `executionGateway` | SRS v0.2.2 | OrderBookDepth, future synthetic liquidity adapters |
 | `autoCardValues` | SRS v0.1.6 section 7 | AutoCardEffect |
 | `autoRewardRules` | SRS v0.1.6 section 7 | Auto card reward choice |
 | `documentEventRules` | SRS v0.1.6 section 8 | DocumentEventEffect |
@@ -268,6 +271,7 @@ MVP 저장 대상에는 상세 플레이 로그를 포함하지 않는다.
 | SDD-MOD-SAFE-004 | 실제 시장 데이터, 실제 종목명, 실제 거래소명은 어떤 모듈에도 입력하지 않는다. |
 | SDD-MOD-SAFE-005 | 플레이테스트 후 조정은 우선 밸런싱 데이터 변경으로 해결하고, 구조 변경은 마지막에 검토한다. |
 | SDD-MOD-SAFE-006 | 금융 도메인 전문가 검토, 실제 시장 검증, 실제 금융 모델 확장은 MVP 범위에 포함하지 않는다. |
+| SDD-MOD-SAFE-007 | `ExecutionGateway` 구현체는 실제 거래소, 실제 계좌, 실제 시장 데이터에 직접 연결하면 안 되며, 게임 도메인에는 로컬 합성 execution report만 전달해야 한다. |
 
 ---
 

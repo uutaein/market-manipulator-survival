@@ -11,7 +11,7 @@ The `.feature` files are grouped by domain and function. They are not TC documen
 | `run/` | Run lifecycle, Day flow, failure, onboarding |
 | `market/` | Asset selection, hidden asset tendencies, Market Board |
 | `preopen/` | Morning News, Market Briefing, Pre-open Cards |
-| `intraday/` | Tick simulation, manual actions, auto cards, document events, Retail Swarm |
+| `intraday/` | Tick simulation, manual actions, auto cards, document events, Retail Swarm, local synthetic execution |
 | `contract/` | Post-MVP Contract Mode acceptance criteria |
 | `settlement/` | Day/Final Settlement, carryover, aftereffects |
 | `persistence/` | localStorage and restart records |

@@ -6,6 +6,7 @@ import { documentEventRules } from "../domain/balancing/documentEventValues";
 import {
   advanceIntradayTime,
   clampIntradayState,
+  createEmptyOrderBookWallCooldowns,
   createFictionalQuoteState,
   createIntradayState,
   isIntradayComplete,
@@ -37,6 +38,13 @@ import {
   useManualAction,
   type ManualActionResult
 } from "../domain/intraday/manualActions";
+import {
+  clearOrderBookWallEffects,
+  tickOrderBookWallEffects,
+  useOrderBookWall,
+  type OrderBookWallResult,
+  type OrderBookWallSide
+} from "../domain/intraday/orderBookWalls";
 import { runPlayerPriceTick } from "../domain/intraday/priceTick";
 import type { ManualActionId } from "../domain/balancing/manualActionValues";
 import { advanceMarketBoard, buildMarketBoard, type MarketBoardState } from "../domain/market/marketBoard";
@@ -151,6 +159,7 @@ export class GameSession {
   intradayState: IntradayState | null = null;
   marketBoardState: MarketBoardState | null = null;
   lastManualActionResult: ManualActionResult | null = null;
+  lastOrderBookWallResult: OrderBookWallResult | null = null;
   daySettlementResult: DaySettlementResult | null = null;
   finalSettlementResult: FinalSettlementResult | null = null;
   surveillanceHistory: number[] = [];
@@ -261,6 +270,7 @@ export class GameSession {
     this.intradayState = null;
     this.marketBoardState = null;
     this.lastManualActionResult = null;
+    this.lastOrderBookWallResult = null;
     this.daySettlementResult = null;
     this.finalSettlementResult = null;
     this.surveillanceHistory = [];
@@ -287,6 +297,7 @@ export class GameSession {
     this.intradayState = null;
     this.marketBoardState = null;
     this.lastManualActionResult = null;
+    this.lastOrderBookWallResult = null;
     this.daySettlementResult = null;
     this.finalSettlementResult = null;
     this.surveillanceHistory = [];
@@ -331,6 +342,7 @@ export class GameSession {
     this.intradayState = null;
     this.marketBoardState = null;
     this.lastManualActionResult = null;
+    this.lastOrderBookWallResult = null;
     this.daySettlementResult = null;
     this.finalSettlementResult = null;
     this.surveillanceHistory = [];
@@ -352,6 +364,7 @@ export class GameSession {
     this.intradayState = null;
     this.marketBoardState = null;
     this.lastManualActionResult = null;
+    this.lastOrderBookWallResult = null;
     this.daySettlementResult = null;
     this.finalSettlementResult = null;
     this.surveillanceHistory = [];
@@ -400,6 +413,7 @@ export class GameSession {
     this.intradayState = null;
     this.marketBoardState = null;
     this.lastManualActionResult = null;
+    this.lastOrderBookWallResult = null;
     this.daySettlementResult = null;
     this.finalSettlementResult = null;
     this.priceHistory = [];
@@ -471,7 +485,9 @@ export class GameSession {
     const actionProgressState = tickManualActionCooldowns(currentState, 1);
     this.recordBudgetLedgerDelta(actionProgressState.budget - currentState.budget);
     this.queueManualActionDashboardTradeValueProgress(currentState, actionProgressState);
-    const dashboardPressureState = this.applyMarketDashboardRankBuyPressure(actionProgressState);
+    const wallProgressState = tickOrderBookWallEffects(actionProgressState, 1);
+    this.recordBudgetLedgerDelta(wallProgressState.budget - actionProgressState.budget);
+    const dashboardPressureState = this.applyMarketDashboardRankBuyPressure(wallProgressState);
     const tickedState = runPlayerPriceTick(dashboardPressureState, {
       runSeed: runState.runSeed,
       dayIndex: runState.currentDay
@@ -518,6 +534,17 @@ export class GameSession {
     this.applyManualActionChartResponse(this.lastManualActionResult);
     this.checkImmediateRunFailure(this.intradayState);
     return this.lastManualActionResult;
+  }
+
+  useOrderBookWall(side: OrderBookWallSide, offsetPercent: number, priceChangePercent: number): OrderBookWallResult {
+    const currentState = this.intradayState ?? this.startIntraday();
+    this.lastOrderBookWallResult = useOrderBookWall(currentState, side, offsetPercent, priceChangePercent);
+    this.intradayState = this.lastOrderBookWallResult.state;
+    if (this.lastOrderBookWallResult.applied) {
+      this.recordBudgetLedgerDelta(this.lastOrderBookWallResult.budgetDelta);
+    }
+    this.checkImmediateRunFailure(this.intradayState);
+    return this.lastOrderBookWallResult;
   }
 
   cancelManualAction(actionId: ManualActionId): IntradayState {
@@ -578,6 +605,8 @@ export class GameSession {
       personalParticipation: Math.max(20, state.personalParticipation - 12),
       volatility: Math.min(100, state.volatility + 4),
       activeManualActionEffects: [],
+      orderBookWallCooldowns: createEmptyOrderBookWallCooldowns(),
+      activeOrderBookWallEffects: [],
       lastManualActionId: null,
       latestPriceComponents: null
     });
@@ -634,7 +663,12 @@ export class GameSession {
 
   calculateDaySettlement(): DaySettlementResult {
     const runState = this.ensureRun();
-    const intradayState = this.intradayState ?? this.startIntraday();
+    const currentIntradayState = this.intradayState ?? this.startIntraday();
+    const intradayState = clearOrderBookWallEffects(currentIntradayState);
+    if (intradayState !== currentIntradayState) {
+      this.recordBudgetLedgerDelta(intradayState.budget - currentIntradayState.budget);
+      this.intradayState = intradayState;
+    }
     this.recordContractObservation("day_close", intradayState);
 
     this.daySettlementResult = calculateDaySettlement({
@@ -701,6 +735,7 @@ export class GameSession {
     this.intradayState = null;
     this.marketBoardState = null;
     this.lastManualActionResult = null;
+    this.lastOrderBookWallResult = null;
     this.daySettlementResult = null;
     this.priceHistory = [];
     this.resetIntradayMoneyLedger(0);
