@@ -8,6 +8,7 @@ This directory contains TypeScript step definitions for the accepted MVP Gherkin
 | --- | --- |
 | `run.steps.ts` | Run lifecycle, failure routing, same-condition restart, Day 1 onboarding |
 | `market.steps.ts` | Asset selection, hidden asset tendencies, Market Board |
+| `contract.steps.ts` | Post-MVP Contract Mode acceptance scenarios |
 | `preopen.steps.ts` | Morning News, Market Briefing, Pre-open Cards, Opening Approval |
 | `intraday.steps.ts` | Timer, tick rules, manual actions, auto cards, document events, Retail Swarm |
 | `settlement.steps.ts` | Day Settlement, Final Settlement, holding bands, carryover |
