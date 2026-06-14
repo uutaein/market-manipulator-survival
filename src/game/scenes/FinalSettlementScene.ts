@@ -13,6 +13,7 @@ export class FinalSettlementScene extends BaseDocumentScene {
     const finalSettlement = gameSession.finalSettlementResult ?? gameSession.calculateFinalSettlement();
     const saved = gameSession.saveFinalSettlementRecord();
     const runState = gameSession.ensureRun();
+    const contractLines = gameSession.getContractFinalSettlementLines();
 
     this.drawDocumentShell(
       "Final 정산 화면",
@@ -30,6 +31,7 @@ export class FinalSettlementScene extends BaseDocumentScene {
         `FINAL HOLDING BAND: ${finalSettlement.finalHoldingBand.displayName}`,
         `SOCIAL COST: ${formatNumber(finalSettlement.socialCost)}`,
         `LOCAL RECORD: ${saved ? (gameSession.lastFinalSaveUpdatedBest ? "best updated" : "saved") : "unavailable"}`,
+        ...(contractLines.length > 0 ? ["", ...contractLines] : []),
         "",
         createFinalNote(finalSettlement.forcedFailure, finalSettlement.failureReason),
         createProgressionNote(runState.selectedSectorId, finalSettlement.forcedFailure)
@@ -53,15 +55,7 @@ export class FinalSettlementScene extends BaseDocumentScene {
         label: "새 Run 시작",
         target: SceneKeys.RunSetup,
         onClick: () => {
-          gameSession.runState = null;
-          gameSession.dayState = null;
-          gameSession.marketBriefing = null;
-          gameSession.intradayState = null;
-          gameSession.marketBoardState = null;
-          gameSession.lastManualActionResult = null;
-          gameSession.daySettlementResult = null;
-          gameSession.finalSettlementResult = null;
-          gameSession.surveillanceHistory = [];
+          gameSession.prepareFreeMode();
         }
       },
       1

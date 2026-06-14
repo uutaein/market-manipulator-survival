@@ -41,6 +41,7 @@ export class IntradayScene extends BaseDocumentScene {
   private moneyText: Phaser.GameObjects.Text | null = null;
   private statsText: Phaser.GameObjects.Text | null = null;
   private actionStatusText: Phaser.GameObjects.Text | null = null;
+  private contractText: Phaser.GameObjects.Text | null = null;
   private autoCardText: Phaser.GameObjects.Text | null = null;
   private manualActionButtons: Partial<Record<ManualActionId, Phaser.GameObjects.Text>> = {};
   private manualActionGaugeTracks: Partial<Record<ManualActionId, Phaser.GameObjects.Rectangle>> = {};
@@ -118,10 +119,22 @@ export class IntradayScene extends BaseDocumentScene {
     });
     this.marketTerminalOverlay = new IntradayMarketTerminalOverlay(this, {
       x: 610,
-      y: 132,
+      y: 152,
       width: 560,
-      height: 374
+      height: 354
     });
+
+    this.contractText = this.add
+      .text(610, 92, "", {
+        color: "#d9c58b",
+        backgroundColor: "#111417",
+        fontFamily: this.fontFamily,
+        fontSize: "12px",
+        lineSpacing: 1,
+        padding: { x: 8, y: 5 },
+        wordWrap: { width: 270 }
+      })
+      .setOrigin(0, 0);
 
     this.moneyText = this.add
       .text(96, 326, "", {
@@ -229,6 +242,7 @@ export class IntradayScene extends BaseDocumentScene {
     this.renderPriceChart();
     this.refreshIntradayText();
     this.renderMarketTerminal();
+    this.refreshContractText();
     this.renderRetailSwarm();
     this.refreshAutoCardText();
     this.renderAutoCardChoices();
@@ -502,6 +516,18 @@ export class IntradayScene extends BaseDocumentScene {
         gameSession.autoCardRewardChoices.length > 0 ? "카드 선택 대기 중" : ""
       ].join("\n")
     );
+  }
+
+  private refreshContractText(): void {
+    const lines = gameSession.getContractProgressLines();
+
+    if (lines.length === 0) {
+      this.contractText?.setVisible(false);
+      return;
+    }
+
+    this.contractText?.setVisible(true);
+    this.contractText?.setText(lines.slice(0, 4).join("\n"));
   }
 
   private renderAutoCardChoices(): void {

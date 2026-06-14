@@ -57,9 +57,16 @@ import { runDefaults } from "../domain/balancing/runDefaults";
 import { createRunState, restartRunWithSameSeed, type AutoCardState, type RunState } from "../domain/run/runState";
 import { prepareNextDayCarryover } from "../domain/settlement/carryover";
 import {
+  createContractObservation,
   createSampleContractMandates,
+  evaluateContractObjectives,
   getSampleContractMandate,
+  settleContract,
+  type ContractEvaluationResult,
   type ContractMandate,
+  type ContractObservation,
+  type ContractObservationKind,
+  type ContractSettlementResult,
   type GameMode
 } from "../domain/contract";
 import {
@@ -129,6 +136,9 @@ interface BreakoutImpulseResult {
 export class GameSession {
   gameMode: GameMode = "free";
   contractMandate: ContractMandate | null = null;
+  contractObservations: readonly ContractObservation[] = [];
+  contractEvaluationResult: ContractEvaluationResult | null = null;
+  contractSettlementResult: ContractSettlementResult | null = null;
   selectedSectorId: SectorId = sectors[0].id;
   selectedAssetId: AssetId = getAssetsBySector(this.selectedSectorId)[0].id;
   runState: RunState | null = null;
@@ -154,6 +164,7 @@ export class GameSession {
   private intradayStartingBudget = 0;
   private intradaySpentBudget = 0;
   private intradayRecoveredBudget = 0;
+  private contractBudgetSpent = 0;
   private pendingMarketDashboardTradeValueImpulse = 0;
   private lastMarketDashboardFeedbackElapsedSec: number | null = null;
   private lastRetailSwarmState: RetailSwarmState | null = null;
@@ -194,6 +205,7 @@ export class GameSession {
     this.setSelectedAsset(mandate.assetId);
     this.startNewRun();
     this.beginDay();
+    this.recordContractObservation("contract_start");
 
     return mandate;
   }
@@ -213,9 +225,13 @@ export class GameSession {
     this.surveillanceHistory = [];
     this.priceHistory = [];
     this.resetIntradayMoneyLedger(0);
+    this.resetContractProgress();
     this.resetMarketDashboardFeedback();
     this.lastFinalSaveUpdatedBest = false;
     this.resetDayAutoCardSession();
+    if (this.gameMode === "contract" && this.contractMandate) {
+      this.recordContractObservation("contract_start");
+    }
     this.saveCurrentRunProgress();
     return this.runState;
   }
@@ -235,9 +251,13 @@ export class GameSession {
     this.surveillanceHistory = [];
     this.priceHistory = [];
     this.resetIntradayMoneyLedger(0);
+    this.resetContractProgress();
     this.resetMarketDashboardFeedback();
     this.lastFinalSaveUpdatedBest = false;
     this.resetDayAutoCardSession();
+    if (this.gameMode === "contract" && this.contractMandate) {
+      this.recordContractObservation("contract_start");
+    }
     this.saveCurrentRunProgress();
     return this.runState;
   }
@@ -275,6 +295,7 @@ export class GameSession {
     this.surveillanceHistory = [];
     this.priceHistory = [];
     this.resetIntradayMoneyLedger(0);
+    this.resetContractProgress();
     this.resetMarketDashboardFeedback();
     this.lastFinalSaveUpdatedBest = false;
     this.resetDayAutoCardSession();
@@ -293,6 +314,7 @@ export class GameSession {
     this.surveillanceHistory = [];
     this.priceHistory = [];
     this.resetIntradayMoneyLedger(0);
+    this.resetContractProgress();
     this.resetMarketDashboardFeedback();
     this.lastFinalSaveUpdatedBest = false;
     this.resetDayAutoCardSession();
@@ -381,6 +403,7 @@ export class GameSession {
     this.lastAutoCardEffects = [];
     this.lastAutoCardRewardMessage = null;
     this.priceHistory = [createPriceHistoryPoint(this.intradayState)];
+    this.recordContractObservation("intraday_tick", this.intradayState);
     return this.intradayState;
   }
 
@@ -424,6 +447,7 @@ export class GameSession {
     }
     this.recordPriceHistory(this.intradayState);
     this.advanceMarketBoard();
+    this.recordContractObservation("intraday_tick", this.intradayState);
 
     if (this.checkImmediateRunFailure(this.intradayState)) {
       return this.intradayState;
@@ -575,6 +599,7 @@ export class GameSession {
   calculateDaySettlement(): DaySettlementResult {
     const runState = this.ensureRun();
     const intradayState = this.intradayState ?? this.startIntraday();
+    this.recordContractObservation("day_close", intradayState);
 
     this.daySettlementResult = calculateDaySettlement({
       dayIndex: runState.currentDay,
@@ -649,6 +674,7 @@ export class GameSession {
       forcedFailure: runState.runStatus === "failed",
       failureReason: runState.failedReason
     });
+    this.contractSettlementResult = this.calculateContractSettlementResult(this.finalSettlementResult);
 
     return this.finalSettlementResult;
   }
@@ -704,6 +730,64 @@ export class GameSession {
     const playerKey = `asset:${this.selectedAssetId}`;
     this.marketDashboardPlayerRank = ranks.get(playerKey) ?? null;
     this.marketDashboardPlayerValue = tradeValues.get(playerKey) ?? this.marketDashboardPlayerValue;
+    this.recordContractObservation("contract_event", this.intradayState);
+  }
+
+  getContractProgressLines(): readonly string[] {
+    const mandate = this.contractMandate;
+
+    if (this.gameMode !== "contract" || !mandate) {
+      return [];
+    }
+
+    const evaluation = this.refreshContractEvaluation();
+    const asset = getAssetById(mandate.assetId);
+    const runState = this.runState;
+    const currentDay = Math.min(runState?.currentDay ?? 1, mandate.durationDays);
+    const headline = evaluation.successful
+      ? "상태: 성공 조건 충족"
+      : evaluation.failed
+        ? "상태: 실패 조건 발생"
+        : `상태: 진행 중 (${evaluation.completedObjectives}/${mandate.objectives.length})`;
+
+    return [
+      `의뢰: ${mandate.displayName}`,
+      `종목: ${asset.displayName} / DAY ${currentDay}/${mandate.durationDays} / 보상 ${formatContractNumber(mandate.fixedReward)}`,
+      headline,
+      ...evaluation.objectiveResults.map((result) => {
+        const objective = mandate.objectives.find((candidate) => candidate.id === result.objectiveId);
+        return `${getContractStatusLabel(result.status)} ${formatContractObjectiveLabel(objective)} ${formatContractProgress(result.progress, result.required)}`;
+      })
+    ];
+  }
+
+  getContractFinalSettlementLines(): readonly string[] {
+    const mandate = this.contractMandate;
+
+    if (this.gameMode !== "contract" || !mandate) {
+      return [];
+    }
+
+    const evaluation = this.refreshContractEvaluation();
+    const settlement = this.contractSettlementResult;
+
+    if (!settlement) {
+      return [
+        "CONTRACT RESULT",
+        `STATUS: ${evaluation.successful ? "SUCCESS" : "INCOMPLETE"}`,
+        `OBJECTIVES: ${evaluation.completedObjectives}/${mandate.objectives.length}`,
+        `REWARD: ${evaluation.successful ? formatContractNumber(mandate.fixedReward) : "0"} / ${formatContractNumber(mandate.fixedReward)}`
+      ];
+    }
+
+    return [
+      "CONTRACT RESULT",
+      `STATUS: ${settlement.successful ? "SUCCESS" : "FAILED"}`,
+      `OBJECTIVES: ${evaluation.completedObjectives}/${mandate.objectives.length}`,
+      `REWARD: ${formatContractNumber(settlement.fixedRewardPaid)} / ${formatContractNumber(settlement.fixedReward)}`,
+      `SPENT: ${formatContractNumber(settlement.budgetSpent)}`,
+      `NET: ${formatContractSigned(settlement.netPerformance)} / GRADE ${settlement.efficiencyGrade}`
+    ];
   }
 
   consumeMarketDashboardTradeValueImpulse(): number {
@@ -1009,6 +1093,80 @@ export class GameSession {
     this.autoCardLastTriggeredAt = {};
   }
 
+  private recordContractObservation(kind: ContractObservationKind, state: IntradayState | null = null): void {
+    const mandate = this.contractMandate;
+
+    if (this.gameMode !== "contract" || !mandate) {
+      return;
+    }
+
+    const runState = this.ensureRun();
+    const activeState = state ?? this.intradayState;
+    const elapsedSec = activeState ? getIntradayElapsedSec(activeState) : null;
+    const observation = createContractObservation({
+      day: runState.currentDay,
+      elapsedSec,
+      price: activeState?.currentPrice ?? mandate.referencePrice,
+      priceChangePercent: activeState?.priceChangePercent ?? 0,
+      marketDashboardRank: this.marketDashboardPlayerRank,
+      marketDashboardValue: this.marketDashboardPlayerValue,
+      madness: activeState?.madness ?? 0,
+      surveillance: activeState?.surveillance ?? runState.surveillance,
+      kind
+    });
+    const observationsWithoutDuplicate = this.contractObservations.filter(
+      (candidate) =>
+        !(
+          candidate.day === observation.day &&
+          candidate.elapsedSec === observation.elapsedSec &&
+          candidate.kind === observation.kind
+        )
+    );
+
+    this.contractObservations = [...observationsWithoutDuplicate, observation].slice(-contractObservationLimit);
+    this.refreshContractEvaluation();
+  }
+
+  private refreshContractEvaluation(): ContractEvaluationResult {
+    const mandate = this.contractMandate;
+
+    if (!mandate) {
+      throw new Error("Contract evaluation requested without an active mandate.");
+    }
+
+    this.contractEvaluationResult = evaluateContractObjectives(mandate, this.contractObservations);
+    return this.contractEvaluationResult;
+  }
+
+  private calculateContractSettlementResult(finalSettlement: FinalSettlementResult): ContractSettlementResult | null {
+    const mandate = this.contractMandate;
+
+    if (this.gameMode !== "contract" || !mandate) {
+      this.contractSettlementResult = null;
+      return null;
+    }
+
+    const evaluation = this.refreshContractEvaluation();
+    const maxMadness = this.contractObservations.reduce(
+      (maxValue, observation) => Math.max(maxValue, observation.madness),
+      0
+    );
+
+    return settleContract(mandate, evaluation, {
+      budgetSpent: this.contractBudgetSpent,
+      surveillanceCost: round1(finalSettlement.finalSurveillance * 0.08),
+      socialCost: round1(finalSettlement.socialCost * 0.5),
+      sideEffectPenalty: round1(maxMadness * 0.04 + (finalSettlement.forcedFailure ? 12 : 0))
+    });
+  }
+
+  private resetContractProgress(): void {
+    this.contractObservations = [];
+    this.contractEvaluationResult = null;
+    this.contractSettlementResult = null;
+    this.contractBudgetSpent = 0;
+  }
+
   private resetIntradayMoneyLedger(startingBudget: number): void {
     this.intradayStartingBudget = startingBudget;
     this.intradaySpentBudget = 0;
@@ -1042,6 +1200,9 @@ export class GameSession {
   private recordBudgetLedgerDelta(delta: number): void {
     if (delta < 0) {
       this.intradaySpentBudget = round1(this.intradaySpentBudget + Math.abs(delta));
+      if (this.gameMode === "contract" && this.contractMandate) {
+        this.contractBudgetSpent = round1(this.contractBudgetSpent + Math.abs(delta));
+      }
       return;
     }
 
@@ -1061,6 +1222,7 @@ const marketDashboardFeedbackBaseChance = 0.01;
 const marketDashboardFeedbackRankChanceScale = 0.13;
 const marketDashboardFeedbackMadnessChanceScale = 0.0008;
 const marketDashboardFeedbackMaxChance = 0.22;
+const contractObservationLimit = 2400;
 
 function round1(value: number): number {
   return Math.round(value * 10) / 10;
@@ -1068,6 +1230,64 @@ function round1(value: number): number {
 
 function round2(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+function formatContractNumber(value: number): string {
+  return Number.isInteger(value) ? `${value}` : value.toFixed(1);
+}
+
+function formatContractSigned(value: number): string {
+  return `${value >= 0 ? "+" : ""}${formatContractNumber(value)}`;
+}
+
+function formatContractProgress(progress: number, required: number): string {
+  if (required <= 1) {
+    return progress >= required ? "(완료)" : "(대기)";
+  }
+
+  return `(${formatContractNumber(Math.min(progress, required))}/${formatContractNumber(required)})`;
+}
+
+function getContractStatusLabel(status: ContractEvaluationResult["objectiveResults"][number]["status"]): string {
+  if (status === "completed") {
+    return "[완료]";
+  }
+
+  if (status === "failed") {
+    return "[실패]";
+  }
+
+  return "[진행]";
+}
+
+function formatContractObjectiveLabel(objective: ContractMandate["objectives"][number] | undefined): string {
+  if (!objective) {
+    return "알 수 없는 조건";
+  }
+
+  switch (objective.type) {
+    case "touch":
+      return `${objective.direction === "downward" ? "하단" : "상단"} ${formatContractNumber(objective.targetPrice)} 터치`;
+    case "maintain":
+      return `${formatContractNumber(objective.lowerPrice)}~${formatContractNumber(objective.upperPrice)} 유지`;
+    case "close_above":
+      return `DAY ${objective.day} ${formatContractNumber(objective.targetPrice)} 이상 마감`;
+    case "close_below":
+      return `DAY ${objective.day} ${formatContractNumber(objective.targetPrice)} 이하 마감`;
+    case "close_inside_band":
+      return `DAY ${objective.day} ${formatContractNumber(objective.lowerPrice)}~${formatContractNumber(objective.upperPrice)} 마감`;
+    case "never_break":
+      if (objective.lowerPrice !== undefined) {
+        return `${formatContractNumber(objective.lowerPrice)} 하단 방어`;
+      }
+      return `${formatContractNumber(objective.upperPrice ?? 0)} 상단 제한`;
+    case "rank":
+      return `대시보드 ${objective.maxRank}위 이내`;
+    case "value":
+      return `VALUE ${formatContractNumber(objective.minValue)} 이상`;
+    case "touch_then_maintain":
+      return `${formatContractNumber(objective.targetPrice)} 터치 후 ${formatContractNumber(objective.lowerPrice)}~${formatContractNumber(objective.upperPrice)} 유지`;
+  }
 }
 
 function getNormalizedPositionMarketValue(state: IntradayState): number {

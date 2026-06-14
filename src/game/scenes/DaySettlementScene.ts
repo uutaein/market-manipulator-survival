@@ -12,6 +12,7 @@ export class DaySettlementScene extends BaseDocumentScene {
     const runState = gameSession.ensureRun();
     const nextScene = runState.currentDay >= 5 ? SceneKeys.FinalSettlement : SceneKeys.PreOpenCard;
     const nextLabel = runState.currentDay >= 5 ? "Final 정산" : "다음 Day";
+    const contractLines = gameSession.getContractProgressLines();
 
     this.drawDocumentShell(
       "Day 정산 화면",
@@ -29,6 +30,7 @@ export class DaySettlementScene extends BaseDocumentScene {
         `HOLDING: ${formatNumber(settlement.supportingRiskMetrics.holdingRatio)}%`,
         `PARTICIPATION: ${formatNumber(settlement.supportingRiskMetrics.personalParticipation)}`,
         `VOLATILITY: ${formatNumber(settlement.supportingRiskMetrics.volatility)}`,
+        ...(contractLines.length > 0 ? ["", "CONTRACT", ...contractLines] : []),
         "",
         createHint(settlement.dayResultCategory, settlement.surveillanceGrade)
       ],
