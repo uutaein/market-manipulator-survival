@@ -623,18 +623,20 @@ export class GameSession {
     const runState = this.ensureRun();
     const intradayState = this.intradayState ?? this.startIntraday();
     const daySettlement = this.daySettlementResult ?? this.calculateDaySettlement();
+    const runLengthDays = this.getRunLengthDays();
 
     const carryover = prepareNextDayCarryover({
       runState,
       endingIntradayState: intradayState,
-      daySettlement
+      daySettlement,
+      runLengthDays
     });
 
     this.surveillanceHistory = [...this.surveillanceHistory, intradayState.surveillance];
     this.runState = carryover.nextRunState;
     this.finalSettlementResult = null;
 
-    if (runState.currentDay >= runDefaults.runLengthDays) {
+    if (runState.currentDay >= runLengthDays) {
       this.runState = {
         ...carryover.nextRunState,
         runStatus: "completed",
@@ -677,6 +679,12 @@ export class GameSession {
     this.contractSettlementResult = this.calculateContractSettlementResult(this.finalSettlementResult);
 
     return this.finalSettlementResult;
+  }
+
+  getRunLengthDays(): number {
+    return this.gameMode === "contract" && this.contractMandate
+      ? this.contractMandate.durationDays
+      : runDefaults.runLengthDays;
   }
 
   getSelectedAssetLabel(): string {

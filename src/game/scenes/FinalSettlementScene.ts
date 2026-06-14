@@ -13,6 +13,7 @@ export class FinalSettlementScene extends BaseDocumentScene {
     const finalSettlement = gameSession.finalSettlementResult ?? gameSession.calculateFinalSettlement();
     const saved = gameSession.saveFinalSettlementRecord();
     const runState = gameSession.ensureRun();
+    const runLengthDays = gameSession.getRunLengthDays();
     const contractLines = gameSession.getContractFinalSettlementLines();
 
     this.drawDocumentShell(
@@ -23,7 +24,7 @@ export class FinalSettlementScene extends BaseDocumentScene {
         `BASE GRADE: ${finalSettlement.baseFinalGrade}`,
         "",
         `CUMULATIVE PROFIT: ${formatSigned(finalSettlement.cumulativeProfit)}%`,
-        `SUCCESSFUL DAYS: ${finalSettlement.successfulDays} / 5`,
+        `SUCCESSFUL DAYS: ${finalSettlement.successfulDays} / ${runLengthDays}`,
         `FINAL BUDGET: ${formatNumber(finalSettlement.finalBudget)}`,
         "",
         `FINAL SURVEILLANCE: ${formatNumber(finalSettlement.finalSurveillance)} (${finalSettlement.finalSurveillanceGrade})`,

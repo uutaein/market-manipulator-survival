@@ -52,9 +52,11 @@ export interface DayCarryoverInput {
   readonly runState: RunState;
   readonly daySettlement: DaySettlementResult;
   readonly endingIntradayState: IntradayState;
+  readonly runLengthDays?: number;
 }
 
 export function prepareNextDayCarryover(input: DayCarryoverInput): DayCarryoverResult {
+  const runLengthDays = input.runLengthDays ?? runDefaults.runLengthDays;
   const aftereffects = selectAftereffects(input.daySettlement, input.endingIntradayState);
   const ending = input.endingIntradayState;
   const nextSurveillanceBase = Math.round(ending.surveillance * 0.6);
@@ -76,8 +78,8 @@ export function prepareNextDayCarryover(input: DayCarryoverInput): DayCarryoverR
 
   const nextRunState: RunState = {
     ...input.runState,
-    phase: input.runState.currentDay >= runDefaults.runLengthDays ? "final_settlement" : "morning_news",
-    currentDay: Math.min(runDefaults.runLengthDays, input.runState.currentDay + 1),
+    phase: input.runState.currentDay >= runLengthDays ? "final_settlement" : "morning_news",
+    currentDay: Math.min(runLengthDays, input.runState.currentDay + 1),
     budget: ending.budget,
     cumulativeProfit: input.runState.cumulativeProfit + input.daySettlement.actualProfit,
     holdingRatio: ending.holdingRatio,

@@ -10,8 +10,9 @@ export class DaySettlementScene extends BaseDocumentScene {
   create(): void {
     const settlement = gameSession.daySettlementResult ?? gameSession.calculateDaySettlement();
     const runState = gameSession.ensureRun();
-    const nextScene = runState.currentDay >= 5 ? SceneKeys.FinalSettlement : SceneKeys.PreOpenCard;
-    const nextLabel = runState.currentDay >= 5 ? "Final 정산" : "다음 Day";
+    const runLengthDays = gameSession.getRunLengthDays();
+    const nextScene = runState.currentDay >= runLengthDays ? SceneKeys.FinalSettlement : SceneKeys.PreOpenCard;
+    const nextLabel = runState.currentDay >= runLengthDays ? "Final 정산" : "다음 Day";
     const contractLines = gameSession.getContractProgressLines();
 
     this.drawDocumentShell(
