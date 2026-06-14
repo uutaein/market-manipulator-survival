@@ -7,7 +7,13 @@ import { documentEventValues } from "../../src/domain/balancing/documentEventVal
 import { isMvpAutoCardId } from "../../src/domain/intraday/autoCards";
 import { openDocumentEvent } from "../../src/domain/intraday/documentEvents";
 import { clampIntradayState } from "../../src/domain/intraday/intradayState";
-import { areManualActionsAvailable, cancelManualAction, tickManualActionCooldowns } from "../../src/domain/intraday/manualActions";
+import {
+  areManualActionsAvailable,
+  cancelManualAction,
+  canUseManualAction,
+  tickManualActionCooldowns,
+  useManualAction
+} from "../../src/domain/intraday/manualActions";
 import { gameSession } from "../../src/game/GameSession";
 
 const normalizeLabel = (label: string) => label.normalize("NFC").trim();
@@ -237,6 +243,50 @@ Then("the intraday total profit is positive", function () {
     ledger.estimatedNetProfitLoss > 0,
     `expected positive total profit, got ${ledger.estimatedNetProfitLoss} with current ${ledger.currentPrice} and average ${ledger.averageEntryPrice}`
   );
+});
+
+When("the Day starts below the original Run budget and account value is {int}", function (accountValue: number) {
+  gameSession.startNewRun();
+  gameSession.runState = {
+    ...gameSession.ensureRun(),
+    currentDay: 2,
+    budget: 56.4,
+    holdingRatio: 10
+  };
+  gameSession.beginDay();
+  gameSession.selectPreOpenCard("관망");
+  const state = gameSession.startIntraday();
+
+  gameSession.intradayState = clampIntradayState({
+    ...state,
+    budget: 50,
+    openingPrice: 10000,
+    averageEntryPrice: 10000,
+    priceChangePercent: 0,
+    holdingRatio: accountValue - 50,
+    assetInfluenceResistance: 1
+  });
+});
+
+Then("the intraday total account value is {int}", function (accountValue: number) {
+  const ledger = gameSession.getIntradayMoneyLedger();
+
+  assert.ok(ledger);
+  assert.equal(ledger.totalAccountValue, accountValue);
+});
+
+Then("the intraday total profit is {int}", function (profitLoss: number) {
+  const ledger = gameSession.getIntradayMoneyLedger();
+
+  assert.ok(ledger);
+  assert.equal(ledger.estimatedNetProfitLoss, profitLoss);
+});
+
+Then("the intraday Day profit is {float}", function (profitLoss: number) {
+  const ledger = gameSession.getIntradayMoneyLedger();
+
+  assert.ok(ledger);
+  assert.equal(ledger.dayProfitLoss, profitLoss);
 });
 
 When("the player uses liquidity supply", function (this: MmsWorld) {
@@ -561,4 +611,88 @@ Then("downward pressure or volatility risk increases", function (this: MmsWorld)
 Then("panic is represented with abstract tokens rather than realistic people", function (this: MmsWorld) {
   assert.equal(this.latestRetailSwarmModel?.usesAbstractTokens, true);
   assert.equal(this.latestRetailSwarmModel?.tokenKind, "abstract_token");
+});
+
+When("the intraday budget is depleted while a position remains", function (this: MmsWorld) {
+  if (!this.intradayState) {
+    this.openIntraday();
+  }
+
+  this.intradayState = clampIntradayState({
+    ...this.intradayState!,
+    budget: 0,
+    holdingRatio: Math.max(20, this.intradayState!.holdingRatio),
+    heldUnits: Math.max(2000, this.intradayState!.heldUnits),
+    averageEntryPrice: this.intradayState!.averageEntryPrice || this.intradayState!.openingPrice,
+    currentPrice: Math.max(this.intradayState!.currentPrice, this.intradayState!.averageEntryPrice || this.intradayState!.openingPrice)
+  });
+});
+
+Then("the Run is not failed by budget depletion", function (this: MmsWorld) {
+  assert.notEqual(this.runStatus, "failed");
+  assert.ok(this.intradayState);
+});
+
+Then("budget-cost manual actions are unavailable", function (this: MmsWorld) {
+  assert.ok(this.intradayState);
+  assert.equal(canUseManualAction(this.intradayState, "liquidity_supply"), false);
+  assert.equal(canUseManualAction(this.intradayState, "price_push"), false);
+  assert.equal(canUseManualAction(this.intradayState, "overheat_cooldown"), false);
+});
+
+Then("position settlement remains available when it can recover budget", function (this: MmsWorld) {
+  assert.ok(this.intradayState);
+  assert.equal(canUseManualAction(this.intradayState, "position_settlement"), true);
+});
+
+When("the player settles a position into high MADNESS", function (this: MmsWorld) {
+  if (!this.intradayState) {
+    this.openIntraday();
+  }
+
+  const highMadnessState = clampIntradayState({
+    ...this.intradayState!,
+    budget: 24,
+    holdingRatio: 40,
+    averageEntryPrice: this.intradayState!.openingPrice,
+    priceChangePercent: 8,
+    marketPressure: 40,
+    personalParticipation: 82,
+    marketLiquidity: 48,
+    volatility: 58
+  });
+  const lowMadnessState = clampIntradayState({
+    ...highMadnessState,
+    priceChangePercent: -1,
+    marketPressure: 0,
+    personalParticipation: 25,
+    volatility: 25
+  });
+  const lowResult = useManualAction(lowMadnessState, "포지션 정리");
+  const lowStateAfterSettlement = tickManualActionCooldowns(lowResult.state, 10);
+
+  this.lowMadnessSettlementBudgetDelta = lowResult.budgetDelta;
+  this.lowMadnessSettlementPressureDelta = lowStateAfterSettlement.marketPressure - lowMadnessState.marketPressure;
+  this.holdingRatioBeforeManualAction = highMadnessState.holdingRatio;
+  this.heldUnitsBeforeManualAction = highMadnessState.heldUnits;
+  this.lastManualActionResult = useManualAction(highMadnessState, "포지션 정리");
+  this.highMadnessSettlementBudgetDelta = this.lastManualActionResult.budgetDelta;
+  this.intradayState = tickManualActionCooldowns(this.lastManualActionResult.state, 10);
+  this.highMadnessSettlementPressureDelta = this.intradayState.marketPressure - highMadnessState.marketPressure;
+});
+
+Then("the position settlement still reduces held units", function (this: MmsWorld) {
+  assert.ok(this.intradayState);
+  assert.ok(this.intradayState.heldUnits < this.heldUnitsBeforeManualAction);
+  assert.ok(this.intradayState.holdingRatio < this.holdingRatioBeforeManualAction);
+});
+
+Then("MADNESS absorbs part of the settlement pressure", function (this: MmsWorld) {
+  assert.ok(this.intradayState);
+  assert.ok(this.intradayState.madness > 55);
+  assert.ok(this.highMadnessSettlementPressureDelta > this.lowMadnessSettlementPressureDelta);
+});
+
+Then("MADNESS improves the settlement recovery", function (this: MmsWorld) {
+  assert.ok(this.highMadnessSettlementBudgetDelta > this.lowMadnessSettlementBudgetDelta);
 });

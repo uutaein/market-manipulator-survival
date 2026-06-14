@@ -42,7 +42,7 @@
 | `MarketBoardTick` | 같은 섹터 경쟁 종목, 타 섹터 평균, 24개 종목 거래대금 대시보드 간략 계산 | 간략 등락/거래대금 공식 |
 | `ChartMotionAdapter` | seeded fake OHLCV와 차트 모션 보정 | 평균회귀, 저항, 되돌림, 볼륨 임펄스 |
 | `ActionEffect` | 수동 액션 효과 생성 | 비용, 쿨다운, 효과량 |
-| `AccountValuation` | 장중 총평가/총손익 표시 계산 | 예산, 보유 비중, 평균단가, 종목 영향력 저항 |
+| `AccountValuation` | 장중 순자산/총손익/Day손익 표시 계산 | 예산, 보유 비중, 평균단가, 종목 영향력 저항 |
 | `AutoCardEffect` | 자동 카드 주기 발동 효과 생성 | 발동 주기, 레벨 성장 |
 | `NewsEffect` | Morning News 효과 생성 | 뉴스별 압력/위험 수치 |
 | `DocumentEventEffect` | 문서 이벤트 선택 효과 생성 | 선택지 효과 |
@@ -86,7 +86,7 @@ The first MVP baseline for these data groups is defined in:
 | SDD-MOD-DATA-002 | 수치 변경만으로 플레이 감각을 조정할 수 있어야 한다. |
 | SDD-MOD-DATA-003 | 새 수치를 적용하기 위해 상태 구조 전체를 바꾸지 않아야 한다. |
 | SDD-MOD-DATA-004 | MVP에서는 데이터 편집 UI를 만들지 않는다. |
-| SDD-MOD-DATA-005 | 장중 총평가/총손익 계산은 가격 Tick 공식과 분리하고, 포지션 획득 비용에 쓰는 asset influence resistance와 같은 기준을 사용해야 한다. |
+| SDD-MOD-DATA-005 | 장중 순자산/총손익/Day손익 계산은 가격 Tick 공식과 분리하고, 포지션 획득 비용에 쓰는 asset influence resistance와 같은 기준을 사용해야 한다. 총손익은 Run 시작 예산 기준, Day손익은 해당 Day 시작 예산 기준으로 분리한다. |
 
 ### 3.2 MVP Balancing Modules
 

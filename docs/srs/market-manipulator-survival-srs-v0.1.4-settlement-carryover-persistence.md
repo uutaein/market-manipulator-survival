@@ -45,13 +45,12 @@
 
 즉시 Run 실패 조건은 다음이다.
 
-1. 예산 고갈
-2. 감시도 100 도달
-3. 치명적 가격 붕괴
+1. 감시도 100 도달
+2. 치명적 가격 붕괴
 
 | ID | Requirement |
 | --- | --- |
-| SRS-SETTLE-FAIL-001 | `budget`이 최소 유지 기준 미만이면 즉시 Run 실패로 처리해야 한다. |
+| SRS-SETTLE-FAIL-001 | `budget`이 부족하면 예산 소모 행동을 제한해야 한다. 예산 부족 자체는 즉시 Run 실패로 처리하지 않는다. |
 | SRS-SETTLE-FAIL-002 | `surveillance`가 100에 도달하면 즉시 Run 실패로 처리해야 한다. |
 | SRS-SETTLE-FAIL-003 | `priceChangePercent`가 `crashLine` 이하가 되면 즉시 Run 실패로 처리해야 한다. |
 | SRS-SETTLE-FAIL-004 | 즉시 실패 시 Day Settlement를 기다리지 않고 실패 결과 화면으로 전환해야 한다. |
@@ -172,6 +171,8 @@ Day 종료 후 다음 Day로 이월되는 상태는 다음이다.
 | 예산 | 이월 |
 | 누적 실제 수익 | 이월 |
 | 보유 비중 | 이월 |
+| 평균단가 | 보유 포지션이 있으면 이월 |
+| 전일 종가 | 보유 포지션이 있으면 다음 Day 시초가 기준으로 이월 |
 | 감시도 | 일부 이월 |
 | 사회적 비용 | 누적 |
 | 자동 카드 레벨 | 이월 |
@@ -186,6 +187,8 @@ Day 종료 후 다음 Day로 이월되는 상태는 다음이다.
 | SRS-SETTLE-CARRY-001 | Day Settlement 이후 Carryover 처리를 수행해야 한다. |
 | SRS-SETTLE-CARRY-002 | Carryover 결과는 다음 Day의 초기 상태에 반영되어야 한다. |
 | SRS-SETTLE-CARRY-003 | 시장 여파는 새 Day의 Morning News보다 약해야 한다. |
+| SRS-SETTLE-CARRY-004 | 보유 포지션이 남아 있으면 다음 Day의 평균단가는 전날 마감 평균단가를 유지해야 하며, 새 Day의 시초가로 재계산하지 않아야 한다. |
+| SRS-SETTLE-CARRY-005 | 보유 포지션이 남아 있으면 다음 Day의 시초가는 전날 종가를 기준으로 시작해야 한다. 표시 등락률은 새 Day 시초가 기준 0%로 초기화한다. |
 
 ---
 

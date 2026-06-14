@@ -333,7 +333,7 @@ nonPlayerPriceChangePercent =
 | SRS-PRICE-FAIL-002 | 대상 종목의 Tick당 가격 변화는 -0.45~+0.45%p로 제한해야 한다. |
 | SRS-PRICE-FAIL-003 | 비플레이어 종목의 Tick당 가격 변화는 -0.25~+0.25%p로 제한해야 한다. |
 | SRS-PRICE-FAIL-004 | 0~100 범위 상태는 Tick 계산 후 0~100으로 보정해야 한다. |
-| SRS-PRICE-FAIL-005 | `surveillance >= 100` 또는 `budget < minimumBudget`이면 가격 Tick 결과와 무관하게 즉시 Run 실패를 발생시켜야 한다. |
+| SRS-PRICE-FAIL-005 | `surveillance >= 100`이면 가격 Tick 결과와 무관하게 즉시 Run 실패를 발생시켜야 한다. 예산 부족은 즉시 실패가 아니라 예산 소모 행동 제한으로 처리한다. |
 
 ---
 

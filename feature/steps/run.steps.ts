@@ -1,5 +1,7 @@
 import { Given, Then, When } from "@cucumber/cucumber";
 import assert from "node:assert/strict";
+import { clampIntradayState } from "../../src/domain/intraday/intradayState";
+import { gameSession } from "../../src/game/GameSession";
 import type { MmsWorld } from "../support/world";
 
 Given("the accepted MVP SPEC is used", function (this: MmsWorld) {
@@ -208,4 +210,105 @@ Then("a short hint explains one useful next decision", function (this: MmsWorld)
 
 Then("the hint does not introduce real-world market procedures", function (this: MmsWorld) {
   assert.equal(this.learningHintShown, true);
+});
+
+Given("the player finished an intraday Day at a large positive change", function (this: MmsWorld) {
+  gameSession.startNewRun();
+  gameSession.beginDay();
+  gameSession.selectPreOpenCard("선취매", {
+    earlyPositioningBudgetPercent: 30
+  });
+
+  const state = gameSession.startIntraday();
+  gameSession.intradayState = clampIntradayState({
+    ...state,
+    budget: Math.max(20, state.budget),
+    holdingRatio: Math.max(12, state.holdingRatio),
+    priceChangePercent: 42,
+    priceDeltaPerTick: 0
+  });
+  this.priceBeforeManualAction = gameSession.intradayState.currentPrice;
+  this.totalProfitBeforeDayTransition = gameSession.getIntradayMoneyLedger()?.estimatedNetProfitLoss ?? 0;
+  gameSession.calculateDaySettlement();
+});
+
+When("the next Day intraday operation starts", function () {
+  gameSession.continueAfterDaySettlement();
+  gameSession.selectPreOpenCard("관망");
+  gameSession.startIntraday();
+});
+
+Then("the player price change starts at {int} percent", function (percent: number) {
+  assert.equal(gameSession.intradayState?.priceChangePercent, percent);
+});
+
+Then("the first chart history point starts at {int} percent", function (percent: number) {
+  assert.equal(gameSession.priceHistory[0]?.priceChangePercent, percent);
+});
+
+Then("the next Day opening price uses the previous close", function (this: MmsWorld) {
+  assert.equal(gameSession.intradayState?.openingPrice, this.priceBeforeManualAction);
+});
+
+Given("the player finished a Day with a carried position average entry", function (this: MmsWorld) {
+  gameSession.startNewRun();
+  gameSession.beginDay();
+  gameSession.selectPreOpenCard("선취매", {
+    earlyPositioningBudgetPercent: 30
+  });
+
+  const state = gameSession.startIntraday();
+  this.averageEntryPriceBeforeManualAction = 11110;
+  gameSession.intradayState = clampIntradayState({
+    ...state,
+    averageEntryPrice: this.averageEntryPriceBeforeManualAction,
+    holdingRatio: Math.max(18, state.holdingRatio),
+    priceChangePercent: 8
+  });
+  gameSession.calculateDaySettlement();
+});
+
+When("the next Day intraday operation starts without additional accumulation", function () {
+  gameSession.continueAfterDaySettlement();
+  gameSession.selectPreOpenCard("관망");
+  gameSession.startIntraday();
+});
+
+Then("the player average entry stays unchanged", function (this: MmsWorld) {
+  assert.equal(gameSession.intradayState?.averageEntryPrice, this.averageEntryPriceBeforeManualAction);
+});
+
+Given("the player ended Day 1 around {int} percent up with a carried position", function (this: MmsWorld, percent: number) {
+  gameSession.startNewRun();
+  gameSession.beginDay();
+  gameSession.selectPreOpenCard("선취매", {
+    earlyPositioningBudgetPercent: 30
+  });
+
+  const state = gameSession.startIntraday();
+  gameSession.intradayState = clampIntradayState({
+    ...state,
+    priceChangePercent: percent,
+    priceDeltaPerTick: 0
+  });
+  this.priceBeforeManualAction = gameSession.intradayState.currentPrice;
+  this.totalProfitBeforeDayTransition = gameSession.getIntradayMoneyLedger()?.estimatedNetProfitLoss ?? 0;
+  gameSession.calculateDaySettlement();
+});
+
+When("Day 2 starts after selecting asset analysis", function () {
+  gameSession.continueAfterDaySettlement();
+  gameSession.selectPreOpenCard("종목 분석");
+  gameSession.startIntraday();
+});
+
+Then("the Day 2 opening price uses the Day 1 close", function (this: MmsWorld) {
+  assert.equal(gameSession.intradayState?.openingPrice, this.priceBeforeManualAction);
+});
+
+Then("the intraday total profit only changes by the asset analysis cost", function (this: MmsWorld) {
+  const ledger = gameSession.getIntradayMoneyLedger();
+
+  assert.ok(ledger);
+  assert.equal(ledger.estimatedNetProfitLoss, Math.round((this.totalProfitBeforeDayTransition - 4) * 10) / 10);
 });

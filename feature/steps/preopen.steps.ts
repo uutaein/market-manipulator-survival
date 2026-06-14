@@ -8,6 +8,7 @@ import { getEarlyPositioningEntryPremiumPercent } from "../../src/domain/intrada
 import { getActiveNewsPricePressure } from "../../src/domain/intraday/newsPressure";
 import {
   canStartIntraday,
+  earlyPositioningBudgetPercentMax,
   getAvailablePreOpenCards,
   hasStatEffect,
   previewEarlyPositioningEffect
@@ -237,6 +238,14 @@ Then("the early positioning effect stores the chosen budget ratio", function (th
   assert.equal(this.dayState?.preOpenCardEffect?.earlyPositioningBudgetPercent, 35);
 });
 
+Then("the early positioning maximum budget ratio is {int} percent", function (percent: number) {
+  assert.equal(earlyPositioningBudgetPercentMax, percent);
+});
+
+Then("the early positioning choice is marked as high-risk concentration", function (this: MmsWorld) {
+  assert.equal(this.dayState?.preOpenCardEffect?.earlyPositioningRiskBand, "concentrated");
+});
+
 Then("the early positioning effect stores {int} percent as the chosen budget ratio", function (
   this: MmsWorld,
   percent: number
@@ -282,7 +291,7 @@ Then("no pre-open stat effect is applied for the early positioning choice", func
 When("the player compares low and high early positioning", function (this: MmsWorld) {
   assert.ok(this.dayState);
   const low = previewEarlyPositioningEffect(this.dayState.startingBudgetForDay, 10);
-  const high = previewEarlyPositioningEffect(this.dayState.startingBudgetForDay, 50);
+  const high = previewEarlyPositioningEffect(this.dayState.startingBudgetForDay, 85);
 
   this.lowEarlyPositioningHoldingDelta = low.holdingRatioDelta;
   this.highEarlyPositioningHoldingDelta = high.holdingRatioDelta;

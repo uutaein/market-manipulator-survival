@@ -28,8 +28,13 @@ The current first playable baseline uses:
 10. Market Dashboard ranks all 24 individual fictional assets by baseline-anchored fictional trade value with live activity adjustment.
 11. Fixed asset market profiles provide baseline trade value, market role, and influence resistance so larger assets are harder to move.
 12. Retail Swarm may be represented as a participant mood/RSI-style panel in the first playable rather than moving crowd tokens.
-13. Intraday account/P&L display uses a normalized fictional position value based on `holdingRatio * assetInfluenceResistance * currentPrice / averageEntryPrice`, so position value is consistent with the budget required to acquire influence in larger assets.
+13. Intraday account/P&L display uses a normalized fictional position value based on `holdingRatio * assetInfluenceResistance * currentPrice / averageEntryPrice`, so position value is consistent with the budget required to acquire influence in larger assets. The screen separates net account value, Run-baseline total P&L, and Day-baseline P&L so a profitable Day inside a still-negative Run does not read as a contradictory total valuation.
 14. Document Event choices that change budget must show the budget delta in the popup. The `유동성 경색 보고` aggressive response is named `유동성 긴급 공급` and uses a low 2B budget cost, distinct from the manual `유동성 공급` button.
+15. Player asset intraday price change is Day-local. A new Day's intraday session starts its visible price-change percentage and first chart history point at `0%` relative to that Day's opening price rather than carrying over the previous Day's visible percentage.
+16. Player average entry price is Run position state, not a Day quote baseline. If the player carries a position into the next Day without additional accumulation, the average entry price must remain unchanged even when the new Day opening price changes.
+17. `선취매` supports a wider high-risk budget range: 10~85% for first/no-position entry and 0~85% for carried-position optional accumulation. Values above 50% are shown as a high-risk concentration band rather than a normal default choice.
+18. Budget depletion is not an immediate Run failure in the first playable. When budget is depleted, budget-cost actions are disabled; recoverable position actions may still be available while the player holds position value.
+19. If the player carries a position into the next Day, the next Day opening price uses the previous Day close as its baseline while the displayed Day-local change still resets to `0%`.
 
 ## Consequences
 

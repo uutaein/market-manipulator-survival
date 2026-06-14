@@ -42,3 +42,21 @@ Feature: Run lifecycle
     Then the new attempt uses the same Run Seed
     And initial Run-random conditions are reproduced
     And the player can try different decisions
+
+  Scenario: Start the next Day with fresh intraday price change
+    Given the player finished an intraday Day at a large positive change
+    When the next Day intraday operation starts
+    Then the player price change starts at 0 percent
+    And the first chart history point starts at 0 percent
+    And the next Day opening price uses the previous close
+
+  Scenario: Carry average entry into the next Day without additional accumulation
+    Given the player finished a Day with a carried position average entry
+    When the next Day intraday operation starts without additional accumulation
+    Then the player average entry stays unchanged
+
+  Scenario: Keep total profit coherent after Day 2 asset analysis
+    Given the player ended Day 1 around 20 percent up with a carried position
+    When Day 2 starts after selecting asset analysis
+    Then the Day 2 opening price uses the Day 1 close
+    And the intraday total profit only changes by the asset analysis cost

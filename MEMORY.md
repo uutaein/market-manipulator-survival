@@ -27,13 +27,13 @@ Current baseline:
 13. Document Event domain module exists for 8 event values, trigger priority, cap/gap rules, pause behavior, 3 choices, choice effects, and event history.
 14. Retail Swarm domain module exists for participation-synced state, participant mood modeling, warning/panic flags, and overheat/panic risk effects.
 15. Settlement domain module exists for Day result matrix, surveillance grade, holding bands, social cost deltas, Final grade baselines, and forced failure handling.
-16. Day Carryover domain module exists for persistent Run state carryover, partial risk carryover, reset baselines, weak aftereffects, and Pre-open Card non-carryover.
+16. Day Carryover domain module exists for persistent Run state carryover, including average-entry and previous-close carryover, partial risk carryover, reset baselines, weak aftereffects, and Pre-open Card non-carryover.
 17. Local Persistence domain module exists for versioned save envelopes, current Run save/load, recent Final save, best record update, forbidden keys, and incompatible save discard.
 18. Safety Contract domain module exists for player-facing content checks, approved safe terms, forbidden procedure/entity terms, and fictional calculation validation.
 19. Phaser Run/Day flow scene wiring now exists for Main Menu, Run Setup, Morning Briefing, Pre-open Card selection, Opening Approval, and initial Intraday state display.
 20. Phaser Intraday scene now renders a fictional candle chart, volume bars, target band, crash line, current price marker, quote/position/money-flow readout, and action-specific candle/volume responses.
 21. Phaser Market Board now shows competitor context, other-sector averages, current/average prices, and a 24-asset fictional trade-value dashboard during Intraday.
-22. Phaser Intraday scene now routes budget exhaustion, surveillance 100, and critical price collapse to Final Settlement forced failure.
+22. Phaser Intraday scene now routes surveillance 100 and critical price collapse to Final Settlement forced failure; budget depletion blocks budget-cost actions instead of forcing failure.
 23. Phaser Intraday scene now advances one-second price/timer ticks and exposes the 4 manual action buttons with locked blinking execution feedback.
 24. Phaser Intraday scene now displays owned Auto Cards, opens paused reward choices, and applies periodic Auto Card effects.
 25. Phaser Intraday scene now opens Document Event modals, pauses time, applies one of 3 choices, and resumes.
@@ -156,7 +156,7 @@ MVP shape:
 20. Added Retail Swarm domain module for participation-synced participant mood modeling, overheat warnings, panic state, and risk effects.
 21. Added Market Board domain module for player detail, same-sector peers, other-sector averages, and simplified non-player movement.
 22. Added Settlement domain module for Day/Final result classification, holding risk bands, social cost deltas, and forced failure handling.
-23. Added Day Carryover domain module for persistent state carryover, partial risk carryover, reset baselines, weak aftereffects, and Pre-open Card non-carryover.
+23. Added Day Carryover domain module for persistent state carryover, average-entry and previous-close carryover, partial risk carryover, reset baselines, weak aftereffects, and Pre-open Card non-carryover.
 24. Added Local Persistence domain module for versioned local save envelopes, current Run save/load, recent Final save, best record update, and incompatible save discard.
 25. Added Safety Contract domain module for player-facing content checks, forbidden term/entity validation, and fictional calculation validation.
 26. Added first Phaser scene wiring slice for shared Run/Day session state, sector/asset selection, Morning Briefing, Pre-open Card selection/approval, and initial Intraday state display.
@@ -168,11 +168,14 @@ MVP shape:
 32. Added Retail Swarm scene wiring for a participant mood panel, participation-synced heat/readability, and one-shot overheat/panic transition risk effects.
 33. Added browser localStorage wiring for active Run save/load, Main Menu continue, Final Settlement record save, best-record update flag, and current Run cleanup after Final.
 34. Added Market Board live scene wiring for simplified non-player movement advancement and live player price display.
-35. Added immediate failure scene routing for budget exhaustion, surveillance 100, critical price collapse, and forced Final Settlement.
+35. Added immediate failure scene routing for surveillance 100, critical price collapse, and forced Final Settlement, with budget depletion handled as action gating.
 36. Added Intraday fictional candle/volume chart with target band, crash line, current price marker, liquidity volume spike, action-specific candle responses, and money-flow readout.
 37. Added intraday desk-reposition flow after full position settlement and 24-asset fictional trade-value dashboard.
-38. Corrected normalized intraday P&L display so position value uses asset influence resistance consistently with acquisition cost.
+38. Corrected normalized intraday P&L display so position value uses asset influence resistance consistently with acquisition cost, then split the readout into net account value, Run-baseline total P&L, and Day-baseline P&L.
 39. Clarified Document Event budget costs in popup choices and split `유동성 긴급 공급` from the manual `유동성 공급` button.
+40. Added a regression expectation that player intraday price change and the first chart history point reset to 0% at the start of each new Day.
+41. Added average-entry and previous-close carryover so a carried position keeps its prior average entry and next-Day opening price baseline across Days unless the player changes position accounting.
+42. Expanded `선취매` budget ratio to 85% max and marked selections above 50% as high-risk concentration.
 
 ---
 
@@ -212,7 +215,7 @@ The game is a fictional resource-management and pressure-management game.
 Latest merged main baseline:
 
 ```text
-0360c53 fix(game): correct intraday pnl and event costs
+41e2cb7 docs(spec): align first playable documentation
 ```
 
 Current branch baseline includes:

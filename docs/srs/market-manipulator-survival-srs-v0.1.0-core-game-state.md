@@ -118,12 +118,14 @@ Run State는 5-Day Run 전체에 유지된다.
 | `budget` | 0 이상 숫자 | Day 간 이월 | 현재 예산 |
 | `cumulativeProfit` | 숫자 | Day 간 이월 | 누적 실제 수익 |
 | `holdingRatio` | 0~100 | Day 간 이월 | 현재 보유 비중 |
+| `averageEntryPrice` | 양수 또는 없음 | 보유 포지션이 있으면 Day 간 이월 | 플레이어 데스크의 평균단가 |
+| `lastClosePrice` | 양수 또는 없음 | 보유 포지션이 있으면 Day 간 이월 | 다음 Day 시초가 기준으로 사용할 전일 종가 |
 | `surveillance` | 0~100 | 일부 이월 | 현재 감시도 |
 | `socialCost` | 0 이상 숫자 | 누적 | 누적 사회적 비용 |
 | `autoCards` | 카드 ID + 레벨 | Day 간 이월 | 보유 자동 카드와 레벨 |
 | `marketAftereffects` | 효과 목록 | Day 간 일부 유지 | 전날 결과가 남긴 시장 여파 |
 | `dayResults` | 최대 5개 결과 | Run 전체 | Day별 정산 결과 |
-| `failedReason` | 실패 사유 또는 없음 | 실패 시 설정 | 예산 고갈, 감시도 100, 가격 붕괴 등 |
+| `failedReason` | 실패 사유 또는 없음 | 실패 시 설정 | 감시도 100, 가격 붕괴 등 |
 
 ### 4.1 Run State Requirements
 
@@ -134,10 +136,12 @@ Run State는 5-Day Run 전체에 유지된다.
 | SRS-STATE-RUN-003 | `runSeed`는 Run별 Asset Profile, Morning News 대상, Today Condition, 일부 시장 여파 초기 조건을 재현해야 한다. |
 | SRS-STATE-RUN-004 | `currentDay`는 1에서 시작하고, Day 정산 후 다음 Day로 진행할 때 1씩 증가해야 한다. |
 | SRS-STATE-RUN-005 | `currentDay`가 5인 Day의 정산이 끝나면 시스템은 Final Settlement로 전환해야 한다. |
-| SRS-STATE-RUN-006 | `budget`, `cumulativeProfit`, `holdingRatio`, `socialCost`, `autoCards`는 Day 간 이월되어야 한다. |
+| SRS-STATE-RUN-006 | `budget`, `cumulativeProfit`, `holdingRatio`, `averageEntryPrice`, `lastClosePrice`, `socialCost`, `autoCards`는 Day 간 이월되어야 한다. |
 | SRS-STATE-RUN-007 | `surveillance`는 Day 간 일부 이월되어야 하며, 정확한 감소율은 밸런싱 값으로 분리해야 한다. |
 | SRS-STATE-RUN-008 | `failedReason`이 설정되면 `runStatus`는 `failed`가 되어야 한다. |
 | SRS-STATE-RUN-009 | 신규 Run의 `holdingRatio`는 0에서 시작해야 한다. Day 1의 첫 보유 비중은 `선취매`를 통해 생성된다. |
+| SRS-STATE-RUN-010 | 보유 포지션이 있는 상태로 다음 Day에 진입하면 `averageEntryPrice`는 전날 마감 평단을 유지해야 한다. 선취매, 매수봇, 매도봇, 포지션 정리처럼 포지션 회계가 변하는 행동이 있을 때만 변경된다. |
+| SRS-STATE-RUN-011 | 보유 포지션이 있는 상태로 다음 Day에 진입하면 `lastClosePrice`는 전날 마감 현재가로 설정되고, 다음 Day `openingPrice`는 이 값을 기준으로 시작해야 한다. |
 
 ---
 
@@ -183,7 +187,7 @@ Intraday Core State는 장중 운용 중 실시간으로 변한다.
 | --- | --- | --- | --- |
 | `timeRemainingSec` | 0~180 | Day 시작 시 180 | 장중 남은 시간 |
 | `isIntradayPaused` | boolean | 기본 false | 문서 이벤트 등으로 장중 시간이 멈췄는지 여부 |
-| `budget` | 0 이상 숫자 | MVP 시작 기준 100, 최소 유지 기준 10 | 핵심 생존 자원 |
+| `budget` | 0 이상 숫자 | MVP 시작 기준 100 | 행동 비용과 포지션 회수에 쓰는 현금 자원 |
 | `openingPrice` | 양수 | Day 시작 시 설정 | fictional 기준 시초가 |
 | `currentPrice` | 양수 | Tick마다 갱신 | 현재 fictional 가격 |
 | `averageEntryPrice` | 양수 또는 없음 | 선취매/매수봇/매도봇/정리 결과 | 플레이어 데스크의 평균단가 |
@@ -207,7 +211,7 @@ Intraday Core State는 장중 운용 중 실시간으로 변한다.
 | SRS-STATE-INTRA-001 | 장중 운용은 기본 180초의 `timeRemainingSec`로 시작해야 한다. |
 | SRS-STATE-INTRA-002 | `timeRemainingSec`가 0에 도달하면 시스템은 `day_settlement`로 전환해야 한다. |
 | SRS-STATE-INTRA-003 | `isIntradayPaused`가 참이면 `timeRemainingSec`는 감소하지 않아야 한다. |
-| SRS-STATE-INTRA-004 | `budget`이 최소 유지 기준 미만이면 즉시 Run 실패가 발생해야 한다. |
+| SRS-STATE-INTRA-004 | `budget`이 부족하면 예산을 소모하는 행동을 사용할 수 없어야 한다. 단, 예산 부족 자체는 즉시 Run 실패를 발생시키지 않는다. |
 | SRS-STATE-INTRA-005 | `surveillance`가 100에 도달하면 즉시 Run 실패가 발생해야 한다. |
 | SRS-STATE-INTRA-006 | `priceChangePercent`가 `crashLine`을 이탈하면 즉시 Run 실패가 발생해야 한다. |
 | SRS-STATE-INTRA-007 | `holdingRatio`, `personalParticipation`, `marketLiquidity`, `surveillance`, `volatility`, `competitionPressure`는 0~100 범위를 벗어나지 않도록 보정되어야 한다. |

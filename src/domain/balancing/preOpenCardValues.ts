@@ -32,7 +32,7 @@ export const preOpenCardValues = {
   early_positioning: {
     id: "early_positioning",
     displayName: "선취매",
-    role: "개장 전 미리 비싸게 확보한다. 첫 진입은 현재 예산의 10~50%, 보유 포지션이 있으면 0~50%를 투입해 보유 비중을 조절한다.",
+    role: "개장 전 미리 비싸게 확보한다. 첫 진입은 현재 예산의 10~85%, 보유 포지션이 있으면 0~85%를 투입해 보유 비중을 조절한다. 50% 초과는 과집중 위험 구간이다.",
     budgetDelta: 0,
     holdingRatioDelta: 0,
     marketPressureDelta: 0,

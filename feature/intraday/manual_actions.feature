@@ -31,6 +31,13 @@ Feature: Manual intraday actions
     When the player marks the asset up from the high 9000s to 14000
     Then the intraday total profit is positive
 
+  Scenario: Total profit uses the Run baseline while Day profit uses the Day baseline
+    Given intraday operation is active
+    When the Day starts below the original Run budget and account value is 98
+    Then the intraday total account value is 98
+    And the intraday total profit is -2
+    And the intraday Day profit is 41.6
+
   Scenario: Liquidity supply has a visible low budget cost
     Given intraday operation is active
     When the player uses liquidity supply
@@ -53,6 +60,20 @@ Feature: Manual intraday actions
     When the player uses sell bot to create a cheaper accumulation window
     And the player buys again in that cheaper accumulation window
     Then the average entry price is below the pre-sell average
+
+  Scenario: Depleted budget blocks cash-cost actions without forcing Run failure
+    Given intraday operation is active
+    When the intraday budget is depleted while a position remains
+    Then the Run is not failed by budget depletion
+    And budget-cost manual actions are unavailable
+    And position settlement remains available when it can recover budget
+
+  Scenario: High MADNESS lets retail demand absorb position settlement
+    Given intraday operation is active
+    When the player settles a position into high MADNESS
+    Then the position settlement still reduces held units
+    And MADNESS absorbs part of the settlement pressure
+    And MADNESS improves the settlement recovery
 
   Scenario: Active manual actions can be interrupted mid-gauge
     Given intraday operation is active

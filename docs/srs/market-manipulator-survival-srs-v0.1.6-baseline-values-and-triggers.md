@@ -110,7 +110,7 @@ Baseline trade value must be intentionally non-linear. The largest sector-leader
 | Run length | 5 Days |
 | Intraday duration | 180 sec |
 | Starting budget | 100 |
-| Minimum budget failure threshold | 10 |
+| Budget action guard floor | 0 |
 | Initial `priceChangePercent` | 0 |
 | Initial `holdingRatio` | 15 |
 | Initial `personalParticipation` | 30 |
@@ -193,7 +193,7 @@ The Market Dashboard should update through a stable DOM row pool or equivalent r
 
 | Card | Baseline Effect |
 | --- | --- |
-| 선취매 | On Day 1 or when no carried position exists, player chooses 10~50% of current Day budget with a drag-style investment ratio. From Day 2 onward, if a position carries over, the player may choose 0~50% because additional accumulation is optional. Budget spent is `currentBudget * selectedPercent`; higher selected percent increases holding ratio and reduces opening market liquidity, but the resulting holding-ratio gain is reduced by the selected asset's influence resistance. Pressure, surveillance, and volatility scale from the effective acquired influence, not only from raw spend. Average entry price starts roughly 2~7% above opening price using deterministic Run/asset randomness, so the initial position valuation may show a loss. Does not increase attention directly. |
+| 선취매 | On Day 1 or when no carried position exists, player chooses 10~85% of current Day budget with a drag-style investment ratio. From Day 2 onward, if a position carries over, the player may choose 0~85% because additional accumulation is optional. Above 50% is marked as a high-risk concentration band. Budget spent is `currentBudget * selectedPercent`; higher selected percent increases holding ratio and reduces opening market liquidity, but the resulting holding-ratio gain is reduced by the selected asset's influence resistance. Pressure, surveillance, and volatility scale from the effective acquired influence, not only from raw spend. Average entry price starts roughly 2~7% above opening price using deterministic Run/asset randomness, so the initial position valuation may show a loss. Does not increase attention directly. |
 | 뉴스 배정 | `budget -8`. Player chooses `호재` or `악재` before Morning News is revealed. The generated Morning News targets the player asset. |
 | 뉴스 배정: 호재 | Player asset positive news. Adds attention/upward context, lets liquidity supply add meaningful upward pressure, improves price-push effect, and reduces upward-action surveillance burden. |
 | 뉴스 배정: 악재 | Player asset negative news. Adds downside context and volatility, reduces position-settlement surveillance burden, but weakens price-push context. |
@@ -239,6 +239,7 @@ Manual actions are unavailable while a document event or auto card reward choice
 | SRS-BASE-ACTION-011 | Active manual actions must show a fill gauge and may be interrupted mid-gauge. Already-applied partial effects remain; only the remaining action progress is cancelled. |
 | SRS-BASE-ACTION-012 | Acquisition budget and effective holding-ratio gain must respect asset influence resistance so top trade-value assets require materially more budget to move than entry/theme assets. |
 | SRS-BASE-ACTION-013 | Normalized position cost basis must account for asset influence resistance. The first-playable account display uses `holdingRatio * max(1, assetInfluenceResistance)` as normalized position cost basis and multiplies it by `currentPrice / averageEntryPrice` for position market value. |
+| SRS-BASE-ACTION-014 | If budget is depleted, budget-cost actions must be unavailable, but budget depletion itself must not force Run failure while position value remains recoverable. |
 
 ### 6.1 Intraday Money Flow Display
 
@@ -251,14 +252,19 @@ The Intraday screen must expose simple fictional budget-flow feedback:
 | 투입 | `사용 - 회수` |
 | 현재가 / 시초가 / 평균단가 | Fictional quote context for the player asset |
 | 보유 / 매물 / 비중 | Held fictional units, fictional float units, and holding ratio |
-| 총 평가 | Current budget plus normalized fictional position market value |
-| 총 손익 | Total account value minus the Day starting budget |
+| 순자산 | Current budget plus normalized fictional position market value |
+| 총손익 | 순자산 minus the original Run starting budget |
+| Day손익 | 순자산 minus the current Day starting budget |
 | 포지션 평가 | Fictional position market value |
 | 평가손익 | Unrealized fictional position gain/loss from current price versus average entry |
 
 This is a game-budget display, not real accounting.
 
-The money-flow readout must remain internally consistent with influence acquisition. If the player moved a position from a high-9000 fictional price area to around 14000 while holding above average entry, total P&L should not remain negative only because the display ignored asset influence resistance.
+The money-flow readout must remain internally consistent with influence acquisition. If the player moved a position from a high-9000 fictional price area to around 14000 while holding above average entry, Run-baseline total P&L should not remain negative only because the display ignored asset influence resistance. If the current Day began below the original Run budget, Day P&L may be positive while Run-baseline total P&L remains negative; the UI must show both values separately.
+
+`priceChangePercent` is always Day-local. When a new Day intraday session starts, the player asset price change and the first chart history point must start from `0%` relative to that Day's opening price. Budget, holdings, surveillance, social cost, and selected carryover risks may persist, but the visible intraday price-change percentage must not carry over as a cumulative Run change.
+
+If a position is carried into the next Day, the next Day opening price must use the previous Day close as its baseline. The Day-local percentage still starts at `0%`, but carried position valuation uses a coherent price baseline rather than a fresh random quote.
 
 ---
 
@@ -455,6 +461,8 @@ Grades cannot be downgraded below F.
 | `budget` | carries exactly |
 | `cumulativeProfit` | carries exactly |
 | `holdingRatio` | carries exactly |
+| `averageEntryPrice` | carries exactly while holding remains above 0; clears when holding reaches 0 |
+| `lastClosePrice` | previous Day current price carries while holding remains above 0; clears when holding reaches 0 |
 | `surveillance` | carries at 60% rounded to nearest integer |
 | `socialCost` | carries exactly |
 | `autoCards` | card levels carry exactly |

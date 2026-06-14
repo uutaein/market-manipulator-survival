@@ -14,8 +14,11 @@ import {
 export const preOpenCards = Object.values(preOpenCardValues);
 export const earlyPositioningBudgetPercentMin = 10;
 export const earlyPositioningBudgetPercentCarryoverMin = 0;
-export const earlyPositioningBudgetPercentMax = 50;
+export const earlyPositioningBudgetPercentMax = 85;
+export const earlyPositioningHighRiskThresholdPercent = 50;
 export const earlyPositioningBudgetPercentStep = 5;
+
+export type EarlyPositioningRiskBand = "normal" | "concentrated";
 
 export interface PreOpenCardSelectionOptions {
   readonly earlyPositioningBudgetPercent?: number;
@@ -23,6 +26,7 @@ export interface PreOpenCardSelectionOptions {
 
 export interface EarlyPositioningPreviewEffect {
   readonly earlyPositioningBudgetPercent: number;
+  readonly riskBand: EarlyPositioningRiskBand;
   readonly assetInfluenceResistance: number;
   readonly budgetDelta: number;
   readonly holdingRatioDelta: number;
@@ -187,6 +191,7 @@ function createPreOpenCardEffect(
     sourceCardId: card.id,
     newsAssignmentDirection,
     earlyPositioningBudgetPercent: earlyPositioningEffect?.earlyPositioningBudgetPercent ?? null,
+    earlyPositioningRiskBand: earlyPositioningEffect?.riskBand ?? null,
     budgetDelta: earlyPositioningEffect?.budgetDelta ?? card.budgetDelta,
     holdingRatioDelta: earlyPositioningEffect?.holdingRatioDelta ?? card.holdingRatioDelta,
     marketLiquidityDelta: earlyPositioningEffect?.marketLiquidityDelta ?? 0,
@@ -225,6 +230,7 @@ export function previewEarlyPositioningEffect(
 
   return {
     earlyPositioningBudgetPercent,
+    riskBand: earlyPositioningBudgetPercent > earlyPositioningHighRiskThresholdPercent ? "concentrated" : "normal",
     assetInfluenceResistance: round2(assetInfluenceResistance),
     budgetDelta: -budgetSpend,
     holdingRatioDelta,

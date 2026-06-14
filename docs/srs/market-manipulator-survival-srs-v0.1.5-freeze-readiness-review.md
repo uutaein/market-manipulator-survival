@@ -71,7 +71,7 @@ The current SRS references several baseline values but does not collect them int
 Required before implementation:
 
 1. starting budget,
-2. minimum budget failure threshold,
+2. budget action guard,
 3. Day 1 initial holding ratio,
 4. Day 1 initial personal participation,
 5. Day 1 initial liquidity,
@@ -84,7 +84,7 @@ Recommended baseline:
 | State | Recommended MVP Baseline |
 | --- | ---: |
 | starting budget | 100 |
-| minimum budget threshold | 10 |
+| budget action guard | 0 |
 | initial holding ratio | 0 |
 | initial personal participation | 30 |
 | initial market liquidity | 50 |

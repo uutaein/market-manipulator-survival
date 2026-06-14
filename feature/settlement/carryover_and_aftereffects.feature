@@ -8,6 +8,7 @@ Feature: Day carryover and market aftereffects
     Then budget carries forward
     And cumulative profit carries forward
     And holding ratio carries forward
+    And average entry price carries forward
     And social cost carries forward
     And auto card levels carry forward
 

@@ -75,7 +75,7 @@ The first playable build must include the following feature set.
 | Day duration | 180 sec intraday per Day |
 | Day flow | Pre-open Card -> Morning News -> Market Briefing / Opening Approval -> Intraday -> Day Settlement |
 | Final flow | Final Settlement after Day 5 |
-| Immediate failure | budget exhaustion, surveillance 100, critical price collapse |
+| Immediate failure | surveillance 100, critical price collapse |
 | Sectors | 8 fictional sectors |
 | Assets | 24 fictional assets |
 | Asset choice | player selects sector and asset at Run start; setup may show non-locking entry recommendations |
@@ -229,7 +229,7 @@ The player can choose at most 1 per Day before Morning News is revealed.
 
 Both directions target the player-selected fictional asset for the current Day. Positive assignment improves attention and upward-action legitimacy. Negative assignment increases downside context and reduces surveillance burden for position settlement.
 
-`선취매` uses a drag-style investment ratio control instead of a fixed budget cost. On Day 1 or when no position carries over, the player chooses 10~50% of the current Day budget. From Day 2 onward, if a position carries over, the player chooses 0~50% because additional accumulation is optional. The chosen ratio determines budget spent and position acquired; a higher ratio increases holding ratio and lowers opening market liquidity. The resulting average entry price starts roughly 2~7% above the opening price using deterministic Run/asset randomness, so the initial valuation can show a loss before intraday pressure changes the price.
+`선취매` uses a drag-style investment ratio control instead of a fixed budget cost. On Day 1 or when no position carries over, the player chooses 10~85% of the current Day budget. From Day 2 onward, if a position carries over, the player chooses 0~85% because additional accumulation is optional. A selection above 50% is marked as a high-risk concentration band. The chosen ratio determines budget spent and position acquired; a higher ratio increases holding ratio and lowers opening market liquidity. The resulting average entry price starts roughly 2~7% above the opening price using deterministic Run/asset randomness, so the initial valuation can show a loss before intraday pressure changes the price.
 
 The Intraday chart must include a fictional order-book/depth panel for the player asset. Thin sell-side depth should make upward pressure more responsive; thin buy-side depth should make downward pressure more responsive. This is an abstract game model, not real order-book data.
 
@@ -242,9 +242,13 @@ The Intraday chart must include a fictional order-book/depth panel for the playe
 
 Manual actions are unavailable while a document event or auto card reward choice is open.
 
-The Intraday screen must show a simple fictional position and money-flow readout: opening price, current price, average entry price, held units, fictional float units, position value, total account value, total P&L, unrealized gain/loss, spent budget, recovered budget, and current budget.
+The Intraday screen must show a simple fictional position and money-flow readout: opening price, current price, average entry price, held units, fictional float units, position value, net account value, Run-baseline total P&L, Day-baseline P&L, unrealized gain/loss, spent budget, recovered budget, and current budget.
 
-Position value must be normalized against the same fictional influence resistance used for acquisition. First playable account value uses `holdingRatio * max(1, assetInfluenceResistance)` as normalized cost basis and multiplies it by `currentPrice / averageEntryPrice`. This keeps large-asset acquisition cost, position value, and total P&L internally consistent without becoming a real accounting model.
+Position value must be normalized against the same fictional influence resistance used for acquisition. First playable account value uses `holdingRatio * max(1, assetInfluenceResistance)` as normalized cost basis and multiplies it by `currentPrice / averageEntryPrice`. This keeps large-asset acquisition cost, position value, and P&L display internally consistent without becoming a real accounting model. Run-baseline total P&L uses the original Run starting budget; Day-baseline P&L uses the current Day starting budget.
+
+The player asset's intraday price change is Day-local. At the start of each new Day intraday session, visible price change and the first chart history point start at `0%` relative to that Day's opening price.
+
+If the player carries a position into the next Day, that Day's opening price must use the previous Day's close as its baseline. This keeps carried average entry, current price, and total P&L coherent while still resetting the displayed Day-local change to `0%`.
 
 ### 7.4 Auto Cards
 
@@ -364,6 +368,7 @@ The first playable build must carry Day results into the next Day.
 | budget | exact |
 | cumulative profit | exact |
 | holding ratio | exact |
+| average entry price | exact while the player still holds a position |
 | surveillance | partial |
 | social cost | exact |
 | auto card levels | exact |

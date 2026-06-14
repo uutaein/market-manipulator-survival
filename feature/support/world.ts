@@ -112,6 +112,7 @@ export class MmsWorld extends World {
   holdingRatioBeforeManualAction = 0;
   heldUnitsBeforeManualAction = 0;
   averageEntryPriceBeforeManualAction = 0;
+  totalProfitBeforeDayTransition = 0;
   lastManualActionResult?: ManualActionResult;
   openingApproved = false;
   selectedPreOpenCard = "";
@@ -171,6 +172,10 @@ export class MmsWorld extends World {
   highEarlyPositioningHoldingDelta = 0;
   lowEarlyPositioningLiquidityDelta = 0;
   highEarlyPositioningLiquidityDelta = 0;
+  lowMadnessSettlementBudgetDelta = 0;
+  highMadnessSettlementBudgetDelta = 0;
+  lowMadnessSettlementPressureDelta = 0;
+  highMadnessSettlementPressureDelta = 0;
 
   startNewRun(): void {
     this.previousRunSeed = this.runSeed || "mms-seed-001";

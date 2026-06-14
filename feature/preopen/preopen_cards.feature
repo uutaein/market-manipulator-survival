@@ -46,6 +46,13 @@ Feature: Pre-open Card selection and Opening Approval
     Then the pre-open effect spends 35 percent of the current budget
     And the early positioning effect stores the chosen budget ratio
 
+  Scenario: Allow high-risk early positioning up to 85 percent
+    Given a new Day begins before Morning News is revealed
+    When the player chooses early positioning with 85 percent of current budget
+    Then the pre-open effect spends 85 percent of the current budget
+    And the early positioning maximum budget ratio is 85 percent
+    And the early positioning choice is marked as high-risk concentration
+
   Scenario: Early positioning starts with a premium entry loss
     Given a new Day begins before Morning News is revealed
     When the player chooses early positioning with 35 percent of current budget

@@ -2,7 +2,6 @@ export const runDefaults = {
   runLengthDays: 5,
   intradayDurationSec: 180,
   startingBudget: 100,
-  minimumBudgetFailureThreshold: 10,
   initialPriceChangePercent: 0,
   initialHoldingRatio: 0,
   initialPersonalParticipation: 30,

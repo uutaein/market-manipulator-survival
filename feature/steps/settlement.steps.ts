@@ -199,6 +199,10 @@ Then("holding ratio carries forward", function (this: MmsWorld) {
   assert.equal(this.latestCarryoverResult?.holdingRatioCarried, true);
 });
 
+Then("average entry price carries forward", function (this: MmsWorld) {
+  assert.equal(this.latestCarryoverResult?.averageEntryPriceCarried, true);
+});
+
 Then("social cost carries forward", function (this: MmsWorld) {
   assert.equal(this.latestCarryoverResult?.socialCostCarried, true);
 });

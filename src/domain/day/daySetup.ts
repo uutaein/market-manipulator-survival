@@ -9,6 +9,7 @@ export interface PreOpenCardEffect {
   readonly sourceCardId: PreOpenCardId;
   readonly newsAssignmentDirection: NewsAssignmentDirection | null;
   readonly earlyPositioningBudgetPercent: number | null;
+  readonly earlyPositioningRiskBand: "normal" | "concentrated" | null;
   readonly budgetDelta: number;
   readonly holdingRatioDelta: number;
   readonly marketLiquidityDelta: number;

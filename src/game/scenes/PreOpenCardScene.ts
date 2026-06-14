@@ -185,9 +185,9 @@ export class PreOpenCardScene extends BaseDocumentScene {
     const currentBudget = dayState.startingBudgetForDay;
     const panelX = 96;
     const panelWidth = 760;
-    const panelHeight = 118;
+    const panelHeight = 136;
     const trackX = panelX + 24;
-    const trackY = y + 101;
+    const trackY = y + 119;
     const trackWidth = 340;
     const percentToX = (percent: number) =>
       trackX +
@@ -229,7 +229,7 @@ export class PreOpenCardScene extends BaseDocumentScene {
     const knob = this.add.circle(percentToX(effect.earlyPositioningBudgetPercent), trackY, 11, 0xf3e8ca, 1);
     const previewText = this.add
       .text(panelX + 420, y + 18, formatEarlyPositioningPreview(effect, currentBudget, entryPremiumPercent), {
-        color: selected ? "#f3e8ca" : "#8f9f7a",
+        color: selected ? "#f3e8ca" : getEarlyPositioningPreviewColor(effect),
         fontFamily: this.fontFamily,
         fontSize: "15px",
         lineSpacing: 6,
@@ -258,6 +258,7 @@ export class PreOpenCardScene extends BaseDocumentScene {
       knob.setPosition(knobX, trackY);
       fill.width = knobX - trackX;
       previewText.setText(formatEarlyPositioningPreview(nextEffect, currentBudget, entryPremiumPercent));
+      previewText.setColor(getEarlyPositioningPreviewColor(nextEffect));
     };
 
     if (!selected) {
@@ -398,10 +399,19 @@ function formatEarlyPositioningPreview(
 
   return [
     `투입 비율 ${formatPercent(effect.earlyPositioningBudgetPercent)}`,
+    formatEarlyPositioningRiskLine(effect),
     `예산 사용 ${formatBudget(budgetSpend)}`,
     `체급 저항 x${formatNumber(effect.assetInfluenceResistance)} · 매입 프리미엄 ${formatPercent(entryPremiumPercent)}`,
     `잔여 예산 ${formatBudget(remainingBudget)} · 예산 소모율 ${formatBudgetSpendRate(currentBudget, budgetSpend)}`
   ].join("\n");
+}
+
+function formatEarlyPositioningRiskLine(effect: ReturnType<typeof previewEarlyPositioningEffect>): string {
+  return effect.riskBand === "concentrated" ? "구간 과집중 · 개장 유동성 급감" : "구간 일반";
+}
+
+function getEarlyPositioningPreviewColor(effect: ReturnType<typeof previewEarlyPositioningEffect>): string {
+  return effect.riskBand === "concentrated" ? "#ffb86c" : "#8f9f7a";
 }
 
 function formatCardBudgetPreview(currentBudget: number, budgetDelta: number): string {
