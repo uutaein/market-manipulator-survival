@@ -42,9 +42,10 @@ import type { ManualActionId } from "../domain/balancing/manualActionValues";
 import { advanceMarketBoard, buildMarketBoard, type MarketBoardState } from "../domain/market/marketBoard";
 import {
   canContinueSavedRun,
-  loadCurrentRun,
+  loadCurrentRunSession,
   persistenceKeys,
-  saveCurrentRun,
+  saveCurrentRunSession,
+  type CurrentRunSessionSave,
   saveFinalSettlement
 } from "../domain/persistence/localPersistence";
 import {
@@ -280,15 +281,15 @@ export class GameSession {
       return false;
     }
 
-    const result = loadCurrentRun(storage);
+    const result = loadCurrentRunSession(storage);
 
     if (result.status !== "loaded") {
       return false;
     }
 
-    this.runState = result.envelope.data;
-    this.gameMode = "free";
-    this.contractMandate = null;
+    const saved = result.envelope.data;
+    this.runState = saved.runState;
+    this.restoreSavedContractSession(saved);
     this.selectedSectorId = this.runState.selectedSectorId;
     this.selectedAssetId = this.runState.selectedAssetId;
     this.dayState = null;
@@ -301,10 +302,12 @@ export class GameSession {
     this.surveillanceHistory = [];
     this.priceHistory = [];
     this.resetIntradayMoneyLedger(0);
-    this.resetContractProgress();
     this.resetMarketDashboardFeedback();
     this.lastFinalSaveUpdatedBest = false;
     this.resetDayAutoCardSession();
+    if (this.gameMode === "contract" && this.contractMandate) {
+      this.contractEvaluationResult = evaluateContractObjectives(this.contractMandate, this.contractObservations);
+    }
     return true;
   }
 
@@ -333,7 +336,7 @@ export class GameSession {
       return false;
     }
 
-    saveCurrentRun(storage, this.runState);
+    saveCurrentRunSession(storage, this.createCurrentRunSessionSave());
     return true;
   }
 
@@ -1100,6 +1103,54 @@ export class GameSession {
     );
   }
 
+  private createCurrentRunSessionSave(): CurrentRunSessionSave {
+    const runState = this.ensureRun();
+
+    if (this.gameMode !== "contract" || !this.contractMandate) {
+      return {
+        runState,
+        gameMode: "free"
+      };
+    }
+
+    return {
+      runState,
+      gameMode: "contract",
+      contractId: this.contractMandate.id,
+      contractObservations: this.contractObservations,
+      contractBudgetSpent: this.contractBudgetSpent,
+      contractActionMistakePenalty: this.contractActionMistakePenalty,
+      contractActionEfficiencyBonus: this.contractActionEfficiencyBonus
+    };
+  }
+
+  private restoreSavedContractSession(saved: CurrentRunSessionSave): void {
+    const gameMode = saved.gameMode ?? "free";
+
+    if (gameMode !== "contract" || !saved.contractId) {
+      this.gameMode = "free";
+      this.contractMandate = null;
+      this.resetContractProgress();
+      return;
+    }
+
+    try {
+      this.contractMandate = getSampleContractMandate(saved.contractId);
+      this.gameMode = "contract";
+      this.contractObservations = sanitizeContractObservations(saved.contractObservations);
+      this.contractBudgetSpent = normalizeSavedNumber(saved.contractBudgetSpent);
+      this.contractActionMistakePenalty = normalizeSavedNumber(saved.contractActionMistakePenalty);
+      this.contractActionEfficiencyBonus = normalizeSavedNumber(saved.contractActionEfficiencyBonus);
+      this.contractSettlementResult = null;
+      this.lastContractActionFitResult = null;
+      this.contractEvaluationResult = evaluateContractObjectives(this.contractMandate, this.contractObservations);
+    } catch {
+      this.gameMode = "free";
+      this.contractMandate = null;
+      this.resetContractProgress();
+    }
+  }
+
   private resetDayAutoCardSession(): void {
     this.autoCardRewardIndex = 0;
     this.autoCardRewardChoices = [];
@@ -1345,6 +1396,52 @@ function formatContractObjectiveLabel(objective: ContractMandate["objectives"][n
     case "touch_then_maintain":
       return `${formatContractNumber(objective.targetPrice)} 터치 후 ${formatContractNumber(objective.lowerPrice)}~${formatContractNumber(objective.upperPrice)} 유지`;
   }
+}
+
+function sanitizeContractObservations(value: unknown): readonly ContractObservation[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((candidate): ContractObservation[] => {
+    if (!isSavedContractObservation(candidate)) {
+      return [];
+    }
+
+    return [candidate];
+  });
+}
+
+function isSavedContractObservation(value: unknown): value is ContractObservation {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const candidate = value as Partial<ContractObservation>;
+  return (
+    typeof candidate.day === "number" &&
+    (typeof candidate.elapsedSec === "number" || candidate.elapsedSec === null) &&
+    typeof candidate.price === "number" &&
+    typeof candidate.priceChangePercent === "number" &&
+    (typeof candidate.marketDashboardRank === "number" || candidate.marketDashboardRank === null) &&
+    typeof candidate.marketDashboardValue === "number" &&
+    typeof candidate.madness === "number" &&
+    typeof candidate.surveillance === "number" &&
+    isContractObservationKind(candidate.kind)
+  );
+}
+
+function isContractObservationKind(value: unknown): value is ContractObservationKind {
+  return (
+    value === "contract_start" ||
+    value === "intraday_tick" ||
+    value === "day_close" ||
+    value === "contract_event"
+  );
+}
+
+function normalizeSavedNumber(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
 function getNormalizedPositionMarketValue(state: IntradayState): number {

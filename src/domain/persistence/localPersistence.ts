@@ -1,4 +1,5 @@
 import type { FinalGrade } from "../balancing/settlementValues";
+import type { ContractObservation, GameMode } from "../contract/contractTypes";
 import type { RunState } from "../run/runState";
 import type { FinalSettlementResult } from "../settlement/settlement";
 
@@ -40,12 +41,67 @@ export interface BestRecord {
   readonly finalSurveillance: number;
 }
 
+export interface CurrentRunSessionSave {
+  readonly runState: RunState;
+  readonly gameMode?: GameMode;
+  readonly contractId?: string | null;
+  readonly contractObservations?: readonly ContractObservation[];
+  readonly contractBudgetSpent?: number;
+  readonly contractActionMistakePenalty?: number;
+  readonly contractActionEfficiencyBonus?: number;
+}
+
+export type CurrentRunSaveData = RunState | CurrentRunSessionSave;
+
 export function saveCurrentRun(storage: KeyValueStorage, runState: RunState, savedAt = new Date().toISOString()): void {
   saveEnvelope(storage, persistenceKeys.currentRun, runState, savedAt);
 }
 
 export function loadCurrentRun(storage: KeyValueStorage): LoadResult<RunState> {
-  return loadEnvelope<RunState>(storage, persistenceKeys.currentRun);
+  const result = loadEnvelope<CurrentRunSaveData>(storage, persistenceKeys.currentRun);
+
+  if (result.status !== "loaded") {
+    return result;
+  }
+
+  return {
+    status: "loaded",
+    envelope: {
+      ...result.envelope,
+      data: getSavedRunState(result.envelope.data)
+    }
+  };
+}
+
+export function saveCurrentRunSession(
+  storage: KeyValueStorage,
+  session: CurrentRunSessionSave,
+  savedAt = new Date().toISOString()
+): void {
+  saveEnvelope(storage, persistenceKeys.currentRun, session, savedAt);
+}
+
+export function loadCurrentRunSession(storage: KeyValueStorage): LoadResult<CurrentRunSessionSave> {
+  const result = loadEnvelope<CurrentRunSaveData>(storage, persistenceKeys.currentRun);
+
+  if (result.status !== "loaded") {
+    return result;
+  }
+
+  const session = isCurrentRunSessionSave(result.envelope.data)
+    ? result.envelope.data
+    : {
+        runState: result.envelope.data,
+        gameMode: "free" as const
+      };
+
+  return {
+    status: "loaded",
+    envelope: {
+      ...result.envelope,
+      data: session
+    }
+  };
 }
 
 export function saveFinalSettlement(
@@ -144,6 +200,14 @@ function loadEnvelope<T>(storage: KeyValueStorage, key: string): LoadResult<T> {
     storage.removeItem(key);
     return { status: "discarded", reason: "invalid_json" };
   }
+}
+
+function isCurrentRunSessionSave(data: CurrentRunSaveData): data is CurrentRunSessionSave {
+  return typeof data === "object" && data !== null && "runState" in data;
+}
+
+function getSavedRunState(data: CurrentRunSaveData): RunState {
+  return isCurrentRunSessionSave(data) ? data.runState : data;
 }
 
 function isBetterBestRecord(candidate: BestRecord, current: BestRecord): boolean {
