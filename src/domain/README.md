@@ -15,6 +15,7 @@ Current implemented scope:
 | `balancing/preOpenCardValues.ts` | First-playable Pre-open Card values from SRS v0.1.6 |
 | `balancing/priceTickValues.ts` | First-playable price tick coefficients and news pressure values |
 | `balancing/retailSwarmValues.ts` | First-playable Retail Swarm thresholds, participant mood scaling, and risk effects |
+| `contract/` | Post-MVP Contract Mode mandate samples, objective evaluation, and settlement scoring |
 | `day/` | Day start state, Morning News generation, Today Condition, Market Briefing summary |
 | `intraday/` | Intraday state, timer pause/resume, bounded stats, player asset price tick, order-book/depth model, and seeded chart motion |
 | `market/marketBoard.ts` | MVP player/peer/sector-average Market Board context and simplified non-player summaries |

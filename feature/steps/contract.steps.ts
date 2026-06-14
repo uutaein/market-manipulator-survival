@@ -1,8 +1,9 @@
 import { Given, Then, When } from "@cucumber/cucumber";
 import assert from "node:assert/strict";
 import type { MmsWorld } from "../support/world";
+import { createSampleContractMandates } from "../../src/domain/contract";
 
-type ContractDirection = "upward" | "downward" | "range" | "defense" | "attention";
+type ContractDirection = "upward" | "downward" | "range" | "defense" | "attention" | "stealth";
 type ContractKind = "upward_touch" | "downward_touch" | "band_maintain" | "defense" | "value_rank";
 type ObjectiveStatus = "pending" | "completed" | "failed";
 
@@ -50,83 +51,41 @@ function contractWorld(world: MmsWorld): ContractModeWorld {
 }
 
 function createContractOptions(): ContractOption[] {
-  return [
-    {
-      id: "upward-touch-01",
-      kind: "upward_touch",
-      direction: "upward",
-      targetAsset: "fictional_asset_alpha",
-      durationDays: 3,
-      fixedReward: 18,
-      riskLevel: 3,
-      objectiveSummary: "Touch the upper target before D+3",
-      expertReport: {
-        summary: "Desk estimate points to a higher fictional range.",
-        confidence: 72,
-        revealsExactObjective: false
-      }
-    },
-    {
-      id: "downward-touch-01",
-      kind: "downward_touch",
-      direction: "downward",
-      targetAsset: "fictional_asset_beta",
-      durationDays: 3,
-      fixedReward: 22,
-      riskLevel: 4,
-      objectiveSummary: "Touch the lower target before D+3",
-      expertReport: {
-        summary: "Desk estimate points to a lower fictional range.",
-        confidence: 64,
-        revealsExactObjective: false
-      }
-    },
-    {
-      id: "band-maintain-01",
-      kind: "band_maintain",
-      direction: "range",
-      targetAsset: "fictional_asset_gamma",
-      durationDays: 5,
-      fixedReward: 26,
-      riskLevel: 5,
-      objectiveSummary: "Maintain the requested price band for 3 Days",
-      expertReport: {
-        summary: "Desk estimate frames a bounded fictional range.",
-        confidence: 69,
-        revealsExactObjective: false
-      }
-    },
-    {
-      id: "defense-01",
-      kind: "defense",
-      direction: "defense",
-      targetAsset: "fictional_asset_delta",
-      durationDays: 4,
-      fixedReward: 20,
-      riskLevel: 3,
-      objectiveSummary: "Defend the lower break line through the contract",
-      expertReport: {
-        summary: "Desk estimate highlights a fictional support zone.",
-        confidence: 75,
-        revealsExactObjective: false
-      }
-    },
-    {
-      id: "value-rank-01",
-      kind: "value_rank",
-      direction: "attention",
-      targetAsset: "fictional_asset_epsilon",
-      durationDays: 2,
-      fixedReward: 24,
-      riskLevel: 5,
-      objectiveSummary: "Reach the requested VALUE and dashboard rank",
-      expertReport: {
-        summary: "Desk estimate expects elevated fictional attention.",
-        confidence: 61,
-        revealsExactObjective: false
-      }
+  return createSampleContractMandates().map((mandate) => ({
+    id: mandate.id,
+    kind: getContractKind(mandate.id),
+    direction: mandate.direction,
+    targetAsset: mandate.assetId,
+    durationDays: mandate.durationDays,
+    fixedReward: mandate.fixedReward,
+    riskLevel: mandate.riskLevel,
+    objectiveSummary: mandate.objectives.map((objective) => objective.type).join(", "),
+    expertReport: {
+      summary: mandate.expertReport.summary,
+      confidence: mandate.expertReport.confidence,
+      revealsExactObjective: mandate.expertReport.revealsExactObjective
     }
-  ];
+  }));
+}
+
+function getContractKind(contractId: string): ContractKind {
+  if (contractId.includes("upward_touch")) {
+    return "upward_touch";
+  }
+
+  if (contractId.includes("downward_touch")) {
+    return "downward_touch";
+  }
+
+  if (contractId.includes("band_maintain")) {
+    return "band_maintain";
+  }
+
+  if (contractId.includes("defense")) {
+    return "defense";
+  }
+
+  return "value_rank";
 }
 
 function ensureContractOptions(world: ContractModeWorld): ContractOption[] {
