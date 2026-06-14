@@ -607,6 +607,7 @@ export class GameSession {
       activeManualActionEffects: [],
       orderBookWallCooldowns: createEmptyOrderBookWallCooldowns(),
       activeOrderBookWallEffects: [],
+      orderBookWallEvents: [],
       lastManualActionId: null,
       latestPriceComponents: null
     });

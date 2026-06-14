@@ -75,6 +75,8 @@ runScenario("order-book walls change visible depth and responsiveness", () => {
   assert.equal(buyResult.budgetDelta, -10);
   assert.equal(buyResult.reservedBudget, 10);
   assert.equal(buyResult.state.budget, buyState.budget - 10);
+  assert.equal(getLastOrderBookWallEvent(buyResult.state)?.type, "formed");
+  assert.equal(getLastOrderBookWallEvent(buyResult.state)?.depthDelta, buyResult.depthBoost);
   assert.ok(buyLevelAfter.bidDepth > buyLevelBefore.bidDepth);
   assert.ok(buyProfileAfter.buyWallDepth > buyProfileBefore.buyWallDepth);
   assert.ok(buyProfileAfter.downwardResponsiveness < buyProfileBefore.downwardResponsiveness);
@@ -136,6 +138,12 @@ runScenario("order-book walls change visible depth and responsiveness", () => {
   assert.ok(getOrderBookWallRemainingDepthBoost(partiallyMeltedEffect) < decayResult.depthBoost);
   assert.ok(getOrderBookWallRemainingReservedBudget(partiallyMeltedEffect) < decayResult.reservedBudget);
   assert.ok(getOrderBookWallRemainingReservedBudget(partiallyMeltedEffect) > 0);
+  assert.equal(getLastOrderBookWallEvent(partiallyMeltedState)?.type, "melted");
+  assert.ok((getLastOrderBookWallEvent(partiallyMeltedState)?.depthDelta ?? 0) < 0);
+  assert.equal(
+    getLastOrderBookWallEvent(partiallyMeltedState)?.remainingReservedBudget,
+    getOrderBookWallRemainingReservedBudget(partiallyMeltedEffect)
+  );
 
   const partiallyMeltedProfile = buildOrderBookProfile(partiallyMeltedState, {
     runSeed: decayRun.runSeed,
@@ -157,6 +165,8 @@ runScenario("order-book walls change visible depth and responsiveness", () => {
   assert.equal(removePartialWallResult.budgetDelta, getOrderBookWallRemainingReservedBudget(partiallyMeltedEffect));
   assert.ok(removePartialWallResult.budgetDelta > 0);
   assert.ok(removePartialWallResult.budgetDelta < decayResult.reservedBudget);
+  assert.equal(getLastOrderBookWallEvent(removePartialWallResult.state)?.type, "removed");
+  assert.equal(getLastOrderBookWallEvent(removePartialWallResult.state)?.reserveDelta, removePartialWallResult.budgetDelta);
 
   const meltSession = startFreeIntraday();
   meltSession.intradayState = tuneOrderBookTestState(meltSession.intradayState ?? meltSession.startIntraday());
@@ -183,6 +193,8 @@ runScenario("order-book walls change visible depth and responsiveness", () => {
     ),
     false
   );
+  assert.equal(getLastOrderBookWallEvent(fullyMeltedState)?.type, "collapsed");
+  assert.ok(fullyMeltedState.orderBookWallEvents.length <= 6);
   const postMeltDownsideAttempt = clampIntradayState({
     ...fullyMeltedState,
     priceChangePercent: meltWallPrice - 4,
@@ -217,6 +229,7 @@ runScenario("order-book walls change visible depth and responsiveness", () => {
   }
   assert.equal(cooledState.activeOrderBookWallEffects.some((effect) => effect.side === "buy" && effect.offsetPercent === -2), false);
   assert.equal(cooledState.budget, buyState.budget);
+  assert.equal(getLastOrderBookWallEvent(cooledState)?.type, "expired");
 
   const sellSession = startFreeIntraday();
   sellSession.intradayState = tuneOrderBookTestState(sellSession.intradayState ?? sellSession.startIntraday());
@@ -353,7 +366,8 @@ function tuneOrderBookTestState(state: ReturnType<GameSession["startIntraday"]>)
     volatility: 35,
     assetInfluenceResistance: 1,
     orderBookWallCooldowns: createEmptyOrderBookWallCooldowns(),
-    activeOrderBookWallEffects: []
+    activeOrderBookWallEffects: [],
+    orderBookWallEvents: []
   });
 }
 
@@ -364,4 +378,8 @@ function getLevelPriceChangePercent(
   const level = profile.levels.find((candidate) => candidate.offsetPercent === offsetPercent);
   assert.ok(level);
   return level.priceChangePercent;
+}
+
+function getLastOrderBookWallEvent(state: ReturnType<GameSession["startIntraday"]>) {
+  return state.orderBookWallEvents[state.orderBookWallEvents.length - 1];
 }

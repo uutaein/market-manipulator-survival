@@ -52,6 +52,7 @@ export class IntradayScene extends BaseDocumentScene {
   private moneyText: Phaser.GameObjects.Text | null = null;
   private statsText: Phaser.GameObjects.Text | null = null;
   private actionStatusText: Phaser.GameObjects.Text | null = null;
+  private orderBookWallLogText: Phaser.GameObjects.Text | null = null;
   private contractText: Phaser.GameObjects.Text | null = null;
   private autoCardText: Phaser.GameObjects.Text | null = null;
   private manualActionButtons: Partial<Record<ManualActionId, Phaser.GameObjects.Text>> = {};
@@ -187,6 +188,15 @@ export class IntradayScene extends BaseDocumentScene {
         wordWrap: { width: 500 }
       })
       .setOrigin(0, 0);
+    this.orderBookWallLogText = this.add
+      .text(610, 638, "", {
+        color: "#8fa2a6",
+        fontFamily: this.fontFamily,
+        fontSize: "12px",
+        lineSpacing: 1,
+        wordWrap: { width: 390 }
+      })
+      .setOrigin(0, 0);
 
     manualActions.forEach((action, index) => {
       const buttonX = 96 + index * 206;
@@ -263,6 +273,7 @@ export class IntradayScene extends BaseDocumentScene {
     this.refreshContractText();
     this.renderRetailSwarm();
     this.refreshAutoCardText();
+    this.refreshOrderBookWallLogText();
     this.renderAutoCardChoices();
     this.renderDocumentEventPopup();
     this.refreshDomOverlayVisibility();
@@ -528,6 +539,20 @@ export class IntradayScene extends BaseDocumentScene {
     this.previousMarketTradeValueElapsedSec = elapsedSec;
     gameSession.updateMarketDashboardSnapshot(model.ranks, model.tradeValues);
     this.marketTerminalOverlay?.update(model);
+  }
+
+  private refreshOrderBookWallLogText(): void {
+    const events = gameSession.intradayState?.orderBookWallEvents ?? [];
+    const recentEvents = [...events].slice(-3).reverse();
+
+    if (recentEvents.length === 0) {
+      this.orderBookWallLogText?.setText("호가벽 로그: -");
+      this.orderBookWallLogText?.setAlpha(0.58);
+      return;
+    }
+
+    this.orderBookWallLogText?.setText(["호가벽 로그", ...recentEvents.map(formatOrderBookWallEvent)].join("\n"));
+    this.orderBookWallLogText?.setAlpha(1);
   }
 
   private refreshAutoCardText(): void {
@@ -1157,6 +1182,28 @@ function getOrderBookWallResultLabel(reason: OrderBookWallResult["reason"]): str
     case "unknown_side":
     case "unknown_level":
       return "알 수 없음";
+  }
+}
+
+function formatOrderBookWallEvent(event: IntradayState["orderBookWallEvents"][number]): string {
+  const sideLabel = event.side === "buy" ? "매수벽" : "매도벽";
+  const levelLabel = formatPercent(event.priceChangePercent);
+
+  switch (event.type) {
+    case "formed":
+      return `${sideLabel} 형성 ${levelLabel} +${formatNumber(Math.abs(event.depthDelta))} depth / 예약 ${formatNumber(
+        Math.abs(event.reserveDelta)
+      )}B`;
+    case "melted":
+      return `${sideLabel} 소진 ${levelLabel} -${formatNumber(Math.abs(event.depthDelta))} depth / 환급 ${formatNumber(
+        event.remainingReservedBudget
+      )}B`;
+    case "collapsed":
+      return `${sideLabel} 붕괴 ${levelLabel} / 방어선 해제`;
+    case "removed":
+      return `${sideLabel} 제거 ${levelLabel} / 환급 ${formatNumber(Math.abs(event.reserveDelta))}B`;
+    case "expired":
+      return `${sideLabel} 만료 ${levelLabel} / 환급 ${formatNumber(Math.abs(event.reserveDelta))}B`;
   }
 }
 

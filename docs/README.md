@@ -23,6 +23,7 @@ This directory contains the product, requirement, decision, and design documents
 
 | Type | Document |
 | --- | --- |
+| Post-MVP PRD | [market-manipulator-survival-prd-v0.2.5.md](prd/market-manipulator-survival-prd-v0.2.5.md) |
 | Post-MVP PRD | [market-manipulator-survival-prd-v0.2.4.md](prd/market-manipulator-survival-prd-v0.2.4.md) |
 | Post-MVP PRD | [market-manipulator-survival-prd-v0.2.3.md](prd/market-manipulator-survival-prd-v0.2.3.md) |
 | Post-MVP PRD | [market-manipulator-survival-prd-v0.2.2.md](prd/market-manipulator-survival-prd-v0.2.2.md) |
@@ -42,6 +43,7 @@ This directory contains the product, requirement, decision, and design documents
 | Post-MVP SRS | [market-manipulator-survival-srs-v0.2.2-local-synthetic-execution-engine.md](srs/market-manipulator-survival-srs-v0.2.2-local-synthetic-execution-engine.md) |
 | Post-MVP SRS | [market-manipulator-survival-srs-v0.2.3-order-book-wall-decay.md](srs/market-manipulator-survival-srs-v0.2.3-order-book-wall-decay.md) |
 | Post-MVP SRS | [market-manipulator-survival-srs-v0.2.4-order-book-wall-visual-feedback.md](srs/market-manipulator-survival-srs-v0.2.4-order-book-wall-visual-feedback.md) |
+| Post-MVP SRS | [market-manipulator-survival-srs-v0.2.5-order-book-wall-decay-feedback.md](srs/market-manipulator-survival-srs-v0.2.5-order-book-wall-decay-feedback.md) |
 | SDD | [market-manipulator-survival-sdd-v0.1.0-simulation-modularity.md](sdd/market-manipulator-survival-sdd-v0.1.0-simulation-modularity.md) |
 | SPEC | [market-manipulator-survival-mvp-spec-v0.1.0.md](spec/market-manipulator-survival-mvp-spec-v0.1.0.md) |
 | Implementation Scaffold | [../src/README.md](../src/README.md) |

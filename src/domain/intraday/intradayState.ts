@@ -61,6 +61,20 @@ export interface ActiveOrderBookWallEffect {
   readonly totalSec: number;
 }
 
+export type OrderBookWallEventType = "formed" | "melted" | "collapsed" | "removed" | "expired";
+
+export interface OrderBookWallEvent {
+  readonly id: string;
+  readonly type: OrderBookWallEventType;
+  readonly side: OrderBookWallSide;
+  readonly priceChangePercent: number;
+  readonly depthDelta: number;
+  readonly reserveDelta: number;
+  readonly remainingDepthBoost: number;
+  readonly remainingReservedBudget: number;
+  readonly elapsedSec: number;
+}
+
 export interface IntradayState {
   readonly timeRemainingSec: number;
   readonly isPaused: boolean;
@@ -96,6 +110,7 @@ export interface IntradayState {
   readonly activeManualActionEffects: readonly ActiveManualActionEffect[];
   readonly orderBookWallCooldowns: Readonly<Record<OrderBookWallLevelKey, number>>;
   readonly activeOrderBookWallEffects: readonly ActiveOrderBookWallEffect[];
+  readonly orderBookWallEvents: readonly OrderBookWallEvent[];
   readonly lastManualActionId: ManualActionId | null;
   readonly activeDocumentEventId: DocumentEventId | null;
   readonly documentEventChoices: readonly DocumentEventChoiceType[];
@@ -185,6 +200,7 @@ export function createIntradayState(
     activeManualActionEffects: [],
     orderBookWallCooldowns: createEmptyOrderBookWallCooldowns(),
     activeOrderBookWallEffects: [],
+    orderBookWallEvents: [],
     lastManualActionId: null,
     activeDocumentEventId: null,
     documentEventChoices: [],

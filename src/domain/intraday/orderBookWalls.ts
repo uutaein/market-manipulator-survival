@@ -9,11 +9,14 @@ import {
   type OrderBookWallValue
 } from "../balancing/orderBookWallValues";
 import { runDefaults } from "../balancing/runDefaults";
-import { applyIntradayStatUpdate, clampIntradayState, type IntradayState } from "./intradayState";
+import { applyIntradayStatUpdate, clampIntradayState, type IntradayState, type OrderBookWallEvent } from "./intradayState";
 
 export type { OrderBookWallSide };
 
 type ActiveOrderBookWallEffect = IntradayState["activeOrderBookWallEffects"][number];
+
+const maxOrderBookWallEvents = 6;
+const orderBookWallMeltEventDepthThreshold = 8;
 
 export interface OrderBookWallResult {
   readonly state: IntradayState;
@@ -145,7 +148,15 @@ export function useOrderBookWall(
     const nextState = clampIntradayState({
       ...state,
       budget: state.budget + refundBudget,
-      activeOrderBookWallEffects: state.activeOrderBookWallEffects.filter((effect) => effect !== activeEffect)
+      activeOrderBookWallEffects: state.activeOrderBookWallEffects.filter((effect) => effect !== activeEffect),
+      orderBookWallEvents: appendOrderBookWallEvents(state, [
+        createOrderBookWallEvent(state, activeEffect, "removed", {
+          depthDelta: -remainingDepthBoost,
+          reserveDelta: refundBudget,
+          remainingDepthBoost: 0,
+          remainingReservedBudget: 0
+        })
+      ])
     });
 
     return {
@@ -192,6 +203,17 @@ export function useOrderBookWall(
     };
   }
 
+  const nextEffect = {
+    side,
+    offsetPercent,
+    priceChangePercent: normalizeOrderBookWallPriceLevel(priceChangePercent),
+    reservedBudget,
+    depthBoost,
+    remainingReservedBudget: reservedBudget,
+    remainingDepthBoost: depthBoost,
+    remainingSec: action.durationSec,
+    totalSec: action.durationSec
+  };
   const nextState = clampIntradayState({
     ...state,
     budget: state.budget - reservedBudget,
@@ -201,18 +223,16 @@ export function useOrderBookWall(
     },
     activeOrderBookWallEffects: [
       ...state.activeOrderBookWallEffects,
-      {
-        side,
-        offsetPercent,
-        priceChangePercent: normalizeOrderBookWallPriceLevel(priceChangePercent),
-        reservedBudget,
-        depthBoost,
-        remainingReservedBudget: reservedBudget,
+      nextEffect
+    ],
+    orderBookWallEvents: appendOrderBookWallEvents(state, [
+      createOrderBookWallEvent(state, nextEffect, "formed", {
+        depthDelta: depthBoost,
+        reserveDelta: -reservedBudget,
         remainingDepthBoost: depthBoost,
-        remainingSec: action.durationSec,
-        totalSec: action.durationSec
-      }
-    ]
+        remainingReservedBudget: reservedBudget
+      })
+    ])
   });
 
   return {
@@ -249,6 +269,7 @@ export function tickOrderBookWallEffects(
     surveillance: 0,
     volatility: 0
   };
+  const wallEvents: OrderBookWallEvent[] = [];
   const activeOrderBookWallEffects = state.activeOrderBookWallEffects.flatMap((effect) => {
     const action = orderBookWallValues[effect.side];
     const appliedSeconds = Math.min(seconds, effect.remainingSec);
@@ -274,7 +295,29 @@ export function tickOrderBookWallEffects(
     }
 
     if (remainingSec <= 0 || nextRemainingDepthBoost <= 0) {
+      const eventType = nextRemainingDepthBoost <= 0 ? "collapsed" : "expired";
+      wallEvents.push(
+        createOrderBookWallEvent(state, effect, eventType, {
+          depthDelta: eventType === "collapsed" ? -depthDecay : -nextRemainingDepthBoost,
+          reserveDelta: eventType === "collapsed" ? -reserveDecay : nextRemainingReservedBudget,
+          remainingDepthBoost: 0,
+          remainingReservedBudget: 0,
+          elapsedSec: getOrderBookWallEventElapsedSec(state, appliedSeconds)
+        })
+      );
       return [];
+    }
+
+    if (depthDecay >= orderBookWallMeltEventDepthThreshold) {
+      wallEvents.push(
+        createOrderBookWallEvent(state, effect, "melted", {
+          depthDelta: -depthDecay,
+          reserveDelta: -reserveDecay,
+          remainingDepthBoost: nextRemainingDepthBoost,
+          remainingReservedBudget: nextRemainingReservedBudget,
+          elapsedSec: getOrderBookWallEventElapsedSec(state, appliedSeconds)
+        })
+      );
     }
 
     return [
@@ -292,7 +335,8 @@ export function tickOrderBookWallEffects(
       ...state,
       budget: state.budget + effectDelta.budget,
       orderBookWallCooldowns: cooldowns,
-      activeOrderBookWallEffects
+      activeOrderBookWallEffects,
+      orderBookWallEvents: appendOrderBookWallEvents(state, wallEvents)
     },
     {
       marketPressure: state.marketPressure + effectDelta.marketPressure,
@@ -459,6 +503,54 @@ function isOrderBookWallTouched(effect: ActiveOrderBookWallEffect, priceChangePe
   }
 
   return priceChangePercent >= effect.priceChangePercent;
+}
+
+function appendOrderBookWallEvents(
+  state: IntradayState,
+  events: readonly OrderBookWallEvent[]
+): readonly OrderBookWallEvent[] {
+  if (events.length === 0) {
+    return state.orderBookWallEvents ?? [];
+  }
+
+  return [...(state.orderBookWallEvents ?? []), ...events].slice(-maxOrderBookWallEvents);
+}
+
+function createOrderBookWallEvent(
+  state: IntradayState,
+  effect: ActiveOrderBookWallEffect,
+  type: OrderBookWallEvent["type"],
+  values: {
+    readonly depthDelta: number;
+    readonly reserveDelta: number;
+    readonly remainingDepthBoost: number;
+    readonly remainingReservedBudget: number;
+    readonly elapsedSec?: number;
+  }
+): OrderBookWallEvent {
+  const elapsedSec = values.elapsedSec ?? getOrderBookWallEventElapsedSec(state, 0);
+
+  return {
+    id: [
+      elapsedSec,
+      type,
+      effect.side,
+      normalizeOrderBookWallPriceLevel(effect.priceChangePercent),
+      (state.orderBookWallEvents?.length ?? 0)
+    ].join(":"),
+    type,
+    side: effect.side,
+    priceChangePercent: normalizeOrderBookWallPriceLevel(effect.priceChangePercent),
+    depthDelta: round1(values.depthDelta),
+    reserveDelta: round1(values.reserveDelta),
+    remainingDepthBoost: round1(values.remainingDepthBoost),
+    remainingReservedBudget: round1(values.remainingReservedBudget),
+    elapsedSec: round1(elapsedSec)
+  };
+}
+
+function getOrderBookWallEventElapsedSec(state: IntradayState, additionalSeconds: number): number {
+  return Math.max(0, runDefaults.intradayDurationSec - state.timeRemainingSec + additionalSeconds);
 }
 
 function getMaxOrNull(values: readonly number[]): number | null {

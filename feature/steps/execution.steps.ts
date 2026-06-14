@@ -100,7 +100,8 @@ When("a synthetic buy wall is added to a visible bid level", function (this: Mms
     volatility: 35,
     assetInfluenceResistance: 1,
     orderBookWallCooldowns: createEmptyOrderBookWallCooldowns(),
-    activeOrderBookWallEffects: []
+    activeOrderBookWallEffects: [],
+    orderBookWallEvents: []
   });
   const context = { runSeed: this.runSeed, dayIndex: this.currentDay };
   this.orderBookProfileBeforeWall = buildOrderBookProfile(this.intradayState!, context);
