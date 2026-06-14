@@ -51,7 +51,7 @@ function evaluateContractObjective(
     case "touch":
       return evaluateTouchObjective(mandate, objective, observations);
     case "maintain":
-      return evaluateMaintainObjective(objective, observations);
+      return evaluateMaintainObjective(mandate, objective, observations);
     case "close_above":
       return evaluateCloseAboveObjective(objective, observations);
     case "close_below":
@@ -79,18 +79,24 @@ function evaluateTouchObjective(
   const touched = eligibleObservations.some((observation) =>
     direction === "upward" ? observation.price >= objective.targetPrice : observation.price <= objective.targetPrice
   );
+  const deadlinePassed = getLatestClosedDay(observations) >= objective.deadlineDay;
 
   return {
     objectiveId: objective.id,
     objectiveType: objective.type,
-    status: touched ? "completed" : "pending",
+    status: touched ? "completed" : deadlinePassed ? "failed" : "pending",
     progress: touched ? 1 : 0,
     required: 1,
-    reason: touched ? "target touched before deadline" : "target not touched yet"
+    reason: touched
+      ? "target touched before deadline"
+      : deadlinePassed
+        ? "deadline passed before target touch"
+        : "target not touched yet"
   };
 }
 
 function evaluateMaintainObjective(
+  mandate: ContractMandate,
   objective: Extract<ContractObjective, { type: "maintain" }>,
   observations: readonly ContractObservation[]
 ): ContractObjectiveEvaluation {
@@ -105,16 +111,21 @@ function evaluateMaintainObjective(
       .map((observation) => observation.day)
   );
   const progress = maintainedDays.size;
+  const latestClosedDay = getLatestClosedDay(observations);
+  const remainingCloseDays = Math.max(0, mandate.durationDays - latestClosedDay);
+  const impossible = progress + remainingCloseDays < objective.requiredDays;
 
   return {
     objectiveId: objective.id,
     objectiveType: objective.type,
-    status: progress >= objective.requiredDays ? "completed" : "pending",
+    status: progress >= objective.requiredDays ? "completed" : impossible ? "failed" : "pending",
     progress,
     required: objective.requiredDays,
     reason:
       progress >= objective.requiredDays
         ? "required maintained Days reached"
+        : impossible
+          ? "not enough contract Days remain to maintain band"
         : "more maintained Day closes required"
   };
 }
@@ -159,7 +170,7 @@ function evaluateNeverBreakObjective(
       (objective.lowerPrice !== undefined && observation.price < objective.lowerPrice) ||
       (objective.upperPrice !== undefined && observation.price > objective.upperPrice)
   );
-  const latestDay = observations.reduce((maxDay, observation) => Math.max(maxDay, observation.day), 0);
+  const latestClosedDay = getLatestClosedDay(observations);
 
   if (broken) {
     return {
@@ -175,10 +186,10 @@ function evaluateNeverBreakObjective(
   return {
     objectiveId: objective.id,
     objectiveType: objective.type,
-    status: latestDay >= objective.durationDays ? "completed" : "pending",
-    progress: Math.min(latestDay, objective.durationDays),
+    status: latestClosedDay >= objective.durationDays ? "completed" : "pending",
+    progress: Math.min(latestClosedDay, objective.durationDays),
     required: objective.durationDays,
-    reason: latestDay >= objective.durationDays ? "break line defended" : "contract period still active"
+    reason: latestClosedDay >= objective.durationDays ? "break line defended" : "contract period still active"
   };
 }
 
@@ -192,14 +203,19 @@ function evaluateRankObjective(
       observation.marketDashboardRank !== null &&
       observation.marketDashboardRank <= objective.maxRank
   );
+  const deadlinePassed = getLatestClosedDay(observations) >= objective.deadlineDay;
 
   return {
     objectiveId: objective.id,
     objectiveType: objective.type,
-    status: completed ? "completed" : "pending",
+    status: completed ? "completed" : deadlinePassed ? "failed" : "pending",
     progress: completed ? 1 : 0,
     required: 1,
-    reason: completed ? "rank target reached" : "rank target not reached yet"
+    reason: completed
+      ? "rank target reached"
+      : deadlinePassed
+        ? "rank deadline passed"
+        : "rank target not reached yet"
   };
 }
 
@@ -212,14 +228,19 @@ function evaluateValueObjective(
       observation.day <= objective.deadlineDay ? Math.max(value, observation.marketDashboardValue) : value,
     0
   );
+  const deadlinePassed = getLatestClosedDay(observations) >= objective.deadlineDay;
 
   return {
     objectiveId: objective.id,
     objectiveType: objective.type,
-    status: maxValue >= objective.minValue ? "completed" : "pending",
+    status: maxValue >= objective.minValue ? "completed" : deadlinePassed ? "failed" : "pending",
     progress: maxValue,
     required: objective.minValue,
-    reason: maxValue >= objective.minValue ? "VALUE target reached" : "VALUE target not reached yet"
+    reason: maxValue >= objective.minValue
+      ? "VALUE target reached"
+      : deadlinePassed
+        ? "VALUE deadline passed"
+        : "VALUE target not reached yet"
   };
 }
 
@@ -236,13 +257,17 @@ function evaluateTouchThenMaintainObjective(
   );
 
   if (!touchObservation) {
+    const touchDeadlinePassed = getLatestClosedDay(observations) >= objective.touchDeadlineDay;
+
     return {
       objectiveId: objective.id,
       objectiveType: objective.type,
-      status: "pending",
+      status: touchDeadlinePassed ? "failed" : "pending",
       progress: 0,
       required: objective.maintainDays,
-      reason: "touch required before maintenance starts"
+      reason: touchDeadlinePassed
+        ? "touch deadline passed before maintenance could start"
+        : "touch required before maintenance starts"
     };
   }
 
@@ -258,16 +283,21 @@ function evaluateTouchThenMaintainObjective(
       .map((observation) => observation.day)
   );
   const progress = maintainedDays.size;
+  const latestClosedDay = getLatestClosedDay(observations);
+  const remainingCloseDays = Math.max(0, mandate.durationDays - latestClosedDay);
+  const impossible = progress + remainingCloseDays < objective.maintainDays;
 
   return {
     objectiveId: objective.id,
     objectiveType: objective.type,
-    status: progress >= objective.maintainDays ? "completed" : "pending",
+    status: progress >= objective.maintainDays ? "completed" : impossible ? "failed" : "pending",
     progress,
     required: objective.maintainDays,
     reason:
       progress >= objective.maintainDays
         ? "touch and maintenance requirements completed"
+        : impossible
+          ? "not enough contract Days remain after touch"
         : "maintenance still required after touch"
   };
 }
@@ -290,6 +320,14 @@ function createCloseEvaluation(
 
 function findDayClose(observations: readonly ContractObservation[], day: number): ContractObservation | undefined {
   return observations.find((observation) => observation.kind === "day_close" && observation.day === day);
+}
+
+function getLatestClosedDay(observations: readonly ContractObservation[]): number {
+  return observations.reduce(
+    (latestDay, observation) =>
+      observation.kind === "day_close" ? Math.max(latestDay, observation.day) : latestDay,
+    0
+  );
 }
 
 function inferTouchDirection(
