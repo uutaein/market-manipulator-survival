@@ -38,9 +38,7 @@ export class ContractSelectionScene extends BaseDocumentScene {
       [
         "CONTRACT DESK",
         "",
-        "고정 보상 계약을 선택합니다.",
-        "목표는 수익 극대화가 아니라 최소 비용으로 조건을 달성하는 것입니다.",
-        "모든 종목과 조건은 허구이며 실제 시장 데이터나 절차를 사용하지 않습니다."
+        "고정 보상 계약을 비교하고 선택합니다."
       ],
       undefined,
       "CONTRACT TERMINAL"
