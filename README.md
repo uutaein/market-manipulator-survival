@@ -14,7 +14,7 @@ The game must not use real companies, real tickers, real exchanges, real market 
 
 ## Current MVP Shape
 
-The MVP is a 5-Day Run.
+The MVP baseline is a 5-Day Run. This mode is now treated as **Free Mode** (`자유모드`).
 
 Each Day follows:
 
@@ -43,6 +43,23 @@ MVP defaults:
 - Market Dashboard: 24 individual fictional assets ranked by fictional trade value
 - Intraday quote readout: opening price, current price, average entry price, held units, and fictional position P/L
 - Storage: local only
+
+---
+
+## Post-MVP Contract Mode
+
+The next product direction is **Contract Mode** (`의뢰모드`).
+
+Contract Mode reuses the same fictional market engine, manual actions, Market Dashboard, VALUE, MADNESS, and Retail Swarm systems, but changes the objective structure:
+
+- The player accepts a fixed-reward contract from a fictional sponsor.
+- The contract targets a fictional asset over 1~5 Days.
+- Objectives may require price touch, price band maintenance, close-above / close-below conditions, rank, VALUE, or defense.
+- Contracts can be upward, downward, range-bound, defensive, attention-driven, or stealth-oriented.
+- The score is based on fixed reward minus budget spent, surveillance risk, social cost, failed objectives, and excessive VALUE / MADNESS side effects.
+- In Contract Mode, `종목분석` becomes `전문가 리포트`, which hints at a plausible target range without directly exposing the sponsor's exact objective.
+
+The first Contract Mode implementation is scoped as a thin playable slice: mode selection, contract selection, four sample contracts, objective tracking, expert report presentation, and contract settlement.
 
 ---
 
@@ -120,6 +137,7 @@ docs/
 
 Key current documents:
 
+- [Post-MVP PRD v0.2.0 — Contract Mode](docs/prd/market-manipulator-survival-prd-v0.2.0.md)
 - [PRD v0.1.5](docs/prd/market-manipulator-survival-prd-v0.1.5.md)
 - [MVP Freeze Candidate](docs/prd/market-manipulator-survival-mvp-freeze-candidate.md)
 - [Traceability Matrix](docs/traceability.md)
@@ -131,6 +149,7 @@ Key current documents:
 - [SRS v0.1.4 — Settlement, Carryover, and Persistence](docs/srs/market-manipulator-survival-srs-v0.1.4-settlement-carryover-persistence.md)
 - [SRS v0.1.5 — Freeze Readiness Review](docs/srs/market-manipulator-survival-srs-v0.1.5-freeze-readiness-review.md)
 - [SRS v0.1.6 — Baseline Values and Triggers](docs/srs/market-manipulator-survival-srs-v0.1.6-baseline-values-and-triggers.md)
+- [SRS v0.2.0 — Contract Mode](docs/srs/market-manipulator-survival-srs-v0.2.0-contract-mode.md)
 - [SDD v0.1.0 — Simulation Modularity](docs/sdd/market-manipulator-survival-sdd-v0.1.0-simulation-modularity.md)
 - [MVP SPEC v0.1.0 — First Playable Build](docs/spec/market-manipulator-survival-mvp-spec-v0.1.0.md)
 - [MEMORY](MEMORY.md)
