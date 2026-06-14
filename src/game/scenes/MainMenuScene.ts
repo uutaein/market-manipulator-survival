@@ -15,7 +15,8 @@ export class MainMenuScene extends BaseDocumentScene {
       [
         "FICTIONAL EXCHANGE SURVEILLANCE DESK",
         "",
-        "5-Day Run",
+        "자유모드: 5-Day Run",
+        "의뢰모드: fixed-reward contract slice",
         "Morning documents",
         "Pre-open approval",
         "Intraday pressure management",
@@ -24,20 +25,23 @@ export class MainMenuScene extends BaseDocumentScene {
         "No real companies, tickers, exchanges, market data, or real procedures."
       ],
       {
-        label: "새 Run 시작",
+        label: "자유모드 시작",
         target: SceneKeys.RunSetup,
         onClick: () => {
-          gameSession.runState = null;
-          gameSession.dayState = null;
-          gameSession.marketBriefing = null;
-          gameSession.intradayState = null;
-          gameSession.marketBoardState = null;
-          gameSession.lastManualActionResult = null;
-          gameSession.daySettlementResult = null;
-          gameSession.finalSettlementResult = null;
-          gameSession.surveillanceHistory = [];
+          gameSession.prepareFreeMode();
         }
       }
+    );
+
+    this.addActionButton(
+      {
+        label: "의뢰모드 시작",
+        target: SceneKeys.ContractSelection,
+        onClick: () => {
+          gameSession.prepareContractMode();
+        }
+      },
+      1
     );
 
     if (canContinue) {
@@ -49,7 +53,7 @@ export class MainMenuScene extends BaseDocumentScene {
             gameSession.loadSavedRun();
           }
         },
-        1
+        2
       );
     }
   }

@@ -57,6 +57,12 @@ import { runDefaults } from "../domain/balancing/runDefaults";
 import { createRunState, restartRunWithSameSeed, type AutoCardState, type RunState } from "../domain/run/runState";
 import { prepareNextDayCarryover } from "../domain/settlement/carryover";
 import {
+  createSampleContractMandates,
+  getSampleContractMandate,
+  type ContractMandate,
+  type GameMode
+} from "../domain/contract";
+import {
   calculateDaySettlement,
   calculateFinalSettlement as calculateFinalSettlementResult,
   isSuccessfulDayResult,
@@ -121,6 +127,8 @@ interface BreakoutImpulseResult {
 }
 
 export class GameSession {
+  gameMode: GameMode = "free";
+  contractMandate: ContractMandate | null = null;
   selectedSectorId: SectorId = sectors[0].id;
   selectedAssetId: AssetId = getAssetsBySector(this.selectedSectorId)[0].id;
   runState: RunState | null = null;
@@ -160,6 +168,34 @@ export class GameSession {
     const asset = getAssetById(assetId);
     this.selectedSectorId = asset.sectorId;
     this.selectedAssetId = asset.id;
+  }
+
+  prepareFreeMode(): void {
+    this.gameMode = "free";
+    this.contractMandate = null;
+    this.resetCurrentRunState();
+  }
+
+  prepareContractMode(): void {
+    this.gameMode = "contract";
+    this.contractMandate = null;
+    this.resetCurrentRunState();
+  }
+
+  getContractOptions(): readonly ContractMandate[] {
+    return createSampleContractMandates();
+  }
+
+  startContractRun(contractId: string): ContractMandate {
+    const mandate = getSampleContractMandate(contractId);
+
+    this.gameMode = "contract";
+    this.contractMandate = mandate;
+    this.setSelectedAsset(mandate.assetId);
+    this.startNewRun();
+    this.beginDay();
+
+    return mandate;
   }
 
   startNewRun(): RunState {
@@ -225,6 +261,8 @@ export class GameSession {
     }
 
     this.runState = result.envelope.data;
+    this.gameMode = "free";
+    this.contractMandate = null;
     this.selectedSectorId = this.runState.selectedSectorId;
     this.selectedAssetId = this.runState.selectedAssetId;
     this.dayState = null;
@@ -241,6 +279,23 @@ export class GameSession {
     this.lastFinalSaveUpdatedBest = false;
     this.resetDayAutoCardSession();
     return true;
+  }
+
+  resetCurrentRunState(): void {
+    this.runState = null;
+    this.dayState = null;
+    this.marketBriefing = null;
+    this.intradayState = null;
+    this.marketBoardState = null;
+    this.lastManualActionResult = null;
+    this.daySettlementResult = null;
+    this.finalSettlementResult = null;
+    this.surveillanceHistory = [];
+    this.priceHistory = [];
+    this.resetIntradayMoneyLedger(0);
+    this.resetMarketDashboardFeedback();
+    this.lastFinalSaveUpdatedBest = false;
+    this.resetDayAutoCardSession();
   }
 
   saveCurrentRunProgress(): boolean {

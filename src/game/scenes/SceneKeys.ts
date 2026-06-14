@@ -1,5 +1,6 @@
 export const SceneKeys = {
   MainMenu: "main-menu",
+  ContractSelection: "contract-selection",
   RunSetup: "run-setup",
   MorningBriefing: "morning-briefing",
   PreOpenCard: "pre-open-card",

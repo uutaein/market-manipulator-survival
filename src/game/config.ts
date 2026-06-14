@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { ContractSelectionScene } from "./scenes/ContractSelectionScene";
 import { DaySettlementScene } from "./scenes/DaySettlementScene";
 import { FinalSettlementScene } from "./scenes/FinalSettlementScene";
 import { IntradayScene } from "./scenes/IntradayScene";
@@ -20,6 +21,7 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   },
   scene: [
     MainMenuScene,
+    ContractSelectionScene,
     RunSetupScene,
     MorningBriefingScene,
     PreOpenCardScene,
