@@ -1,6 +1,7 @@
 import { BaseDocumentScene } from "./BaseDocumentScene";
 import { SceneKeys } from "./SceneKeys";
 import { describeMorningNewsTarget, type MorningNews } from "../../domain/day/morningNews";
+import type { ContractMandate, ExpertReport } from "../../domain/contract";
 import type { RunState } from "../../domain/run/runState";
 import { gameSession } from "../GameSession";
 
@@ -22,9 +23,10 @@ export class MorningBriefingScene extends BaseDocumentScene {
     const dayState = gameSession.ensureDay();
     const briefing = gameSession.ensureMarketBriefing();
     const todayCondition = dayState.todayCondition;
+    const contractMandate = gameSession.gameMode === "contract" ? gameSession.contractMandate : null;
 
     this.drawDocumentShell(
-      "아침 뉴스 / 시장 브리핑",
+      contractMandate ? "아침 뉴스 / 전문가 리포트" : "아침 뉴스 / 시장 브리핑",
       [],
       {
         label: "개장 승인",
@@ -44,7 +46,11 @@ export class MorningBriefingScene extends BaseDocumentScene {
       .setOrigin(0, 0);
 
     this.drawNewsPanel(96, 184);
-    this.drawBriefingPanel(790, 184, briefing.selectedSectorName, briefing.selectedAssetName, briefing.targetBandLabel, briefing.crashLineLabel);
+    if (contractMandate) {
+      this.drawContractExpertReportPanel(790, 184, briefing.selectedSectorName, briefing.selectedAssetName, contractMandate);
+    } else {
+      this.drawBriefingPanel(790, 184, briefing.selectedSectorName, briefing.selectedAssetName, briefing.targetBandLabel, briefing.crashLineLabel);
+    }
     this.drawConditionPanel(790, 404, todayCondition);
     this.drawRiskPanel(96, 506, briefing.riskHints);
   }
@@ -175,6 +181,39 @@ export class MorningBriefingScene extends BaseDocumentScene {
       .setOrigin(0, 0);
   }
 
+  private drawContractExpertReportPanel(
+    x: number,
+    y: number,
+    sectorName: string,
+    assetName: string,
+    mandate: ContractMandate
+  ): void {
+    const report = mandate.expertReport;
+
+    this.drawPanel(x, y, 360, 190);
+    this.addPanelTitle(x, y, "EXPERT REPORT");
+    this.add
+      .text(
+        x + 26,
+        y + 54,
+        [
+          `${assetName} / ${sectorName}`,
+          `방향: ${getContractDirectionLabel(mandate.direction)} · 신뢰도 ${report.confidence}`,
+          formatExpertReportPriceLine(report),
+          `의뢰주: ${getSponsorTypeLabel(mandate.sponsorType)}`,
+          report.summary
+        ].join("\n"),
+        {
+          color: "#c9c1ad",
+          fontFamily: this.fontFamily,
+          fontSize: "14px",
+          lineSpacing: 6,
+          wordWrap: { width: 310 }
+        }
+      )
+      .setOrigin(0, 0);
+  }
+
   private drawConditionPanel(
     x: number,
     y: number,
@@ -289,4 +328,43 @@ function getPlayerImpactLabel(news: MorningNews, runState: RunState): string | n
 
 function colorStringToNumber(color: string): number {
   return Number.parseInt(color.replace("#", ""), 16);
+}
+
+function formatExpertReportPriceLine(report: ExpertReport): string {
+  const priceHint = report.targetPriceHint ? `제시가 ${formatPrice(report.targetPriceHint)} 부근` : null;
+  const bandHint =
+    report.lowerPrice !== undefined && report.upperPrice !== undefined
+      ? `밴드 ${formatPrice(report.lowerPrice)}~${formatPrice(report.upperPrice)}`
+      : null;
+
+  return [priceHint, bandHint].filter(Boolean).join(" / ") || "가격 제시 없음";
+}
+
+function formatPrice(value: number): string {
+  return value.toLocaleString("ko-KR");
+}
+
+function getContractDirectionLabel(direction: ContractMandate["direction"]): string {
+  const labels: Record<ContractMandate["direction"], string> = {
+    upward: "상방",
+    downward: "하방",
+    range: "밴드",
+    defense: "방어",
+    attention: "관심",
+    stealth: "은닉"
+  };
+
+  return labels[direction];
+}
+
+function getSponsorTypeLabel(sponsorType: ContractMandate["sponsorType"]): string {
+  const labels: Record<ContractMandate["sponsorType"], string> = {
+    long_holder: "롱 보유자",
+    short_seller: "숏 의뢰주",
+    accumulator: "매집자",
+    defender: "방어자",
+    pump_exit: "익절 출구"
+  };
+
+  return labels[sponsorType];
 }
