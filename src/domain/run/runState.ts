@@ -35,6 +35,7 @@ export interface RunState {
   readonly runAssetProfiles: RunAssetProfiles;
   readonly budget: number;
   readonly cumulativeProfit: number;
+  readonly dayProfitHistory?: readonly number[];
   readonly holdingRatio: number;
   readonly averageEntryPrice: number | null;
   readonly lastClosePrice: number | null;
@@ -78,6 +79,7 @@ export function createRunState(options: CreateRunStateOptions = {}): RunState {
     runAssetProfiles: assignRunAssetProfiles(runSeed),
     budget: runDefaults.startingBudget,
     cumulativeProfit: 0,
+    dayProfitHistory: [],
     holdingRatio: runDefaults.initialHoldingRatio,
     averageEntryPrice: null,
     lastClosePrice: null,

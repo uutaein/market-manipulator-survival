@@ -83,6 +83,7 @@ export function prepareNextDayCarryover(input: DayCarryoverInput): DayCarryoverR
     currentDay: Math.min(runLengthDays, input.runState.currentDay + 1),
     budget: ending.budget,
     cumulativeProfit: input.runState.cumulativeProfit + input.daySettlement.actualProfit,
+    dayProfitHistory: [...(input.runState.dayProfitHistory ?? []), input.daySettlement.actualProfit],
     holdingRatio: ending.holdingRatio,
     averageEntryPrice: ending.holdingRatio > 0 ? ending.averageEntryPrice : null,
     lastClosePrice: ending.holdingRatio > 0 ? ending.currentPrice : null,

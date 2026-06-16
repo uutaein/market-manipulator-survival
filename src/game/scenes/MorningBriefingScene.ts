@@ -78,15 +78,15 @@ export class MorningBriefingScene extends BaseDocumentScene {
     const runState = gameSession.ensureRun();
     const dayState = gameSession.ensureDay();
     const promptLines = [
-      { text: "> NEWS FEED OPEN", color: "#d9c58b" },
+      { text: "> NEWS FEED OPEN", color: "#2dd4bf" },
       ...dayState.morningNewsItems.flatMap((news, index) => {
         const scopeBadge = getNewsScopeBadge(news, runState);
         const impactColor = scopeBadge.highlight
           ? getNewsToneColor(news)
-          : "#8f9f7a";
+          : "#7df3e7";
 
         return [
-          { text: `> ${index + 1}. ${news.displayName}`, color: "#f3e8ca" },
+          { text: `> ${index + 1}. ${news.displayName}`, color: "#f2fbfc" },
           {
             text: `> 대상: ${describeMorningNewsTarget(news.target)}${formatPromptImpact(news, runState)}`,
             color: impactColor,
@@ -98,7 +98,7 @@ export class MorningBriefingScene extends BaseDocumentScene {
     this.drawDocumentShell("아침 뉴스 수신 중", []);
     this.add
       .text(96, 136, `DAY ${dayState.dayIndex}`, {
-        color: "#c9c1ad",
+        color: "#c2d0d3",
         fontFamily: this.fontFamily,
         fontSize: "18px",
       })
@@ -136,7 +136,7 @@ export class MorningBriefingScene extends BaseDocumentScene {
       .setStrokeStyle(1, 0x263038);
     this.add
       .text(118, 139, `DAY ${dayIndex} · MORNING NEWS REVEALED`, {
-        color: "#8f9f7a",
+        color: "#7df3e7",
         fontFamily: this.fontFamily,
         fontSize: "12px",
       })
@@ -149,7 +149,7 @@ export class MorningBriefingScene extends BaseDocumentScene {
           ? "전문가 리포트 확인 후 개장 승인"
           : "뉴스 영향과 목표 조건 확인 후 개장 승인",
         {
-          color: "#f3e8ca",
+          color: "#f2fbfc",
           fontFamily: this.fontFamily,
           fontSize: "20px",
         },
@@ -157,7 +157,7 @@ export class MorningBriefingScene extends BaseDocumentScene {
       .setOrigin(0, 0);
     this.add
       .text(956, 139, "OPENING APPROVAL REQUIRED", {
-        color: "#d9c58b",
+        color: "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "13px",
       })
@@ -176,7 +176,7 @@ export class MorningBriefingScene extends BaseDocumentScene {
       const scopeBadge = getNewsScopeBadge(news, runState);
       const impactColor = scopeBadge.highlight
         ? getNewsToneColor(news)
-        : "#8f9f7a";
+        : "#7df3e7";
 
       if (scopeBadge.highlight) {
         this.add
@@ -187,7 +187,7 @@ export class MorningBriefingScene extends BaseDocumentScene {
 
       this.add
         .text(x + 26, rowY, `${index + 1}. ${news.displayName}`, {
-          color: scopeBadge.highlight ? "#f3e8ca" : "#c9c1ad",
+          color: scopeBadge.highlight ? "#f2fbfc" : "#c2d0d3",
           fontFamily: this.fontFamily,
           fontSize: "19px",
         })
@@ -198,7 +198,7 @@ export class MorningBriefingScene extends BaseDocumentScene {
           rowY + 32,
           `대상: ${describeMorningNewsTarget(news.target)}`,
           {
-            color: "#8f9f7a",
+            color: "#7df3e7",
             fontFamily: this.fontFamily,
             fontSize: "15px",
             wordWrap: { width: 420 },
@@ -257,7 +257,7 @@ export class MorningBriefingScene extends BaseDocumentScene {
           `붕괴선: ${crashLineLabel}`,
         ].join("\n"),
         {
-          color: "#c9c1ad",
+          color: "#c2d0d3",
           fontFamily: this.fontFamily,
           fontSize: "16px",
           lineSpacing: 10,
@@ -297,7 +297,7 @@ export class MorningBriefingScene extends BaseDocumentScene {
           report.summary,
         ].join("\n"),
         {
-          color: "#c9c1ad",
+          color: "#c2d0d3",
           fontFamily: this.fontFamily,
           fontSize: "12px",
           lineSpacing: 3,
@@ -306,12 +306,12 @@ export class MorningBriefingScene extends BaseDocumentScene {
       )
       .setOrigin(0, 0);
     this.add
-      .rectangle(x + 24, y + 232, 312, 44, 0x111417, 0.96)
+      .rectangle(x + 24, y + 232, 312, 44, 0x071015, 0.96)
       .setOrigin(0, 0)
       .setStrokeStyle(1, 0x354149, 0.9);
     this.add
       .text(x + 36, y + 240, "TOOL FIT", {
-        color: "#d9c58b",
+        color: "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "10px",
       })
@@ -325,7 +325,7 @@ export class MorningBriefingScene extends BaseDocumentScene {
           `주의 ${riskyTools.join(" / ") || "없음"}`,
         ].join("\n"),
         {
-          color: "#c9c1ad",
+          color: "#c2d0d3",
           fontFamily: this.fontFamily,
           fontSize: "11px",
           lineSpacing: 2,
@@ -355,7 +355,7 @@ export class MorningBriefingScene extends BaseDocumentScene {
           `유동성 ${formatSigned(todayCondition.liquidityShiftPercent)} · 감시 ${formatSigned(todayCondition.surveillanceSensitivityShiftPercent)}`,
         ].join("\n"),
         {
-          color: "#c9c1ad",
+          color: "#c2d0d3",
           fontFamily: this.fontFamily,
           fontSize: "13px",
           lineSpacing: 5,
@@ -374,7 +374,7 @@ export class MorningBriefingScene extends BaseDocumentScene {
     this.addPanelTitle(x, y, "PRE-OPEN EFFECT");
     this.add
       .text(x + 26, y + 46, formatPreOpenEffectSummary(dayState).join("\n"), {
-        color: "#c9c1ad",
+        color: "#c2d0d3",
         fontFamily: this.fontFamily,
         fontSize: "12px",
         lineSpacing: 3,
@@ -391,7 +391,7 @@ export class MorningBriefingScene extends BaseDocumentScene {
     this.drawPanel(x, y, 650, 74);
     this.add
       .text(x + 24, y + 20, `RISK: ${riskHints.join(" / ")}`, {
-        color: "#d9c58b",
+        color: "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "15px",
         wordWrap: { width: 602 },
@@ -407,7 +407,7 @@ export class MorningBriefingScene extends BaseDocumentScene {
     const panel = this.add
       .rectangle(x, y, width, height, 0x090d10, 0.92)
       .setOrigin(0, 0)
-      .setStrokeStyle(2, 0xd9c58b, 0.82);
+      .setStrokeStyle(2, 0x2dd4bf, 0.82);
     const hitZone = this.add
       .zone(x, y, width, height)
       .setOrigin(0, 0)
@@ -415,21 +415,21 @@ export class MorningBriefingScene extends BaseDocumentScene {
 
     this.add
       .text(x + 18, y + 10, "OPENING STAMP", {
-        color: "#8f9f7a",
+        color: "#7df3e7",
         fontFamily: this.fontFamily,
         fontSize: "12px",
       })
       .setOrigin(0, 0);
     this.add
       .text(x + 18, y + 32, "[ 개장 승인 ]", {
-        color: "#f3e8ca",
+        color: "#f2fbfc",
         fontFamily: this.fontFamily,
         fontSize: "20px",
       })
       .setOrigin(0, 0);
     this.add
       .text(x + 18, y + 58, "검토 완료 · 장중 운용 전환", {
-        color: "#c9c1ad",
+        color: "#c2d0d3",
         fontFamily: this.fontFamily,
         fontSize: "11px",
       })
@@ -448,11 +448,11 @@ export class MorningBriefingScene extends BaseDocumentScene {
 
     hitZone.on("pointerover", () => {
       panel.setFillStyle(0x151a18, 0.96);
-      panel.setStrokeStyle(2, 0xf3e8ca, 1);
+      panel.setStrokeStyle(2, 0xe6f7f8, 1);
     });
     hitZone.on("pointerout", () => {
       panel.setFillStyle(0x090d10, 0.92);
-      panel.setStrokeStyle(2, 0xd9c58b, 0.82);
+      panel.setStrokeStyle(2, 0x2dd4bf, 0.82);
     });
     hitZone.on("pointerup", () => {
       gameSession.startIntraday();
@@ -470,7 +470,7 @@ export class MorningBriefingScene extends BaseDocumentScene {
   private addPanelTitle(x: number, y: number, title: string): void {
     this.add
       .text(x + 24, y + 20, title, {
-        color: "#d9c58b",
+        color: "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "15px",
       })
@@ -547,7 +547,7 @@ function getNewsToneColor(news: MorningNews): string {
     return "#78d982";
   }
 
-  return "#d9c58b";
+  return "#2dd4bf";
 }
 
 function isPositiveNews(news: MorningNews): boolean {

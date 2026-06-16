@@ -77,14 +77,14 @@ export class ContractSelectionScene extends BaseDocumentScene {
       .setStrokeStyle(1, 0x263038);
     this.add
       .text(118, 139, "SELECTED CONTRACT", {
-        color: "#8f9f7a",
+        color: "#7df3e7",
         fontFamily: this.fontFamily,
         fontSize: "12px",
       })
       .setOrigin(0, 0);
     this.add
       .text(292, 135, `${contract.displayName} / ${asset.displayName}`, {
-        color: "#f3e8ca",
+        color: "#f2fbfc",
         fontFamily: this.fontFamily,
         fontSize: "24px",
         wordWrap: { width: 500 },
@@ -96,7 +96,7 @@ export class ContractSelectionScene extends BaseDocumentScene {
         137,
         `보상 ${formatReward(contract.fixedReward)} · ${contract.durationDays}D · 위험 ${contract.riskLevel}/5`,
         {
-          color: "#d9c58b",
+          color: "#2dd4bf",
           fontFamily: this.fontFamily,
           fontSize: "14px",
         },
@@ -111,7 +111,7 @@ export class ContractSelectionScene extends BaseDocumentScene {
       .setStrokeStyle(1, 0x263038);
     this.add
       .text(96, 196, "AVAILABLE CONTRACTS", {
-        color: "#d9c58b",
+        color: "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "15px",
       })
@@ -130,8 +130,8 @@ export class ContractSelectionScene extends BaseDocumentScene {
       .setStrokeStyle(1, 0x354149);
     const badge = this.add
       .text(x + 14, y + 8, getDirectionLabel(contract.direction), {
-        color: "#111417",
-        backgroundColor: "#8f9f7a",
+        color: "#071015",
+        backgroundColor: "#7df3e7",
         fontFamily: this.fontFamily,
         fontSize: "11px",
         padding: { x: 6, y: 2 },
@@ -139,7 +139,7 @@ export class ContractSelectionScene extends BaseDocumentScene {
       .setOrigin(0, 0);
     const title = this.add
       .text(x + 74, y + 8, `${contract.displayName} · ${asset.displayName}`, {
-        color: "#f3e8ca",
+        color: "#f2fbfc",
         fontFamily: this.fontFamily,
         fontSize: "15px",
         wordWrap: { width: 286 },
@@ -147,7 +147,7 @@ export class ContractSelectionScene extends BaseDocumentScene {
       .setOrigin(0, 0);
     const confidence = this.add
       .text(x + 384, y + 8, `신뢰 ${contract.reportConfidence}`, {
-        color: "#111417",
+        color: "#071015",
         backgroundColor: getReportConfidenceColor(contract.reportConfidence),
         fontFamily: this.fontFamily,
         fontSize: "11px",
@@ -160,7 +160,7 @@ export class ContractSelectionScene extends BaseDocumentScene {
         y + 30,
         `${contract.durationDays}D · 보상 ${formatReward(contract.fixedReward)} · 위험 ${contract.riskLevel}/5 · ${getSponsorTypeLabel(contract.sponsorType)}`,
         {
-          color: "#c9c1ad",
+          color: "#c2d0d3",
           fontFamily: this.fontFamily,
           fontSize: "12px",
           wordWrap: { width: 430 },
@@ -169,7 +169,7 @@ export class ContractSelectionScene extends BaseDocumentScene {
       .setOrigin(0, 0);
     const objective = this.add
       .text(x + 74, y + 42, formatCardObjectiveSummary(contract.objectives), {
-        color: "#8fa2a6",
+        color: "#a8c0c4",
         fontFamily: this.fontFamily,
         fontSize: "11px",
         wordWrap: { width: 372 },
@@ -222,12 +222,12 @@ export class ContractSelectionScene extends BaseDocumentScene {
       );
       card.background.setStrokeStyle(
         selected ? 2 : 1,
-        selected ? 0xd9c58b : 0x354149,
+        selected ? 0x2dd4bf : 0x354149,
       );
-      card.title.setColor(selected ? "#f3e8ca" : "#d7d0bd");
-      card.meta.setColor(selected ? "#d9c58b" : "#aeb7a3");
-      card.objective.setColor(selected ? "#b7cbb0" : "#8fa2a6");
-      card.badge.setBackgroundColor(selected ? "#d9c58b" : "#8f9f7a");
+      card.title.setColor(selected ? "#f2fbfc" : "#e4f4f6");
+      card.meta.setColor(selected ? "#2dd4bf" : "#9fb8bd");
+      card.objective.setColor(selected ? "#b7cbb0" : "#a8c0c4");
+      card.badge.setBackgroundColor(selected ? "#2dd4bf" : "#7df3e7");
       card.confidence.setAlpha(selected ? 1 : 0.82);
     });
   }
@@ -251,12 +251,12 @@ export class ContractSelectionScene extends BaseDocumentScene {
       this.add
         .rectangle(x, y, width, height, 0x090d10, 0.82)
         .setOrigin(0, 0)
-        .setStrokeStyle(1, 0x6f6a5b),
+        .setStrokeStyle(1, 0x2d4650),
     );
     this.trackDetailObject(
       this.add
         .text(x + 24, y + 18, "CONTRACT BRIEF", {
-          color: "#d9c58b",
+          color: "#2dd4bf",
           fontFamily: this.fontFamily,
           fontSize: "15px",
         })
@@ -269,7 +269,7 @@ export class ContractSelectionScene extends BaseDocumentScene {
           y + 48,
           `${contract.displayName} · ${asset.displayName}`,
           {
-            color: "#f3e8ca",
+            color: "#f2fbfc",
             fontFamily: this.fontFamily,
             fontSize: "21px",
             wordWrap: { width: width - 48 },
@@ -288,7 +288,7 @@ export class ContractSelectionScene extends BaseDocumentScene {
             `보상 ${formatReward(contract.fixedReward)} · 리포트 신뢰도 ${report.confidence}`,
           ].join("\n"),
           {
-            color: "#c9c1ad",
+            color: "#c2d0d3",
             fontFamily: this.fontFamily,
             fontSize: "13px",
             lineSpacing: 4,
@@ -311,7 +311,7 @@ export class ContractSelectionScene extends BaseDocumentScene {
             `주의 도구: ${riskyTools.join(" / ") || "없음"}`,
           ].join("\n"),
           {
-            color: "#c9c1ad",
+            color: "#c2d0d3",
             fontFamily: this.fontFamily,
             fontSize: "14px",
             lineSpacing: 7,
@@ -330,8 +330,8 @@ export class ContractSelectionScene extends BaseDocumentScene {
   ): void {
     const button = this.add
       .text(x, y, `[ ${label} ]`, {
-        color: "#111417",
-        backgroundColor: "#d9c58b",
+        color: "#071015",
+        backgroundColor: "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "20px",
         padding: { x: 18, y: 10 },
@@ -339,10 +339,10 @@ export class ContractSelectionScene extends BaseDocumentScene {
       .setInteractive({ useHandCursor: true });
 
     button.on("pointerover", () => {
-      button.setBackgroundColor("#f3e8ca");
+      button.setBackgroundColor("#f2fbfc");
     });
     button.on("pointerout", () => {
-      button.setBackgroundColor("#d9c58b");
+      button.setBackgroundColor("#2dd4bf");
     });
     button.on("pointerup", onClick);
   }
@@ -355,7 +355,7 @@ export class ContractSelectionScene extends BaseDocumentScene {
   ): void {
     const button = this.add
       .text(x, y, `[ ${label} ]`, {
-        color: "#c9c1ad",
+        color: "#c2d0d3",
         backgroundColor: "#263038",
         fontFamily: this.fontFamily,
         fontSize: "18px",
@@ -364,10 +364,10 @@ export class ContractSelectionScene extends BaseDocumentScene {
       .setInteractive({ useHandCursor: true });
 
     button.on("pointerover", () => {
-      button.setColor("#f3e8ca");
+      button.setColor("#f2fbfc");
     });
     button.on("pointerout", () => {
-      button.setColor("#c9c1ad");
+      button.setColor("#c2d0d3");
     });
     button.on("pointerup", onClick);
   }
@@ -391,7 +391,7 @@ export class ContractSelectionScene extends BaseDocumentScene {
     this.trackDetailObject(
       this.add
         .text(x, y + 28, `위험 ${riskLevel}/5`, {
-          color: "#aeb7a3",
+          color: "#9fb8bd",
           fontFamily: this.fontFamily,
           fontSize: "12px",
         })
@@ -453,11 +453,11 @@ function getSponsorTypeLabel(
 
 function getReportConfidenceColor(confidence: number): string {
   if (confidence >= 72) {
-    return "#d9c58b";
+    return "#2dd4bf";
   }
 
   if (confidence >= 66) {
-    return "#8f9f7a";
+    return "#7df3e7";
   }
 
   return "#d99d5a";
@@ -535,5 +535,5 @@ function getRiskBarColor(riskLevel: number): number {
     return 0xd99d5a;
   }
 
-  return 0x8f9f7a;
+  return 0x7df3e7;
 }

@@ -30,7 +30,7 @@ Steps:
 3. Activate `Run 시작`.
 4. Select the Day 1 `선취매` path and approve opening.
 5. Seed a near-close Day 1 intraday state with a positive carried position.
-6. Activate `Day 정산`.
+6. Let the Intraday timer end and transition to Day Settlement.
 7. Activate `다음 Day`.
 8. Compare the page against the `preopen-card-regular-options.png` visual baseline.
 

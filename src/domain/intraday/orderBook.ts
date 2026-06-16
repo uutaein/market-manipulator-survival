@@ -28,7 +28,7 @@ export interface OrderBookProfile {
   readonly buyWallLabel: "thin" | "normal" | "heavy";
 }
 
-const orderBookOffsets = [-3, -2, -1, 0, 1, 2, 3] as const;
+const orderBookOffsets = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5] as const;
 
 export function buildOrderBookProfile(state: IntradayState, context: OrderBookContext): OrderBookProfile {
   const tickBucket = Math.floor(state.priceTickIndex / 4);
@@ -131,7 +131,7 @@ function selectVisibleSideLevels(
       : left.priceChangePercent - right.priceChangePercent
   );
 
-  return sortedLevels.slice(0, 3).map((level, index) => ({
+  return sortedLevels.slice(0, 5).map((level, index) => ({
     ...level,
     offsetPercent: side === "buy" ? -(index + 1) : index + 1
   }));
@@ -144,7 +144,7 @@ function isWallPriceLevelInVisibleSide(
 ): boolean {
   const distance = Math.abs(wallPriceChangePercent - currentPriceChangePercent);
 
-  if (distance > 3.5) {
+  if (distance > 5.5) {
     return false;
   }
 

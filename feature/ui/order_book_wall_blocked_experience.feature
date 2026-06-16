@@ -11,6 +11,6 @@ Feature: Order-book wall blocked and cooldown experience
   Scenario: Read blocked and cooldown wall state
     When the Intraday order-book panel is rendered
     Then the cooldown row shows a visible waiting state
-    And the wall feedback panel explains that wall actions are blocked by budget or cooldown
+    And row-level feedback explains that wall actions are blocked by budget or cooldown
     And no active remaining-depth indicator is shown for inactive rows
     And the wall interaction remains embedded in order-book rows without permanent extra buttons

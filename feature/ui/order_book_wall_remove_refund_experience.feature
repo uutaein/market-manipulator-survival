@@ -11,7 +11,7 @@ Feature: Order-book wall removal refund experience
   Scenario: Review removed wall refund feedback
     When the Intraday order-book panel is rendered
     Then no active wall row indicator is shown
-    And the recent wall feedback shows the removed wall and released barrier
+    And row-level feedback shows the removed wall and released barrier
     And the feedback shows zero remaining depth and the refunded reserve
     And cooldown remains local to the removed price level
     And available wall actions remain embedded in order-book rows

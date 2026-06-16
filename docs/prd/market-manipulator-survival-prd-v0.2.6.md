@@ -32,7 +32,7 @@ v0.2.5에서는 벽 이벤트 로그가 생겼지만, 플레이어가 현재 활
 
 1. 활성 벽 행에서 남은 가상 depth 비율을 즉시 읽게 한다.
 2. hover title에서 남은 depth와 환급 가능 예산을 정확한 수치로 제공한다.
-3. 기존 PRICE/SIZE 밀도와 hover 조작을 해치지 않는다.
+3. ASK 5줄과 BID 5줄의 PRICE/SIZE 밀도와 hover 조작을 해치지 않는다.
 4. 실제 시장 주문/체결 표현 없이 가상 depth/reserve 상태만 표시한다.
 
 ---
@@ -46,7 +46,7 @@ v0.2.5에서는 벽 이벤트 로그가 생겼지만, 플레이어가 현재 활
 | 행 indicator | 활성 벽 행에 남은 depth 비율을 짧은 막대로 표시 |
 | 상세 title | 활성 벽 hover title에 남은 depth, 원래 depth, 환급 가능 예산 표시 |
 | Overlay action 모델 | DOM overlay action payload에 남은 depth/reserve 수치 추가 |
-| 안정적 레이아웃 | 행 높이와 grid track을 바꾸지 않고 indicator를 absolute overlay로 표시 |
+| 안정적 레이아웃 | ASK 5줄과 BID 5줄이 보이는 호가창 안에서 indicator를 absolute overlay로 표시 |
 
 ### 2.2 제외
 

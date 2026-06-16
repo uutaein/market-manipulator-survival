@@ -29,7 +29,7 @@ Steps:
 1. Open the Main Menu.
 2. Complete the Free Mode path through Opening Approval.
 3. Prepare the active browser session as a Day 5 settlement state.
-4. Activate `Day 정산`.
+4. Let the Intraday timer end and transition to Day Settlement.
 5. Continue from Day Settlement into `Final 정산`.
 6. Wait until the Final Settlement canvas is visible and non-empty.
 7. Compare the page against the `final-settlement.png` visual baseline.

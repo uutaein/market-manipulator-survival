@@ -30,7 +30,7 @@ Steps:
 2. Enter Contract Mode and accept a sample mandate.
 3. Complete the path through Opening Approval until the Intraday screen is active.
 4. Prepare the active browser session with deterministic Contract Mode observations and mixed tool-fit impact.
-5. Activate `Day 정산`.
+5. Let the Intraday timer end and transition to Day Settlement.
 6. Wait until the Day Settlement canvas is visible and non-empty.
 7. Compare the page against the `contract-day-settlement-action-fit.png` visual baseline.
 

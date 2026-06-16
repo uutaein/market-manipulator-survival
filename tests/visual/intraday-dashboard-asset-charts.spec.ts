@@ -42,16 +42,9 @@ test("intraday dashboard selected asset charts visual baseline", async ({
   await dashboardRows.nth(1).click();
   await expect(dashboardRows.nth(1)).toHaveClass(/selected/);
   await expect(marketTerminal.locator(".mms-market-detail")).toBeVisible();
-  await expect(marketTerminal.locator(".mms-market-live-line")).toHaveAttribute(
-    "points",
-    /,/,
-  );
-  await expect(
-    marketTerminal.locator(".mms-market-period-line"),
-  ).toHaveAttribute("points", /,/);
-  await expect(
-    marketTerminal.locator(".mms-market-period-days .current"),
-  ).toHaveText(/D[1-5]/);
+
+  await expect(marketTerminal.locator(".mms-market-chart-tab")).toHaveCount(0);
+  await expect(marketTerminal.locator(".mms-market-detail-line")).toHaveCount(0);
   await expect(marketTerminal.locator(".mms-market-detail-signal")).toHaveCount(
     4,
   );
@@ -67,6 +60,21 @@ test("intraday dashboard selected asset charts visual baseline", async ({
   await expect(marketTerminal.locator(".mms-market-signal-flow")).toHaveText(
     /흐름 (상승|하락)/,
   );
+
+  const priceChart = page.locator(".mms-price-chart-overlay");
+  const priceTabs = priceChart.locator(".mms-price-chart-tab");
+  await expect(priceTabs).toHaveCount(2);
+  await expect(priceTabs.filter({ hasText: "LIVE" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await priceTabs.filter({ hasText: "누적" }).click();
+  await expect(priceTabs.filter({ hasText: "누적" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(priceTabs.filter({ hasText: "틱" })).toHaveCount(0);
+  await expect(priceTabs.filter({ hasText: "DAYS" })).toHaveCount(0);
 
   await expect(page).toHaveScreenshot("intraday-dashboard-asset-charts.png", {
     animations: "disabled",

@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { expectCanvasReady, prepareFinalSettlementState, resetBrowserState } from "./support/canvas";
+import {
+  expectCanvasReady,
+  openDaySettlementScene,
+  prepareFinalSettlementState,
+  resetBrowserState,
+} from "./support/canvas";
 
 test("final settlement visual baseline", async ({ page }) => {
   await resetBrowserState(page);
@@ -33,7 +38,7 @@ test("final settlement visual baseline", async ({ page }) => {
 
   await prepareFinalSettlementState(page);
 
-  await page.mouse.click(1090, 637);
+  await openDaySettlementScene(page);
   await page.waitForTimeout(100);
   await expectCanvasReady(canvas);
 

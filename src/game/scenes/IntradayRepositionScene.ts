@@ -91,7 +91,7 @@ export class IntradayRepositionScene extends BaseDocumentScene {
           `새 종목은 ${formatPercent(intradayRepositionStartingHolding)} 보유로 시작하며 감시/참여/변동성 상태는 보존됩니다.`,
         ].join("    "),
         {
-          color: "#c9c1ad",
+          color: "#c2d0d3",
           fontFamily: this.fontFamily,
           fontSize: "13px",
           wordWrap: { width: 1000 },
@@ -105,7 +105,7 @@ export class IntradayRepositionScene extends BaseDocumentScene {
 
     this.add
       .text(118, 274, "새 데스크 섹터", {
-        color: "#8f9f7a",
+        color: "#7df3e7",
         fontFamily: this.fontFamily,
         fontSize: "13px",
       })
@@ -127,7 +127,7 @@ export class IntradayRepositionScene extends BaseDocumentScene {
 
     this.add
       .text(422, 274, "진입 후보", {
-        color: "#8f9f7a",
+        color: "#7df3e7",
         fontFamily: this.fontFamily,
         fontSize: "13px",
       })
@@ -175,7 +175,7 @@ export class IntradayRepositionScene extends BaseDocumentScene {
           "보존: 감시도, 참여도, 변동성, 문서 이벤트 이력",
         ].join("\n\n"),
         {
-          color: "#c9c1ad",
+          color: "#c2d0d3",
           fontFamily: this.fontFamily,
           fontSize: "14px",
           lineSpacing: 5,
@@ -199,10 +199,10 @@ export class IntradayRepositionScene extends BaseDocumentScene {
             state?.timeRemainingSec ?? 0
           }s`,
           `필요 조건: 보유 0% / 진행 액션 없음 / 예산 ${formatBudget(intradayRepositionEntryCost)} 이상 / 장중 진행 중`,
-          "조건이 맞지 않으면 남은 Day를 운용하거나 Day 정산 후 다음 Day 종목 선택을 사용합니다.",
+          "조건이 맞지 않으면 남은 Day를 운용하고 장마감 후 다음 Day 종목 선택을 사용합니다.",
         ].join("\n"),
         {
-          color: "#c9c1ad",
+          color: "#c2d0d3",
           fontFamily: this.fontFamily,
           fontSize: "16px",
           lineSpacing: 9,
@@ -225,17 +225,17 @@ export class IntradayRepositionScene extends BaseDocumentScene {
     const background = this.add
       .rectangle(x, y, 316, 62, selected ? 0x273e2f : 0x151b1f, 0.96)
       .setOrigin(0, 0)
-      .setStrokeStyle(1, selected ? 0xd9c58b : 0x263038);
+      .setStrokeStyle(1, selected ? 0x2dd4bf : 0x263038);
     const titleText = this.add
       .text(x + 14, y + 10, title, {
-        color: selected ? "#f3e8ca" : "#d9c58b",
+        color: selected ? "#f2fbfc" : "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "15px",
       })
       .setOrigin(0, 0);
     const bodyText = this.add
       .text(x + 14, y + 32, `${body} · ${getAssetRoleLabel(profile.role)}`, {
-        color: "#c9c1ad",
+        color: "#c2d0d3",
         fontFamily: this.fontFamily,
         fontSize: "11px",
         wordWrap: { width: 288 },
@@ -261,14 +261,14 @@ export class IntradayRepositionScene extends BaseDocumentScene {
         y,
         212,
         25,
-        selected ? 0xd9c58b : 0x151b1f,
+        selected ? 0x2dd4bf : 0x151b1f,
         selected ? 0.96 : 0.9,
       )
       .setOrigin(0, 0)
-      .setStrokeStyle(1, selected ? 0xd9c58b : 0x263038);
+      .setStrokeStyle(1, selected ? 0x2dd4bf : 0x263038);
     const labelText = this.add
       .text(x + 12, y + 5, label, {
-        color: selected ? "#111417" : "#c9c1ad",
+        color: selected ? "#071015" : "#c2d0d3",
         fontFamily: this.fontFamily,
         fontSize: "14px",
       })
@@ -293,7 +293,7 @@ export class IntradayRepositionScene extends BaseDocumentScene {
       .setStrokeStyle(1, 0x263038);
     this.add
       .text(x + 22, y + 20, title, {
-        color: "#d9c58b",
+        color: "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "14px",
       })

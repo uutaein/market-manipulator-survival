@@ -54,17 +54,17 @@ export class DaySettlementScene extends BaseDocumentScene {
     this.add
       .rectangle(96, 126, 1088, 72, 0x090d10, 0.9)
       .setOrigin(0, 0)
-      .setStrokeStyle(1, 0x6f6a5b);
+      .setStrokeStyle(1, 0x2d4650);
     this.add
       .text(118, 142, `DAY ${settlement.dayIndex} RESULT`, {
-        color: "#8f9f7a",
+        color: "#7df3e7",
         fontFamily: this.fontFamily,
         fontSize: "13px",
       })
       .setOrigin(0, 0);
     this.add
       .text(118, 162, settlement.dayResultCategory, {
-        color: "#f3e8ca",
+        color: "#f2fbfc",
         fontFamily: this.fontFamily,
         fontSize: "28px",
       })
@@ -88,7 +88,7 @@ export class DaySettlementScene extends BaseDocumentScene {
       144,
       "PROFIT BAND",
       settlement.profitBand,
-      "#d9c58b",
+      "#2dd4bf",
     );
   }
 
@@ -119,7 +119,7 @@ export class DaySettlementScene extends BaseDocumentScene {
           `사회적 비용 ${settlement.socialCostTotal} (+${settlement.socialCostDelta})`,
         ].join("\n"),
         {
-          color: "#c9c1ad",
+          color: "#c2d0d3",
           fontFamily: this.fontFamily,
           fontSize: "18px",
           lineSpacing: 12,
@@ -131,7 +131,7 @@ export class DaySettlementScene extends BaseDocumentScene {
     const holdingContextLines = getHoldingContextLines(settlement);
     const holdingContextColor = settlement.holdingBand.settlementRisk
       ? "#ff8a70"
-      : "#c9c1ad";
+      : "#c2d0d3";
 
     this.add
       .text(678, 286, holdingContextLines.join("\n"), {
@@ -152,7 +152,7 @@ export class DaySettlementScene extends BaseDocumentScene {
       this.drawPanel(96, 500, 390, 88, "NEXT PLAY HINT");
       this.add
         .text(122, 540, hint, {
-          color: "#d9c58b",
+          color: "#2dd4bf",
           fontFamily: this.fontFamily,
           fontSize: "14px",
           wordWrap: { width: 338 },
@@ -165,7 +165,7 @@ export class DaySettlementScene extends BaseDocumentScene {
     this.drawPanel(96, 516, 760, 84, "NEXT PLAY HINT");
     this.add
       .text(122, 558, hint, {
-        color: "#d9c58b",
+        color: "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "16px",
         wordWrap: { width: 700 },
@@ -183,7 +183,7 @@ export class DaySettlementScene extends BaseDocumentScene {
       summary.actionFitMessage ??
       `추천 도구: ${summary.recommendedTools.join(" / ")}`;
     const actionFitScoreColor =
-      summary.actionFitRisk > summary.actionFitBonus ? "#ffb3a8" : "#dff6dc";
+      summary.actionFitRisk > summary.actionFitBonus ? "#ffb3a8" : "#c8fff4";
 
     this.drawPanel(520, 500, 664, 88, "CONTRACT PROGRESS");
     this.add
@@ -206,7 +206,7 @@ export class DaySettlementScene extends BaseDocumentScene {
       .setOrigin(0, 0);
     this.add
       .text(744, 538, objectiveLines.join("\n"), {
-        color: "#d9c58b",
+        color: "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "12px",
         lineSpacing: 4,
@@ -215,7 +215,7 @@ export class DaySettlementScene extends BaseDocumentScene {
       .setOrigin(0, 0);
     this.add
       .text(1018, 538, actionLine, {
-        color: "#c9c1ad",
+        color: "#c2d0d3",
         fontFamily: this.fontFamily,
         fontSize: "11px",
         lineSpacing: 3,
@@ -238,8 +238,8 @@ export class DaySettlementScene extends BaseDocumentScene {
   private addNextButton(label: string, onClick: () => void): void {
     const button = this.add
       .text(960, this.scale.height - 124, `[ ${label} ]`, {
-        color: "#111417",
-        backgroundColor: "#d9c58b",
+        color: "#071015",
+        backgroundColor: "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "20px",
         padding: { x: 18, y: 10 },
@@ -247,10 +247,10 @@ export class DaySettlementScene extends BaseDocumentScene {
       .setInteractive({ useHandCursor: true });
 
     button.on("pointerover", () => {
-      button.setBackgroundColor("#f3e8ca");
+      button.setBackgroundColor("#f2fbfc");
     });
     button.on("pointerout", () => {
-      button.setBackgroundColor("#d9c58b");
+      button.setBackgroundColor("#2dd4bf");
     });
     button.on("pointerup", onClick);
   }
@@ -265,7 +265,7 @@ export class DaySettlementScene extends BaseDocumentScene {
     this.add
       .text(x, y, `${label}\n${value}`, {
         color,
-        backgroundColor: "#111417",
+        backgroundColor: "#071015",
         fontFamily: this.fontFamily,
         fontSize: "14px",
         lineSpacing: 5,
@@ -287,7 +287,7 @@ export class DaySettlementScene extends BaseDocumentScene {
       .setStrokeStyle(1, 0x263038);
     this.add
       .text(x + 24, y + 20, title, {
-        color: "#d9c58b",
+        color: "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "15px",
       })
@@ -313,10 +313,10 @@ function getSurveillanceColor(grade: string): string {
   }
 
   if (grade === "C") {
-    return "#d9c58b";
+    return "#2dd4bf";
   }
 
-  return "#8f9f7a";
+  return "#7df3e7";
 }
 
 function getContractStatusColor(statusLabel: string): string {
@@ -328,7 +328,7 @@ function getContractStatusColor(statusLabel: string): string {
     return "#f6465d";
   }
 
-  return "#d9c58b";
+  return "#2dd4bf";
 }
 
 function createHint(

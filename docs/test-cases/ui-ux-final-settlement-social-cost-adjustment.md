@@ -31,7 +31,7 @@ Steps:
 1. Open the Main Menu.
 2. Complete the Free Mode path through Opening Approval.
 3. Prepare the active browser session as a Day 5 state with high accumulated social cost.
-4. Activate `Day 정산`.
+4. Let the Intraday timer end and transition to Day Settlement.
 5. Continue from Day Settlement into `Final 정산`.
 6. Compare the page against the `final-settlement-social-cost-adjustment.png` visual baseline.
 

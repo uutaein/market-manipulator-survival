@@ -97,10 +97,10 @@ export class FinalSettlementScene extends BaseDocumentScene {
     this.add
       .rectangle(96, 126, 1088, 112, 0x090d10, 0.9)
       .setOrigin(0, 0)
-      .setStrokeStyle(1, 0x6f6a5b);
+      .setStrokeStyle(1, 0x2d4650);
     this.add
       .text(122, 146, "FINAL GRADE", {
-        color: "#8f9f7a",
+        color: "#7df3e7",
         fontFamily: this.fontFamily,
         fontSize: "14px",
       })
@@ -114,7 +114,7 @@ export class FinalSettlementScene extends BaseDocumentScene {
       .setOrigin(0, 0);
     this.add
       .text(194, 168, getFinalGradeLabel(finalSettlement.finalGrade), {
-        color: "#f3e8ca",
+        color: "#f2fbfc",
         fontFamily: this.fontFamily,
         fontSize: "28px",
       })
@@ -125,7 +125,7 @@ export class FinalSettlementScene extends BaseDocumentScene {
         204,
         `RUN SEED ${shortenSeed(runSeed)} / ${runLengthDays} DAY REPORT / RECORD ${recordStatus}`,
         {
-          color: "#8f9f7a",
+          color: "#7df3e7",
           fontFamily: this.fontFamily,
           fontSize: "13px",
         },
@@ -161,7 +161,7 @@ export class FinalSettlementScene extends BaseDocumentScene {
         "BUDGET",
         failureSummary?.budgetLabel ??
           `${formatNumber(finalSettlement.finalBudget)}B`,
-        "#d9c58b",
+        "#2dd4bf",
       );
       this.add
         .text(
@@ -191,9 +191,9 @@ export class FinalSettlementScene extends BaseDocumentScene {
       150,
       "SUCCESSFUL DAYS",
       `${finalSettlement.successfulDays}/${runLengthDays}`,
-      "#d9c58b",
+      "#2dd4bf",
     );
-    this.addMetricBadge(936, 150, "LOCAL RECORD", recordStatus, "#8f9f7a");
+    this.addMetricBadge(936, 150, "LOCAL RECORD", recordStatus, "#7df3e7");
   }
 
   private drawPerformancePanel(
@@ -222,7 +222,7 @@ export class FinalSettlementScene extends BaseDocumentScene {
           `기준 등급 ${finalSettlement.baseFinalGrade}`,
         ].join("\n"),
         {
-          color: "#c9c1ad",
+          color: "#c2d0d3",
           fontFamily: this.fontFamily,
           fontSize: "16px",
           lineSpacing: 7,
@@ -248,7 +248,7 @@ export class FinalSettlementScene extends BaseDocumentScene {
             : "감시 기록 저장 완료",
         ].join("\n"),
         {
-          color: "#c9c1ad",
+          color: "#c2d0d3",
           fontFamily: this.fontFamily,
           fontSize: "17px",
           lineSpacing: 12,
@@ -282,7 +282,7 @@ export class FinalSettlementScene extends BaseDocumentScene {
           ...adjustmentReasonLines,
         ].join("\n"),
         {
-          color: isAdjusted ? "#ff8a70" : "#c9c1ad",
+          color: isAdjusted ? "#ff8a70" : "#c2d0d3",
           fontFamily: this.fontFamily,
           fontSize: "15px",
           lineSpacing: 7,
@@ -308,7 +308,7 @@ export class FinalSettlementScene extends BaseDocumentScene {
           ? "NOTE: 계약 정산표를 확인한 뒤 재시작 방식을 선택하세요."
           : `${note}\n${progressionNote}`,
         {
-          color: "#d9c58b",
+          color: "#2dd4bf",
           fontFamily: this.fontFamily,
           fontSize: "14px",
           lineSpacing: 5,
@@ -325,7 +325,7 @@ export class FinalSettlementScene extends BaseDocumentScene {
     this.drawPanel(820, 492, 364, 86, "REPLAY OPTIONS");
     this.add
       .text(846, 532, "같은 Seed로 재시도하거나 새 Run을 시작하세요.", {
-        color: "#c9c1ad",
+        color: "#c2d0d3",
         fontFamily: this.fontFamily,
         fontSize: "15px",
         lineSpacing: 4,
@@ -384,7 +384,7 @@ export class FinalSettlementScene extends BaseDocumentScene {
           `리스크 합계 ${formatNumber(riskCostTotal)}B`,
         ].join("\n"),
         {
-          color: "#c9c1ad",
+          color: "#c2d0d3",
           fontFamily: this.fontFamily,
           fontSize: "12px",
           lineSpacing: 2,
@@ -395,7 +395,7 @@ export class FinalSettlementScene extends BaseDocumentScene {
 
     this.add
       .text(930, 506, objectiveLines.join("\n"), {
-        color: "#d9c58b",
+        color: "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "11px",
         lineSpacing: 5,
@@ -414,7 +414,7 @@ export class FinalSettlementScene extends BaseDocumentScene {
     this.add
       .text(x, y, `${label}\n${value}`, {
         color,
-        backgroundColor: "#111417",
+        backgroundColor: "#071015",
         fontFamily: this.fontFamily,
         fontSize: "14px",
         lineSpacing: 5,
@@ -436,7 +436,7 @@ export class FinalSettlementScene extends BaseDocumentScene {
       .setStrokeStyle(1, 0x263038);
     this.add
       .text(x + 24, y + 20, title, {
-        color: "#d9c58b",
+        color: "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "15px",
       })
@@ -479,7 +479,7 @@ function getFinalGradeColor(grade: string): string {
   }
 
   if (grade === "B" || grade === "C") {
-    return "#d9c58b";
+    return "#2dd4bf";
   }
 
   return "#f6465d";

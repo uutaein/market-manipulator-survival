@@ -1,5 +1,9 @@
 import { expect, test } from "@playwright/test";
-import { expectCanvasReady, resetBrowserState } from "./support/canvas";
+import {
+  expectCanvasReady,
+  openDaySettlementScene,
+  resetBrowserState,
+} from "./support/canvas";
 
 test("day settlement visual baseline", async ({ page }) => {
   await resetBrowserState(page);
@@ -31,7 +35,7 @@ test("day settlement visual baseline", async ({ page }) => {
   await expectCanvasReady(canvas);
   await expect(page.locator(".mms-price-chart-overlay")).toBeVisible();
 
-  await page.mouse.click(1090, 637);
+  await openDaySettlementScene(page);
   await page.waitForTimeout(100);
   await expectCanvasReady(canvas);
 

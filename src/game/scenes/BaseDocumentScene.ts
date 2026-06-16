@@ -8,7 +8,8 @@ export type SceneAction = {
 };
 
 export abstract class BaseDocumentScene extends Phaser.Scene {
-  protected readonly fontFamily = "Consolas, Courier New, monospace";
+  protected readonly fontFamily =
+    '"IBM Plex Mono", "Malgun Gothic", "Apple SD Gothic Neo", Consolas, "Courier New", monospace';
 
   protected drawDocumentShell(
     title: string,
@@ -18,15 +19,15 @@ export abstract class BaseDocumentScene extends Phaser.Scene {
   ): void {
     const { width, height } = this.scale;
 
-    this.cameras.main.setBackgroundColor("#111417");
+    this.cameras.main.setBackgroundColor("#071015");
 
     this.add
-      .rectangle(width / 2, height / 2, width - 96, height - 96, 0x1b1f22)
-      .setStrokeStyle(2, 0x6f6a5b);
+      .rectangle(width / 2, height / 2, width - 96, height - 96, 0x0b1419)
+      .setStrokeStyle(2, 0x2d4650);
 
     this.add
       .text(96, 78, title, {
-        color: "#f3e8ca",
+        color: "#f2fbfc",
         fontFamily: this.fontFamily,
         fontSize: "30px"
       })
@@ -34,7 +35,7 @@ export abstract class BaseDocumentScene extends Phaser.Scene {
 
     this.add
       .text(96, 136, lines.join("\n"), {
-        color: "#c9c1ad",
+        color: "#c2d0d3",
         fontFamily: this.fontFamily,
         fontSize: "18px",
         lineSpacing: 10,
@@ -45,7 +46,7 @@ export abstract class BaseDocumentScene extends Phaser.Scene {
     if (footerLabel) {
       this.add
         .text(width - 286, height - 104, footerLabel, {
-          color: "#8f9f7a",
+          color: "#7df3e7",
           fontFamily: this.fontFamily,
           fontSize: "14px"
         })
@@ -61,8 +62,8 @@ export abstract class BaseDocumentScene extends Phaser.Scene {
     const { height } = this.scale;
     const button = this.add
       .text(96 + index * 260, height - 124, `[ ${action.label} ]`, {
-        color: "#111417",
-        backgroundColor: "#d9c58b",
+        color: "#071015",
+        backgroundColor: "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "20px",
         padding: { x: 16, y: 10 }
@@ -88,8 +89,8 @@ export abstract class BaseDocumentScene extends Phaser.Scene {
   ): Phaser.GameObjects.Text {
     const button = this.add
       .text(x, y, label, {
-        color: selected ? "#111417" : "#f3e8ca",
-        backgroundColor: selected ? "#d9c58b" : "#2a3033",
+        color: selected ? "#071015" : "#f2fbfc",
+        backgroundColor: selected ? "#2dd4bf" : "#17252b",
         fontFamily: this.fontFamily,
         fontSize: "17px",
         padding: { x: 12, y: 8 }

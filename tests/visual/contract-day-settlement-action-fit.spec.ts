@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import {
   expectCanvasReady,
+  openDaySettlementScene,
   prepareContractDaySettlementActionFitState,
   resetBrowserState,
 } from "./support/canvas";
@@ -39,7 +40,7 @@ test("contract day settlement action fit summary visual baseline", async ({
 
   await prepareContractDaySettlementActionFitState(page);
 
-  await page.mouse.click(1090, 637);
+  await openDaySettlementScene(page);
   await page.waitForTimeout(100);
   await expectCanvasReady(canvas);
 

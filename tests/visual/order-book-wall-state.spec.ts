@@ -31,12 +31,16 @@ test("order-book wall state visual baseline", async ({ page }) => {
   await expectCanvasReady(canvas);
   await expect(page.locator(".mms-price-chart-overlay")).toBeVisible();
   await expect(page.locator(".mms-orderbook-overlay")).toBeVisible();
+  await expect(page.locator(".mms-orderbook-body.ask .mms-orderbook-row")).toHaveCount(5);
+  await expect(page.locator(".mms-orderbook-body.bid .mms-orderbook-row")).toHaveCount(5);
 
   await prepareOrderBookWallState(page);
   await page.waitForTimeout(1100);
   await expectCanvasReady(canvas);
 
   await expect(page.locator(".mms-orderbook-row.wall-active")).toBeVisible();
+  await expect(page.locator(".mms-orderbook-body.ask .mms-orderbook-row:not([hidden])")).toHaveCount(5);
+  await expect(page.locator(".mms-orderbook-body.bid .mms-orderbook-row:not([hidden])")).toHaveCount(5);
   await expect(page).toHaveScreenshot("order-book-wall-state.png", {
     animations: "disabled",
     fullPage: true

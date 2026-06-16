@@ -158,14 +158,14 @@ export class PreOpenCardScene extends BaseDocumentScene {
       .setStrokeStyle(1, 0x263038);
     this.add
       .text(118, 136, `DAY ${dayState.dayIndex} · PRE-OPEN DECISION`, {
-        color: "#8f9f7a",
+        color: "#7df3e7",
         fontFamily: this.fontFamily,
         fontSize: "12px",
       })
       .setOrigin(0, 0);
     this.add
       .text(118, 156, `선택: ${formatSelectedCard(dayState)}`, {
-        color: "#c9c1ad",
+        color: "#c2d0d3",
         fontFamily: this.fontFamily,
         fontSize: "18px",
       })
@@ -180,10 +180,10 @@ export class PreOpenCardScene extends BaseDocumentScene {
         0.96,
       )
       .setOrigin(0, 0)
-      .setStrokeStyle(1, dayState.preOpenCardId ? 0x8f9f7a : 0xd9c58b);
+      .setStrokeStyle(1, dayState.preOpenCardId ? 0x7df3e7 : 0x2dd4bf);
     this.add
       .text(526, 145, dayState.preOpenCardId ? "NEWS READY" : "NEWS LOCKED", {
-        color: dayState.preOpenCardId ? "#8f9f7a" : "#d9c58b",
+        color: dayState.preOpenCardId ? "#7df3e7" : "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "13px",
       })
@@ -195,7 +195,7 @@ export class PreOpenCardScene extends BaseDocumentScene {
         .setStrokeStyle(1, 0x263038);
       this.add
         .text(116, 189, "첫 포지션 확보를 위해 선취매만 활성화됩니다.", {
-          color: "#d9c58b",
+          color: "#2dd4bf",
           fontFamily: this.fontFamily,
           fontSize: "14px",
         })
@@ -211,7 +211,7 @@ export class PreOpenCardScene extends BaseDocumentScene {
           190,
           `보유 포지션 유지 중 · ${availableCards.length}개 선택지 비교 가능 · 최대 1장 선택`,
           {
-            color: "#8f9f7a",
+            color: "#7df3e7",
             fontFamily: this.fontFamily,
             fontSize: "13px",
           },
@@ -253,7 +253,7 @@ export class PreOpenCardScene extends BaseDocumentScene {
       .setStrokeStyle(1, 0x263038);
     this.add
       .text(792, 136, summaryLines.join("\n"), {
-        color: "#f3e8ca",
+        color: "#f2fbfc",
         fontFamily: this.fontFamily,
         fontSize: comparisonOpen ? "14px" : "15px",
         lineSpacing: comparisonOpen ? 5 : 7,
@@ -280,7 +280,7 @@ export class PreOpenCardScene extends BaseDocumentScene {
       .setStrokeStyle(1, 0x263038);
     this.add
       .text(904, 386, "LOCKED FUTURE CHOICES", {
-        color: "#8f9f7a",
+        color: "#7df3e7",
         fontFamily: this.fontFamily,
         fontSize: "13px",
       })
@@ -294,7 +294,7 @@ export class PreOpenCardScene extends BaseDocumentScene {
         .setStrokeStyle(1, 0x263038);
       this.add
         .text(916, y + 7, `${card.displayName} · 잠김`, {
-          color: "#8fa2a6",
+          color: "#a8c0c4",
           fontFamily: this.fontFamily,
           fontSize: "13px",
         })
@@ -309,7 +309,7 @@ export class PreOpenCardScene extends BaseDocumentScene {
       .setStrokeStyle(1, 0x263038);
     this.add
       .text(x + 22, this.scale.height - 118, message, {
-        color: "#d9c58b",
+        color: "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "16px",
         wordWrap: { width: width - 44 },
@@ -354,10 +354,10 @@ export class PreOpenCardScene extends BaseDocumentScene {
         1,
       )
       .setOrigin(0, 0)
-      .setStrokeStyle(1, selected ? 0xd9c58b : 0x263038);
+      .setStrokeStyle(1, selected ? 0x2dd4bf : 0x263038);
     this.add
       .text(panelX + 22, y + 14, "선취매", {
-        color: selected ? "#f3e8ca" : "#d9c58b",
+        color: selected ? "#f2fbfc" : "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "22px",
       })
@@ -368,7 +368,7 @@ export class PreOpenCardScene extends BaseDocumentScene {
         y + 48,
         "개장 전 미리 확보한다. 장가격보다 비싸게 사서 시작 손실이 날 수 있다.",
         {
-          color: "#c9c1ad",
+          color: "#c2d0d3",
           fontFamily: this.fontFamily,
           fontSize: "13px",
           lineSpacing: 2,
@@ -378,7 +378,7 @@ export class PreOpenCardScene extends BaseDocumentScene {
       .setOrigin(0, 0);
 
     const track = this.add
-      .rectangle(trackX, trackY, trackWidth, 8, 0x2a3033, 1)
+      .rectangle(trackX, trackY, trackWidth, 8, 0x17252b, 1)
       .setOrigin(0, 0.5);
     const highRiskX = percentToX(earlyPositioningHighRiskThresholdPercent);
     this.add
@@ -412,7 +412,7 @@ export class PreOpenCardScene extends BaseDocumentScene {
         trackY,
         percentToX(effect.earlyPositioningBudgetPercent) - trackX,
         8,
-        0xd9c58b,
+        0x2dd4bf,
         0.95,
       )
       .setOrigin(0, 0.5);
@@ -420,7 +420,7 @@ export class PreOpenCardScene extends BaseDocumentScene {
       percentToX(effect.earlyPositioningBudgetPercent),
       trackY,
       11,
-      0xf3e8ca,
+      0xe6f7f8,
       1,
     );
     const previewText = this.add
@@ -433,7 +433,7 @@ export class PreOpenCardScene extends BaseDocumentScene {
           entryPremiumPercent,
         ),
         {
-          color: selected ? "#f3e8ca" : getEarlyPositioningPreviewColor(effect),
+          color: selected ? "#f2fbfc" : getEarlyPositioningPreviewColor(effect),
           fontFamily: this.fontFamily,
           fontSize: "15px",
           lineSpacing: 6,
@@ -530,10 +530,10 @@ export class PreOpenCardScene extends BaseDocumentScene {
     this.add
       .rectangle(x, y, width, height, selected ? 0x273e2f : 0x090d10, 0.92)
       .setOrigin(0, 0)
-      .setStrokeStyle(1, selected ? 0xd9c58b : 0x263038);
+      .setStrokeStyle(1, selected ? 0x2dd4bf : 0x263038);
     this.add
       .text(x + 18, y + 14, "DECISION IMPACT", {
-        color: "#8f9f7a",
+        color: "#7df3e7",
         fontFamily: this.fontFamily,
         fontSize: "12px",
       })
@@ -544,7 +544,7 @@ export class PreOpenCardScene extends BaseDocumentScene {
         y + 14,
         `원가 +${formatPercent(entryPremiumPercent)}`,
         {
-          color: selected ? "#f3e8ca" : "#d9c58b",
+          color: selected ? "#f2fbfc" : "#2dd4bf",
           fontFamily: this.fontFamily,
           fontSize: "12px",
         },
@@ -556,21 +556,21 @@ export class PreOpenCardScene extends BaseDocumentScene {
       y + 38,
       width - 36,
       "투입",
-      0xd9c58b,
+      0x2dd4bf,
     );
     const budgetRow = this.createImpactMeterRow(
       x + 18,
       y + 58,
       width - 36,
       "잔여",
-      0x8f9f7a,
+      0x7df3e7,
     );
     const riskRow = this.createImpactMeterRow(
       x + 18,
       y + 78,
       width - 36,
       "위험",
-      effect.riskBand === "concentrated" ? 0xffb86c : 0x8f9f7a,
+      effect.riskBand === "concentrated" ? 0xffb86c : 0x7df3e7,
     );
 
     const applyEffect = (
@@ -582,7 +582,7 @@ export class PreOpenCardScene extends BaseDocumentScene {
         currentBudget > 0 ? (remainingBudget / currentBudget) * 100 : 0;
       const riskPercent = getEarlyPositioningImpactRiskPercent(nextEffect);
       const riskColor =
-        nextEffect.riskBand === "concentrated" ? 0xffb86c : 0x8f9f7a;
+        nextEffect.riskBand === "concentrated" ? 0xffb86c : 0x7df3e7;
 
       updateImpactMeterRow(
         percentRow,
@@ -623,7 +623,7 @@ export class PreOpenCardScene extends BaseDocumentScene {
   ): ImpactMeterRow {
     const labelText = this.add
       .text(x, y, label, {
-        color: "#8fa2a6",
+        color: "#a8c0c4",
         fontFamily: this.fontFamily,
         fontSize: "11px",
       })
@@ -659,17 +659,17 @@ export class PreOpenCardScene extends BaseDocumentScene {
     const background = this.add
       .rectangle(x, y, width, height, selected ? 0x273e2f : 0x151b1f, 1)
       .setOrigin(0, 0)
-      .setStrokeStyle(1, selected ? 0xd9c58b : 0x263038);
+      .setStrokeStyle(1, selected ? 0x2dd4bf : 0x263038);
     const titleText = this.add
       .text(x + 18, y + 12, title, {
-        color: selected ? "#f3e8ca" : "#d9c58b",
+        color: selected ? "#f2fbfc" : "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "19px",
       })
       .setOrigin(0, 0);
     const bodyText = this.add
       .text(x + 18, y + 42, body, {
-        color: "#c9c1ad",
+        color: "#c2d0d3",
         fontFamily: this.fontFamily,
         fontSize: "14px",
         wordWrap: { width: width - 36 },
@@ -691,7 +691,7 @@ export class PreOpenCardScene extends BaseDocumentScene {
   ): void {
     this.add
       .text(x, y, formatCardBudgetPreview(currentBudget, budgetDelta), {
-        color: selected ? "#f3e8ca" : "#8f9f7a",
+        color: selected ? "#f2fbfc" : "#7df3e7",
         fontFamily: this.fontFamily,
         fontSize: "15px",
         lineSpacing: 6,
@@ -803,7 +803,7 @@ function formatEarlyPositioningRiskLine(
 function getEarlyPositioningPreviewColor(
   effect: ReturnType<typeof previewEarlyPositioningEffect>,
 ): string {
-  return effect.riskBand === "concentrated" ? "#ffb86c" : "#8f9f7a";
+  return effect.riskBand === "concentrated" ? "#ffb86c" : "#7df3e7";
 }
 
 function formatCardBudgetPreview(

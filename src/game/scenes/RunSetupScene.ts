@@ -93,7 +93,7 @@ export class RunSetupScene extends BaseDocumentScene {
         139,
         isNextDayAssetSelection ? "NEXT DAY TARGET" : "RUN TARGET",
         {
-          color: "#8f9f7a",
+          color: "#7df3e7",
           fontFamily: this.fontFamily,
           fontSize: "12px",
         },
@@ -101,7 +101,7 @@ export class RunSetupScene extends BaseDocumentScene {
       .setOrigin(0, 0);
     this.add
       .text(248, 135, `${sectorName} / ${assetName}`, {
-        color: "#f3e8ca",
+        color: "#f2fbfc",
         fontFamily: this.fontFamily,
         fontSize: "24px",
       })
@@ -114,7 +114,7 @@ export class RunSetupScene extends BaseDocumentScene {
           ? "Run/Day 리스크 보존"
           : "세부 성향은 Run 중 관찰",
         {
-          color: "#d9c58b",
+          color: "#2dd4bf",
           fontFamily: this.fontFamily,
           fontSize: "14px",
         },
@@ -127,7 +127,7 @@ export class RunSetupScene extends BaseDocumentScene {
   ): void {
     this.add
       .text(96, 204, "SECTOR RADAR", {
-        color: "#d9c58b",
+        color: "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "15px",
       })
@@ -159,7 +159,7 @@ export class RunSetupScene extends BaseDocumentScene {
           )
           .join(" / ")}`,
         {
-          color: "#8fa2a6",
+          color: "#a8c0c4",
           fontFamily: this.fontFamily,
           fontSize: "12px",
           wordWrap: { width: 250 },
@@ -171,7 +171,7 @@ export class RunSetupScene extends BaseDocumentScene {
   private drawAssetChoices(): void {
     this.add
       .text(382, 204, "TARGET SHORTLIST", {
-        color: "#d9c58b",
+        color: "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "15px",
       })
@@ -206,24 +206,24 @@ export class RunSetupScene extends BaseDocumentScene {
     this.add
       .rectangle(790, 204, 394, 300, 0x090d10, 0.96)
       .setOrigin(0, 0)
-      .setStrokeStyle(1, 0x6f6a5b);
+      .setStrokeStyle(1, 0x2d4650);
     this.add
       .text(816, 230, "OBSERVATION MEMO", {
-        color: "#d9c58b",
+        color: "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "15px",
       })
       .setOrigin(0, 0);
     this.add
       .text(816, 264, selectedAsset.displayName, {
-        color: "#f3e8ca",
+        color: "#f2fbfc",
         fontFamily: this.fontFamily,
         fontSize: "28px",
       })
       .setOrigin(0, 0);
     this.add
       .text(816, 308, `섹터: ${selectedSectorName}`, {
-        color: "#8f9f7a",
+        color: "#7df3e7",
         fontFamily: this.fontFamily,
         fontSize: "16px",
       })
@@ -239,7 +239,7 @@ export class RunSetupScene extends BaseDocumentScene {
           `뉴스 반응: ${getNewsSensitivityLabel(getAssetNewsSensitivity(selectedAsset))}`,
         ].join("\n"),
         {
-          color: "#d9c58b",
+          color: "#2dd4bf",
           fontFamily: this.fontFamily,
           fontSize: "14px",
           lineSpacing: 5,
@@ -253,7 +253,7 @@ export class RunSetupScene extends BaseDocumentScene {
         isNextDayAssetSelection ? 382 : 392,
         selectedAsset.shortBriefing,
         {
-          color: "#c9c1ad",
+          color: "#c2d0d3",
           fontFamily: this.fontFamily,
           fontSize: isNextDayAssetSelection ? "15px" : "17px",
           lineSpacing: isNextDayAssetSelection ? 6 : 8,
@@ -277,7 +277,7 @@ export class RunSetupScene extends BaseDocumentScene {
       .setStrokeStyle(1, 0x263038);
     this.add
       .text(828, 447, "DISCOVERY RULE", {
-        color: "#8f9f7a",
+        color: "#7df3e7",
         fontFamily: this.fontFamily,
         fontSize: "11px",
       })
@@ -291,7 +291,7 @@ export class RunSetupScene extends BaseDocumentScene {
           "관찰: 내부 성향·감시/예산 효율",
         ].join("\n"),
         {
-          color: "#d9c58b",
+          color: "#2dd4bf",
           fontFamily: this.fontFamily,
           fontSize: "12px",
           lineSpacing: 2,
@@ -308,7 +308,7 @@ export class RunSetupScene extends BaseDocumentScene {
       .setStrokeStyle(1, 0x263038);
     this.add
       .text(828, 442, "RUN CARRYOVER", {
-        color: "#8f9f7a",
+        color: "#7df3e7",
         fontFamily: this.fontFamily,
         fontSize: "11px",
       })
@@ -324,7 +324,7 @@ export class RunSetupScene extends BaseDocumentScene {
           )} · 사회비용 ${formatNumber(runState.socialCost)}`,
         ].join("\n"),
         {
-          color: "#d9c58b",
+          color: "#2dd4bf",
           fontFamily: this.fontFamily,
           fontSize: "12px",
           lineSpacing: 2,
@@ -341,8 +341,8 @@ export class RunSetupScene extends BaseDocumentScene {
         536,
         `[ ${isNextDayAssetSelection ? "다음 Day 준비" : "Run 시작"} ]`,
         {
-          color: "#111417",
-          backgroundColor: "#d9c58b",
+          color: "#071015",
+          backgroundColor: "#2dd4bf",
           fontFamily: this.fontFamily,
           fontSize: "22px",
           padding: { x: 20, y: 12 },
@@ -351,10 +351,10 @@ export class RunSetupScene extends BaseDocumentScene {
       .setInteractive({ useHandCursor: true });
 
     button.on("pointerover", () => {
-      button.setBackgroundColor("#f3e8ca");
+      button.setBackgroundColor("#f2fbfc");
     });
     button.on("pointerout", () => {
-      button.setBackgroundColor("#d9c58b");
+      button.setBackgroundColor("#2dd4bf");
     });
     button.on("pointerup", () => {
       if (isNextDayAssetSelection) {
@@ -387,17 +387,17 @@ export class RunSetupScene extends BaseDocumentScene {
         selected ? 0.96 : 0.88,
       )
       .setOrigin(0, 0)
-      .setStrokeStyle(1, selected ? 0xd9c58b : 0x263038);
+      .setStrokeStyle(1, selected ? 0x2dd4bf : 0x263038);
     const labelText = this.add
       .text(x + 12, y + 7, label, {
-        color: selected ? "#f3e8ca" : "#c9c1ad",
+        color: selected ? "#f2fbfc" : "#c2d0d3",
         fontFamily: this.fontFamily,
         fontSize: "14px",
       })
       .setOrigin(0, 0);
     const metaText = this.add
       .text(x + 184, y + 7, meta, {
-        color: selected ? "#d9c58b" : "#8fa2a6",
+        color: selected ? "#2dd4bf" : "#a8c0c4",
         fontFamily: this.fontFamily,
         fontSize: "12px",
       })
@@ -427,17 +427,17 @@ export class RunSetupScene extends BaseDocumentScene {
         selected ? 0.95 : 0.9,
       )
       .setOrigin(0, 0)
-      .setStrokeStyle(1, selected ? 0xd9c58b : 0x263038);
+      .setStrokeStyle(1, selected ? 0x2dd4bf : 0x263038);
     const titleText = this.add
       .text(x + 16, y + 12, title, {
-        color: selected ? "#f3e8ca" : "#d9c58b",
+        color: selected ? "#f2fbfc" : "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "18px",
       })
       .setOrigin(0, 0);
     const bodyText = this.add
       .text(x + 16, y + 42, body, {
-        color: "#c9c1ad",
+        color: "#c2d0d3",
         fontFamily: this.fontFamily,
         fontSize: "13px",
         wordWrap: { width: 292 },

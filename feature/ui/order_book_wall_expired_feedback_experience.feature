@@ -12,6 +12,6 @@ Feature: Order-book wall expired feedback experience
     When the Intraday order-book panel is rendered
     Then no active wall row indicator is shown
     And the expired wall row shows cooldown with recent expiry refund state
-    And the recent wall feedback shows the expired wall and released barrier
+    And row-level feedback shows the expired wall and released barrier
     And the feedback shows zero remaining depth and refunded reserve
     And available wall actions remain embedded in order-book rows

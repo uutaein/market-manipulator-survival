@@ -28,12 +28,12 @@ Steps:
 1. Open the Main Menu.
 2. Complete the Free Mode path through Opening Approval.
 3. Prepare the active browser session with wall cooldown and insufficient budget.
-4. Wait until the order-book overlay and wall feedback are visible.
+4. Wait until the order-book overlay and row-level wall feedback are visible.
 5. Compare the page against the `order-book-wall-blocked.png` visual baseline.
 
 Expected Result:
 - The cooldown row shows a visible waiting state such as `대기 Ns`.
-- The wall feedback panel explains cooldown and insufficient-budget availability.
+- Row-level feedback explains cooldown and insufficient-budget availability.
 - No active wall indicator is shown because no wall is active.
 - Wall affordances remain embedded in the order-book rows.
 

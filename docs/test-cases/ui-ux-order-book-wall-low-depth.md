@@ -14,7 +14,7 @@ References:
 - `SRS-WALL-STATE-UI-001`: Active wall rows show a compact remaining-depth indicator.
 - `SRS-WALL-STATE-UI-002`: The indicator fill ratio is clamped from remaining depth over original depth.
 - `SRS-WALL-STATE-UI-005`: Active row title text includes remaining depth and remaining refundable reserve.
-- `SRS-WALL-FEED-UI-003`: Event text uses game abstraction terms such as depth, reserve, refund, and barrier.
+- `SRS-WALL-FEED-UI-003`: Row-level feedback text uses game abstraction terms such as depth, reserve, refund, and barrier when text is needed.
 
 Preconditions:
 

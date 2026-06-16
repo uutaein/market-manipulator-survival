@@ -11,9 +11,9 @@
 
 References:
 
-- `SRS-WALL-FEED-UI-001`: Intraday displays latest wall feedback near the action/status area.
-- `SRS-WALL-FEED-UI-002`: UI shows up to three recent wall events.
-- `SRS-WALL-FEED-UI-003`: Event text uses game abstraction terms such as depth, reserve, refund, and barrier.
+- `SRS-WALL-FEED-UI-001`: Intraday must not display a separate order-book wall feedback panel.
+- `SRS-WALL-FEED-UI-002`: Recent wall feedback is represented on the affected order-book row.
+- `SRS-WALL-FEED-UI-003`: Row-level feedback text uses game abstraction terms such as depth, reserve, refund, and barrier when text is needed.
 - `SRS-WALL-STATE-UI-004`: The active indicator disappears when the wall is inactive, removed, expired, or collapsed.
 
 Preconditions:
@@ -29,14 +29,14 @@ Steps:
 1. Open the Main Menu.
 2. Complete the Free Mode path through Opening Approval.
 3. Prepare the active browser session with a collapsed buy wall event log.
-4. Wait until the order-book overlay and wall feedback are visible.
+4. Wait until the order-book overlay and row-level wall feedback are visible.
 5. Compare the page against the `order-book-wall-collapse-feedback.png` visual baseline.
 
 Expected Result:
 
 - No order-book row shows the active wall indicator.
-- The wall feedback area shows a recent collapsed wall event.
-- The collapsed event includes `depth 0`, `환급 0B`, and `방어선 해제`.
+- No separate wall feedback area is shown.
+- The collapsed wall row shows local cooldown/released-barrier state.
 - Wall actions remain embedded in the order-book rows without permanent extra buttons.
 
 Automation:

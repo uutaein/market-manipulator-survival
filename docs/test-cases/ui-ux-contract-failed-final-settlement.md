@@ -28,7 +28,7 @@ Steps:
 1. Open the Main Menu.
 2. Complete the path through Opening Approval until the Intraday screen is active.
 3. Prepare the active browser session as the final Day of a failed Contract Mode mandate.
-4. Activate `Day 정산`.
+4. Let the Intraday timer end and transition to Day Settlement.
 5. Continue from Day Settlement into `Final 정산`.
 6. Wait until the Final Settlement canvas is visible and non-empty.
 7. Compare the page against the `contract-failed-final-settlement.png` visual baseline.

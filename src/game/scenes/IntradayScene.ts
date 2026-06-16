@@ -60,20 +60,17 @@ import {
   IntradayPriceChartOverlay,
   IntradayTelemetryOverlay,
   buildPriceCandles,
+  type DayCumulativeChartBar,
   type MarketBoardRankRow,
   type MarketTerminalModel,
   type OrderBookOverlayWallAction,
   type IntradayTelemetryTone,
 } from "../dom/intradayOverlays";
+import type { RunState } from "../../domain/run/runState";
 
-const antMascotTextureKey = "mms-ant-mood-mascot";
-const antMascotFrameSize = 627;
+const intradayPriceChartSecondsPerCandle = 2;
 
 export class IntradayScene extends BaseDocumentScene {
-  private priceChartGraphics: Phaser.GameObjects.Graphics | null = null;
-  private priceChartLabel: Phaser.GameObjects.Text | null = null;
-  private objectiveStatusBackplate: Phaser.GameObjects.Rectangle | null = null;
-  private objectiveStatusText: Phaser.GameObjects.Text | null = null;
   private sessionStatusText: Phaser.GameObjects.Text | null = null;
   private pnlBadgeText: Phaser.GameObjects.Text | null = null;
   private riskAlertText: Phaser.GameObjects.Text | null = null;
@@ -84,7 +81,6 @@ export class IntradayScene extends BaseDocumentScene {
   private moneyText: Phaser.GameObjects.Text | null = null;
   private statsText: Phaser.GameObjects.Text | null = null;
   private actionStatusText: Phaser.GameObjects.Text | null = null;
-  private orderBookWallLogText: Phaser.GameObjects.Text | null = null;
   private contractText: Phaser.GameObjects.Text | null = null;
   private autoCardText: Phaser.GameObjects.Text | null = null;
   private manualActionButtons: Partial<
@@ -97,6 +93,8 @@ export class IntradayScene extends BaseDocumentScene {
     Record<ManualActionId, Phaser.GameObjects.Rectangle>
   > = {};
   private repositionButton: Phaser.GameObjects.Text | null = null;
+  private playbackSpeedButton: Phaser.GameObjects.Text | null = null;
+  private playbackSpeedMultiplier: PlaybackSpeedMultiplier = 1;
   private manualActionFeedbackEndsAt: Partial<Record<ManualActionId, number>> =
     {};
   private manualActionButtonModes: Partial<
@@ -106,20 +104,12 @@ export class IntradayScene extends BaseDocumentScene {
   private previousMarketTradeValues = new Map<string, number>();
   private previousMarketTradeValueElapsedSec = 0;
   private autoChoiceObjects: Phaser.GameObjects.GameObject[] = [];
+  private autoCardBadgeObjects: Phaser.GameObjects.GameObject[] = [];
   private documentEventObjects: Phaser.GameObjects.GameObject[] = [];
   private retailSwarmObjects: Phaser.GameObjects.GameObject[] = [];
 
   constructor() {
     super(SceneKeys.Intraday);
-  }
-
-  preload(): void {
-    if (!this.textures.exists(antMascotTextureKey)) {
-      this.load.spritesheet(antMascotTextureKey, "/assets/meme-ant-moods.png", {
-        frameWidth: antMascotFrameSize,
-        frameHeight: antMascotFrameSize,
-      });
-    }
   }
 
   create(): void {
@@ -132,14 +122,15 @@ export class IntradayScene extends BaseDocumentScene {
     this.previousMarketBoardRanks = new Map();
     this.previousMarketTradeValues = new Map();
     this.previousMarketTradeValueElapsedSec = 0;
+    this.playbackSpeedMultiplier = 1;
 
     this.drawDocumentShell("장중 운용 화면", [], undefined, "LIVE SESSION");
     this.drawIntradayDeskScaffold();
 
     this.sessionStatusText = this.add
-      .text(96, 118, "", {
-        color: "#111417",
-        backgroundColor: "#d9c58b",
+      .text(intradayLeftX, 118, "", {
+        color: "#071015",
+        backgroundColor: "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "14px",
         padding: { x: 10, y: 5 },
@@ -156,7 +147,7 @@ export class IntradayScene extends BaseDocumentScene {
       .setOrigin(0, 0);
     this.riskAlertText = this.add
       .text(894, 122, "", {
-        color: "#f3e8ca",
+        color: "#f2fbfc",
         backgroundColor: "#5a2024",
         fontFamily: this.fontFamily,
         fontSize: "12px",
@@ -166,30 +157,10 @@ export class IntradayScene extends BaseDocumentScene {
       })
       .setOrigin(0, 0);
 
-    this.priceChartGraphics = this.add.graphics();
-    this.priceChartLabel = this.add
-      .text(108, 140, "", {
-        color: "#f3e8ca",
-        fontFamily: this.fontFamily,
-        fontSize: "13px",
-      })
-      .setOrigin(0, 0);
-    this.objectiveStatusBackplate = this.add
-      .rectangle(312, 137, 242, 21, 0xd9c58b, 0.96)
-      .setOrigin(0, 0)
-      .setStrokeStyle(1, 0x6f6a5b, 0.7);
-    this.objectiveStatusText = this.add
-      .text(318, 141, "", {
-        color: "#111417",
-        fontFamily: this.fontFamily,
-        fontSize: "12px",
-      })
-      .setOrigin(0, 0)
-      .setVisible(false);
     this.priceChartOverlay = new IntradayPriceChartOverlay(this, {
-      x: 96,
+      x: intradayLeftX,
       y: 160,
-      width: 350,
+      width: intradayPriceChartWidth,
       height: 150,
       targetMinFallback: gameSession.ensureDay().targetBandMin,
       targetMaxFallback: gameSession.ensureDay().targetBandMax,
@@ -199,96 +170,79 @@ export class IntradayScene extends BaseDocumentScene {
     this.orderBookOverlay = new IntradayOrderBookOverlay(
       this,
       {
-        x: 452,
-        y: 160,
-        width: 122,
-        height: 150,
+        x: intradayOrderBookX,
+        y: 152,
+        width: intradayOrderBookWidth,
+        height: 190,
       },
       (side, offsetPercent, priceChangePercent) =>
         this.handleOrderBookWallAction(side, offsetPercent, priceChangePercent),
     );
     this.marketTerminalOverlay = new IntradayMarketTerminalOverlay(this, {
-      x: 610,
+      x: intradayRightX + 6,
       y: 152,
-      width: 560,
+      width: intradayRightWidth - 16,
       height: 354,
     });
     this.telemetryOverlay = new IntradayTelemetryOverlay(this, {
-      x: 108,
+      x: intradayLeftX + 12,
       y: 344,
-      width: 446,
+      width: intradayLeftWidth - 24,
       height: 92,
     });
 
     this.contractText = this.add
-      .text(610, 92, "", {
-        color: "#d9c58b",
-        backgroundColor: "#111417",
+      .text(intradayRightX, 92, "", {
+        color: "#2dd4bf",
+        backgroundColor: "#071015",
         fontFamily: this.fontFamily,
         fontSize: "11px",
         lineSpacing: 1,
         padding: { x: 8, y: 5 },
-        wordWrap: { width: 270 },
+        wordWrap: { width: intradayRightWidth - 24 },
       })
       .setOrigin(0, 0);
 
     this.moneyText = this.add
-      .text(96, 326, "", {
-        color: "#f3e8ca",
+      .text(intradayLeftX, 326, "", {
+        color: "#f2fbfc",
         fontFamily: this.fontFamily,
         fontSize: "12px",
         lineSpacing: 3,
-        wordWrap: { width: 470 },
+        wordWrap: { width: intradayLeftWidth - 24 },
       })
       .setOrigin(0, 0)
       .setVisible(false);
 
     this.statsText = this.add
-      .text(96, 414, "", {
-        color: "#c9c1ad",
+      .text(intradayLeftX, 414, "", {
+        color: "#c2d0d3",
         fontFamily: this.fontFamily,
         fontSize: "12px",
         lineSpacing: 3,
-        wordWrap: { width: 470 },
+        wordWrap: { width: intradayLeftWidth - 24 },
       })
       .setOrigin(0, 0)
       .setVisible(false);
 
     this.autoCardText = this.add
-      .text(616, 532, "", {
-        color: "#c9c1ad",
-        fontFamily: this.fontFamily,
-        fontSize: "13px",
-        lineSpacing: 2,
-        wordWrap: { width: 560 },
-      })
-      .setOrigin(0, 0);
-
-    this.actionStatusText = this.add
-      .text(108, 550, "수동 액션: 대기", {
-        color: "#8f9f7a",
-        fontFamily: this.fontFamily,
-        fontSize: "15px",
-        wordWrap: { width: 500 },
-      })
-      .setOrigin(0, 0);
-    this.orderBookWallLogText = this.add
-      .text(610, 626, "", {
-        color: "#8fa2a6",
-        backgroundColor: "#0d171d",
+      .text(intradayRightX + 12, 532, "", {
+        color: "#c2d0d3",
         fontFamily: this.fontFamily,
         fontSize: "12px",
-        lineSpacing: 1,
-        padding: { x: 8, y: 5 },
-        wordWrap: { width: 390 },
+        lineSpacing: 2,
+        wordWrap: { width: intradayRightWidth - 24 },
       })
       .setOrigin(0, 0);
 
+    this.actionStatusText = null;
+
     manualActions.forEach((action, index) => {
-      const buttonX = 96 + index * 206;
+      const buttonX =
+        manualActionButtonStartX + index * manualActionButtonWidth;
       const button = this.addDocumentButton(
         buttonX,
-        590,
+        manualActionButtonY,
         action.displayName,
         () => {
           const activeEffect =
@@ -321,14 +275,26 @@ export class IntradayScene extends BaseDocumentScene {
           this.routeIfRunFailed();
         },
       );
+      button.setFixedSize(
+        manualActionButtonWidth,
+        manualActionButtonHeight,
+      );
+      button.setAlign("center");
       this.manualActionButtons[action.id] = button;
       this.manualActionGaugeTracks[action.id] = this.add
-        .rectangle(buttonX, 648, manualActionGaugeWidth, 5, 0x2a3033, 0.95)
+        .rectangle(
+          buttonX,
+          manualActionGaugeY,
+          manualActionButtonWidth,
+          5,
+          0x17252b,
+          0.95,
+        )
         .setOrigin(0, 0.5);
       this.manualActionGaugeBars[action.id] = this.add
         .rectangle(
           buttonX,
-          648,
+          manualActionGaugeY,
           0,
           5,
           getManualActionFeedbackColorNumber(action.id),
@@ -337,9 +303,24 @@ export class IntradayScene extends BaseDocumentScene {
         .setOrigin(0, 0.5);
     });
 
-    this.addDocumentButton(1040, 618, "Day 정산", () => {
-      this.scene.start(SceneKeys.DaySettlement);
-    });
+    this.playbackSpeedButton = this.addDocumentButton(
+      manualActionButtonStartX + manualActions.length * manualActionButtonWidth,
+      manualActionButtonY,
+      getPlaybackSpeedButtonLabel(this.playbackSpeedMultiplier),
+      () => {
+        this.playbackSpeedMultiplier = getNextPlaybackSpeedMultiplier(
+          this.playbackSpeedMultiplier,
+        );
+        this.refreshPlaybackSpeedButton();
+      },
+    );
+    this.playbackSpeedButton.setFixedSize(
+      manualActionButtonWidth,
+      manualActionButtonHeight,
+    );
+    this.playbackSpeedButton.setAlign("center");
+    this.refreshPlaybackSpeedButton();
+
     this.repositionButton = this.addDocumentButton(
       848,
       590,
@@ -362,7 +343,7 @@ export class IntradayScene extends BaseDocumentScene {
       delay: 1000,
       loop: true,
       callback: () => {
-        const nextState = gameSession.runIntradaySecond();
+        const nextState = this.runIntradayPlaybackTick();
         this.refreshIntradayUi();
 
         if (this.routeIfRunFailed()) {
@@ -377,11 +358,35 @@ export class IntradayScene extends BaseDocumentScene {
   }
 
   private drawIntradayDeskScaffold(): void {
-    this.drawScaffoldPanel(96, 128, 478, 190, "LIVE PRICE DESK");
-    this.drawScaffoldPanel(96, 318, 478, 196, "MONEY / RISK TELEMETRY");
-    this.drawScaffoldPanel(96, 524, 870, 132, "MANUAL ACTIONS");
-    this.drawScaffoldPanel(604, 128, 576, 384, "MARKET BOARD / DASHBOARD");
-    this.drawScaffoldPanel(604, 508, 576, 112, "AUTO CARDS / SYSTEM FEED");
+    this.drawScaffoldPanel(
+      intradayLeftX,
+      128,
+      intradayLeftWidth,
+      190,
+      "LIVE PRICE DESK",
+    );
+    this.drawScaffoldPanel(
+      intradayLeftX,
+      318,
+      intradayLeftWidth,
+      196,
+      "MONEY / RISK TELEMETRY",
+    );
+    this.drawScaffoldPanel(intradayLeftX, 524, intradayLeftWidth, 132, "");
+    this.drawScaffoldPanel(
+      intradayRightX,
+      128,
+      intradayRightWidth,
+      384,
+      "MARKET BOARD / DASHBOARD",
+    );
+    this.drawScaffoldPanel(
+      intradayRightX,
+      508,
+      intradayRightWidth,
+      112,
+      "AUTO CARDS / SYSTEM FEED",
+    );
   }
 
   private drawScaffoldPanel(
@@ -392,16 +397,18 @@ export class IntradayScene extends BaseDocumentScene {
     label: string,
   ): void {
     this.add
-      .rectangle(x, y, width, height, 0x111417, 1)
+      .rectangle(x, y, width, height, 0x071015, 1)
       .setOrigin(0, 0)
       .setStrokeStyle(1, 0x263038);
-    this.add
-      .text(x + 12, y + 8, label, {
-        color: "#8f9f7a",
-        fontFamily: this.fontFamily,
-        fontSize: "11px",
-      })
-      .setOrigin(0, 0);
+    if (label) {
+      this.add
+        .text(x + 12, y + 8, label, {
+          color: "#7df3e7",
+          fontFamily: this.fontFamily,
+          fontSize: "11px",
+        })
+        .setOrigin(0, 0);
+    }
   }
 
   update(time: number): void {
@@ -415,12 +422,30 @@ export class IntradayScene extends BaseDocumentScene {
     this.refreshContractText();
     this.renderRetailSwarm();
     this.refreshAutoCardText();
-    this.refreshOrderBookWallLogText();
     this.renderAutoCardChoices();
     this.renderDocumentEventPopup();
     this.refreshDomOverlayVisibility();
     this.refreshManualActionButtonStyles(this.time.now);
+    this.refreshPlaybackSpeedButton();
     this.refreshRepositionButton();
+  }
+
+  private runIntradayPlaybackTick(): IntradayState {
+    let nextState = gameSession.intradayState ?? gameSession.startIntraday();
+
+    for (let index = 0; index < this.playbackSpeedMultiplier; index += 1) {
+      nextState = gameSession.runIntradaySecond();
+
+      if (
+        gameSession.ensureRun().runStatus === "failed" ||
+        nextState.isPaused ||
+        nextState.timeRemainingSec <= 0
+      ) {
+        break;
+      }
+    }
+
+    return nextState;
   }
 
   private destroyDomOverlays(): void {
@@ -507,6 +532,12 @@ export class IntradayScene extends BaseDocumentScene {
         button.setAlpha(0.38);
         continue;
       }
+      if (unavailableReason === "") {
+        button.disableInteractive();
+        button.setText(label);
+        button.setAlpha(0.38);
+        continue;
+      }
 
       button.setInteractive({ useHandCursor: true });
       button.setAlpha(1);
@@ -532,6 +563,34 @@ export class IntradayScene extends BaseDocumentScene {
     if (availabilitySummary) {
       this.actionStatusText?.setText(availabilitySummary);
     }
+  }
+
+  private refreshPlaybackSpeedButton(): void {
+    const button = this.playbackSpeedButton;
+
+    if (!button) {
+      return;
+    }
+
+    const isAccelerated = this.playbackSpeedMultiplier > 1;
+    button.setText(getPlaybackSpeedButtonLabel(this.playbackSpeedMultiplier));
+    button.setStyle({
+      color: isAccelerated ? "#071015" : "#c2d0d3",
+      backgroundColor: isAccelerated ? "#2dd4bf" : "#17252b",
+      fontFamily: this.fontFamily,
+      fontSize: "17px",
+      padding: { x: 12, y: 8 },
+    });
+    button.setFixedSize(manualActionButtonWidth, manualActionButtonHeight);
+    button.setAlign("center");
+    button.setShadow(
+      0,
+      0,
+      isAccelerated ? "#f2fbfc" : "#000000",
+      isAccelerated ? 7 : 0,
+      isAccelerated,
+      false,
+    );
   }
 
   private handleOrderBookWallAction(
@@ -566,7 +625,7 @@ export class IntradayScene extends BaseDocumentScene {
 
     track.setAlpha(visible ? 0.95 : 0.32);
     bar.width = visible
-      ? manualActionGaugeWidth * Math.max(0, Math.min(1, progress))
+      ? manualActionButtonWidth * Math.max(0, Math.min(1, progress))
       : 0;
   }
 
@@ -583,24 +642,28 @@ export class IntradayScene extends BaseDocumentScene {
 
     if (mode === "active") {
       button.setStyle({
-        color: "#111417",
+        color: "#071015",
         backgroundColor: getManualActionFeedbackColor(actionId),
         fontFamily: this.fontFamily,
         fontSize: "17px",
         padding: { x: 12, y: 8 },
       });
-      button.setShadow(0, 0, "#f3e8ca", 8, true, true);
+      button.setFixedSize(manualActionButtonWidth, manualActionButtonHeight);
+      button.setAlign("center");
+      button.setShadow(0, 0, "#f2fbfc", 8, true, true);
       return;
     }
 
     button.setStyle({
-      color: "#f3e8ca",
-      backgroundColor: "#2a3033",
+      color: getManualActionButtonTextColor(actionId),
+      backgroundColor: getManualActionButtonBaseColor(actionId),
       fontFamily: this.fontFamily,
       fontSize: "17px",
       padding: { x: 12, y: 8 },
     });
-    button.setShadow(0, 0, "#000000", 0, false, false);
+    button.setFixedSize(manualActionButtonWidth, manualActionButtonHeight);
+    button.setAlign("center");
+    button.setShadow(0, 0, getManualActionFeedbackColor(actionId), 3, true, false);
   }
 
   private refreshIntradayText(): void {
@@ -668,9 +731,9 @@ export class IntradayScene extends BaseDocumentScene {
       this.telemetryOverlay?.update({
         cards: [
           {
-            label: "가격",
-            value: formatPrice(ledger.currentPrice),
-            detail: `등락 ${formatPercent(state.priceChangePercent)}`,
+            label: "매수 평균가",
+            value: formatPrice(ledger.averageEntryPrice),
+            detail: `현재 ${formatPrice(ledger.currentPrice)}`,
             tone: getSignedTelemetryTone(state.priceChangePercent),
           },
           {
@@ -776,9 +839,7 @@ export class IntradayScene extends BaseDocumentScene {
       this.repositionButton.setAlpha(
         0.82 + Math.sin(this.time.now * 0.01) * 0.18,
       );
-      this.actionStatusText?.setText(
-        "수동 액션: 보유 0% · 데스크 재배치 또는 Day 정산",
-      );
+      this.actionStatusText?.setText("수동 액션: 보유 0% · 데스크 재배치");
       return;
     }
 
@@ -829,40 +890,15 @@ export class IntradayScene extends BaseDocumentScene {
     this.marketTerminalOverlay?.update(model);
   }
 
-  private refreshOrderBookWallLogText(): void {
-    const state = gameSession.intradayState;
-    const events = state?.orderBookWallEvents ?? [];
-    const recentEvents = [...events].slice(-3).reverse();
-
-    if (recentEvents.length === 0) {
-      this.orderBookWallLogText?.setText(
-        ["호가벽 피드백", getOrderBookWallAvailabilitySummary(state)].join(
-          "\n",
-        ),
-      );
-      this.orderBookWallLogText?.setAlpha(0.58);
-      return;
-    }
-
-    const activeSummary = getOrderBookWallActiveSummary(state);
-    const availabilitySummary = getOrderBookWallAvailabilitySummary(state);
-    this.orderBookWallLogText?.setText(
-      [
-        "호가벽 피드백",
-        activeSummary ?? availabilitySummary,
-        ...recentEvents.map(formatOrderBookWallEvent),
-      ]
-        .filter(Boolean)
-        .join("\n"),
-    );
-    this.orderBookWallLogText?.setAlpha(1);
-  }
-
   private refreshAutoCardText(): void {
     const state = gameSession.intradayState;
     const runState = gameSession.ensureRun();
 
+    this.autoCardBadgeObjects.forEach((object) => object.destroy());
+    this.autoCardBadgeObjects = [];
+
     if (!state) {
+      this.autoCardText?.setText("");
       return;
     }
 
@@ -875,17 +911,44 @@ export class IntradayScene extends BaseDocumentScene {
 
     this.autoCardText?.setText(
       [
-        `자동 카드  다음 보상 ${nextReward ? `${Math.max(0, nextReward - elapsedSec)}s` : "-"}`,
-        runState.autoCards
-          .map((card) => {
-            const value = autoCardValues[card.cardId];
-            return `${value.displayName} Lv.${card.level}(${formatNumber(getAutoCardPeriodSec(card))}s)`;
-          })
-          .join("  "),
-        `최근 발동: ${recentEffects || "-"}`,
+        `다음 보상 ${nextReward ? `${Math.max(0, nextReward - elapsedSec)}s` : "-"} / 최근 발동 ${recentEffects || "-"}`,
         gameSession.autoCardRewardChoices.length > 0 ? "카드 선택 대기 중" : "",
-      ].join("\n"),
+      ]
+        .filter(Boolean)
+        .join("\n"),
     );
+    this.renderAutoCardBadges(runState.autoCards);
+  }
+
+  private renderAutoCardBadges(cards: RunState["autoCards"]): void {
+    const startX = intradayRightX + 12;
+    const maxX = intradayRightX + intradayRightWidth - 16;
+    let x = startX;
+    let y = 560;
+
+    cards.forEach((card) => {
+      const value = autoCardValues[card.cardId];
+      const label = `${value.displayName} Lv.${card.level}`;
+      const badge = this.add
+        .text(x, y, label, {
+          color: "#f2fbfc",
+          backgroundColor: "#182329",
+          fontFamily: this.fontFamily,
+          fontSize: "12px",
+          padding: { x: 8, y: 4 },
+        })
+        .setOrigin(0, 0);
+
+      if (x > startX && x + badge.displayWidth > maxX) {
+        x = startX;
+        y += 25;
+        badge.setPosition(x, y);
+      }
+
+      badge.setStroke("#263038", 1);
+      this.autoCardBadgeObjects.push(badge);
+      x += badge.displayWidth + 8;
+    });
   }
 
   private refreshContractText(): void {
@@ -897,7 +960,10 @@ export class IntradayScene extends BaseDocumentScene {
     }
 
     this.contractText?.setVisible(true);
-    this.contractText?.setPosition(610, tracker.actionFitMessage ? 74 : 92);
+    this.contractText?.setPosition(
+      intradayRightX,
+      tracker.actionFitMessage ? 74 : 92,
+    );
     this.contractText?.setStyle({
       color: getContractTrackerTextColor(tracker),
       backgroundColor: getContractTrackerBackgroundColor(tracker),
@@ -924,7 +990,7 @@ export class IntradayScene extends BaseDocumentScene {
       body: "선택 전까지 장중 운용은 일시 정지됩니다.\n신규 Lv.1 카드 또는 보유 카드 강화를 선택하세요. MVP 최대 레벨은 Lv.3입니다.",
       panelWidth: 760,
       panelHeight: 454,
-      accentColor: 0xd9c58b,
+      accentColor: 0x2dd4bf,
     });
     const pauseLabel = this.add
       .text(
@@ -932,7 +998,7 @@ export class IntradayScene extends BaseDocumentScene {
         shell.panelY + 132,
         "AUTO PICK PAUSED · 3 CHOICES MAX · NO EVOLUTION / NO SYNERGY",
         {
-          color: "#8f9f7a",
+          color: "#7df3e7",
           fontFamily: this.fontFamily,
           fontSize: "13px",
         },
@@ -985,12 +1051,12 @@ export class IntradayScene extends BaseDocumentScene {
     const card = this.add
       .rectangle(x, y, width, height, 0x111a1d, 1)
       .setOrigin(0, 0)
-      .setStrokeStyle(1, 0x6f6a5b, 0.85)
+      .setStrokeStyle(1, 0x2d4650, 0.85)
       .setDepth(32)
       .setInteractive({ useHandCursor: true });
     const indexLabel = this.add
       .text(x + 16, y + 13, `0${index + 1}`, {
-        color: "#8f9f7a",
+        color: "#7df3e7",
         fontFamily: this.fontFamily,
         fontSize: "16px",
       })
@@ -998,8 +1064,8 @@ export class IntradayScene extends BaseDocumentScene {
       .setDepth(33);
     const badge = this.add
       .text(x + width - 126, y + 10, badgeLabel, {
-        color: "#111417",
-        backgroundColor: "#d9c58b",
+        color: "#071015",
+        backgroundColor: "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "11px",
         padding: { x: 8, y: 4 },
@@ -1008,7 +1074,7 @@ export class IntradayScene extends BaseDocumentScene {
       .setDepth(33);
     const primary = this.add
       .text(x + 58, y + 9, primaryLabel, {
-        color: "#f3e8ca",
+        color: "#f2fbfc",
         fontFamily: this.fontFamily,
         fontSize: "16px",
         wordWrap: { width: width - 200 },
@@ -1017,7 +1083,7 @@ export class IntradayScene extends BaseDocumentScene {
       .setDepth(33);
     const body = this.add
       .text(x + 58, y + 31, description, {
-        color: "#c9c1ad",
+        color: "#c2d0d3",
         fontFamily: this.fontFamily,
         fontSize: "12px",
         wordWrap: { width: width - 82 },
@@ -1026,7 +1092,7 @@ export class IntradayScene extends BaseDocumentScene {
       .setDepth(33);
     const meta = this.add
       .text(x + 58, y + 50, `${metaLabel}\n${effectLabel}`, {
-        color: "#8fa2a6",
+        color: "#a8c0c4",
         fontFamily: this.fontFamily,
         fontSize: "11px",
         lineSpacing: 3,
@@ -1037,11 +1103,11 @@ export class IntradayScene extends BaseDocumentScene {
 
     card.on("pointerover", () => {
       card.setFillStyle(0x2f393d, 1);
-      card.setStrokeStyle(1, 0xd9c58b, 1);
+      card.setStrokeStyle(1, 0x2dd4bf, 1);
     });
     card.on("pointerout", () => {
       card.setFillStyle(0x111a1d, 1);
-      card.setStrokeStyle(1, 0x6f6a5b, 0.85);
+      card.setStrokeStyle(1, 0x2d4650, 0.85);
     });
     card.on("pointerup", onClick);
 
@@ -1063,13 +1129,15 @@ export class IntradayScene extends BaseDocumentScene {
       state,
       gameSession.priceHistory,
     );
-    const panelX = 96;
+    const panelX = intradayLeftX;
     const panelY = 446;
-    const panelWidth = 470;
+    const panelWidth = intradayLeftWidth;
     const panelHeight = 68;
     const panelColor = getSwarmPanelColor(model);
     const tokenColor = getSwarmTokenColor(model);
     const mood = getAntSwarmMood(model, participantMood.profitLossPercent);
+    const dividerX = panelX + Math.floor(panelWidth / 2);
+    const columnTextWidth = Math.floor(panelWidth / 2) - 28;
     const panel = this.add
       .rectangle(
         panelX,
@@ -1091,40 +1159,43 @@ export class IntradayScene extends BaseDocumentScene {
         model.warningVisual ? 0.95 : 0.55,
       )
       .setOrigin(0, 0);
-    const label = this.add
+    const divider = this.add
+      .rectangle(dividerX, panelY + 9, 1, panelHeight - 18, tokenColor, 0.35)
+      .setOrigin(0, 0);
+    const interestTitle = this.add
       .text(
         panelX + 14,
         panelY + 8,
-        `RETAIL SWARM ${getSwarmStateLabel(model)} / 열기 ${getSwarmHeatLabel(model)}`,
+        "대중 관심",
+        {
+          color: "#7df3e7",
+          fontFamily: this.fontFamily,
+          fontSize: "11px",
+          wordWrap: { width: columnTextWidth },
+        },
+      )
+      .setOrigin(0, 0);
+    const interestValue = this.add
+      .text(
+        panelX + 14,
+        panelY + 25,
+        `${getSwarmStateLabel(model)} · ${getSwarmHeatLabel(model)}`,
         {
           color: getParticipantMoodTextColor(
             participantMood.profitLossPercent,
             model,
           ),
           fontFamily: this.fontFamily,
-          fontSize: "12px",
-          wordWrap: { width: 306 },
+          fontSize: "15px",
+          wordWrap: { width: columnTextWidth },
         },
       )
-      .setOrigin(0, 0);
-    const stateBadge = this.add
-      .text(panelX + 320, panelY + 8, getSwarmBadgeLabel(model), {
-        color: model.panicVisual ? "#f3e8ca" : "#111417",
-        backgroundColor: model.panicVisual
-          ? "#f6465d"
-          : model.warningVisual
-            ? "#d9c58b"
-            : "#8f9f7a",
-        fontFamily: this.fontFamily,
-        fontSize: "11px",
-        padding: { x: 8, y: 4 },
-      })
       .setOrigin(0, 0);
     const participantText = this.add
       .text(
         panelX + 14,
-        panelY + 29,
-        `무드 ${getAntSwarmLabel(mood)} / 참여자 평단 ${formatPrice(participantMood.averageEntryPrice)} / 체감 ${formatPercent(
+        panelY + 49,
+        `평단 ${formatPrice(participantMood.averageEntryPrice)} / 체감 ${formatPercent(
           participantMood.profitLossPercent,
         )}`,
         {
@@ -1133,89 +1204,103 @@ export class IntradayScene extends BaseDocumentScene {
             model,
           ),
           fontFamily: this.fontFamily,
-          fontSize: "12px",
-          wordWrap: { width: 306 },
+          fontSize: "11px",
+          wordWrap: { width: columnTextWidth },
+        },
+      )
+      .setOrigin(0, 0);
+    const riskTitle = this.add
+      .text(dividerX + 14, panelY + 8, "감시 리스크", {
+        color: "#7df3e7",
+        fontFamily: this.fontFamily,
+        fontSize: "11px",
+        wordWrap: { width: columnTextWidth },
+      })
+      .setOrigin(0, 0);
+    const riskBadge = this.add
+      .text(
+        panelX + panelWidth - 72,
+        panelY + 7,
+        getSwarmRiskBadgeLabel(model),
+        {
+          color: model.panicVisual ? "#f2fbfc" : "#071015",
+          backgroundColor: model.panicVisual
+            ? "#f6465d"
+            : model.warningVisual
+              ? "#2dd4bf"
+              : "#7df3e7",
+          fontFamily: this.fontFamily,
+          fontSize: "10px",
+          padding: { x: 7, y: 3 },
+        },
+      )
+      .setOrigin(0, 0);
+    const riskValue = this.add
+      .text(
+        dividerX + 14,
+        panelY + 25,
+        `노출 ${getSwarmRiskLevelLabel(model)} · 무드 ${getAntSwarmLabel(mood)}`,
+        {
+          color: getSwarmRiskTextColor(model),
+          fontFamily: this.fontFamily,
+          fontSize: "15px",
+          wordWrap: { width: columnTextWidth },
         },
       )
       .setOrigin(0, 0);
     const riskText = this.add
-      .text(panelX + 14, panelY + 49, getSwarmRiskLine(model), {
+      .text(dividerX + 14, panelY + 49, getSwarmRiskDeltaLine(model), {
         color: getSwarmRiskTextColor(model),
         fontFamily: this.fontFamily,
         fontSize: "11px",
-        wordWrap: { width: 382 },
+        wordWrap: { width: columnTextWidth },
       })
       .setOrigin(0, 0);
 
     this.retailSwarmObjects.push(
       panel,
       accent,
-      label,
-      stateBadge,
+      divider,
+      interestTitle,
+      interestValue,
       participantText,
+      riskTitle,
+      riskBadge,
+      riskValue,
       riskText,
     );
-
-    this.retailSwarmObjects.push(
-      ...this.drawAntSwarmMascot(
-        panelX + panelWidth - 58,
-        panelY + 34,
-        mood,
-        tokenColor,
-      ),
-    );
-  }
-
-  private drawAntSwarmMascot(
-    x: number,
-    y: number,
-    mood: AntSwarmMood,
-    signalColor: number,
-  ): Phaser.GameObjects.GameObject[] {
-    const frameIndex = getAntMascotFrameIndex(mood);
-    const backplate = this.add
-      .rectangle(x, y + 1, 88, 56, 0x071015, 0.46)
-      .setStrokeStyle(1, signalColor, 0.42);
-    const mascot = this.textures.exists(antMascotTextureKey)
-      ? this.add
-          .image(x, y + 1, antMascotTextureKey, frameIndex)
-          .setDisplaySize(91, 91)
-          .setOrigin(0.5, 0.5)
-      : this.add
-          .text(x - 24, y - 10, getAntSwarmLabel(mood), {
-            color: "#d9c58b",
-            fontFamily: this.fontFamily,
-            fontSize: "12px",
-          })
-          .setOrigin(0, 0);
-
-    return [backplate, mascot].map((object) => object.setDepth(34));
   }
 
   private renderPriceChart(): void {
-    const graphics = this.priceChartGraphics;
     const state = gameSession.intradayState;
     const dayState = gameSession.ensureDay();
     const runState = gameSession.ensureRun();
 
-    if (!graphics || !state) {
+    if (!state) {
       return;
     }
 
-    const currentPrice = state.priceChangePercent;
     const contractTracker = gameSession.getContractIntradayTrackerSummary();
     const contractTarget = contractTracker?.chartTargetBandPercent;
     const history =
       gameSession.priceHistory.length > 0 ? gameSession.priceHistory : [];
-    const candles = buildPriceCandles(history);
+    const candles = buildPriceCandles(
+      history,
+      intradayPriceChartSecondsPerCandle,
+    );
     const orderBook = buildOrderBookProfile(state, {
       runSeed: runState.runSeed,
       dayIndex: dayState.dayIndex,
     });
 
-    graphics.clear();
     this.priceChartOverlay?.update({
       candles,
+      dayCumulativeBars: buildDayCumulativeBars(
+        runState,
+        state.priceChangePercent,
+        gameSession.getRunLengthDays(),
+      ),
+      runLengthDays: gameSession.getRunLengthDays(),
       targetBandMin: contractTarget?.min ?? dayState.targetBandMin,
       targetBandMax: contractTarget?.max ?? dayState.targetBandMax,
       crashLine: dayState.crashLine,
@@ -1231,32 +1316,6 @@ export class IntradayScene extends BaseDocumentScene {
       buyWallLabel: orderBook.buyWallLabel,
       wallActions: buildOrderBookWallOverlayActions(state, orderBook.levels),
     });
-
-    const latestVolume = history[history.length - 1]?.fictionalVolume ?? 0;
-    const averageEntryChange = calculateAverageEntryPriceChangePercent(state);
-    const targetMin = contractTarget?.min ?? dayState.targetBandMin;
-    const targetMax = contractTarget?.max ?? dayState.targetBandMax;
-    const objectiveStatus = getIntradayObjectiveStatus(
-      currentPrice,
-      targetMin,
-      targetMax,
-      dayState.crashLine,
-    );
-
-    this.priceChartLabel?.setText(
-      `CHG ${formatPercent(currentPrice)}  AVG ${
-        averageEntryChange === null ? "-" : formatPercent(averageEntryChange)
-      }  VOL ${formatNumber(latestVolume)}`,
-    );
-    this.objectiveStatusText?.setText(objectiveStatus.label);
-    this.objectiveStatusText?.setStyle({
-      color: objectiveStatus.color,
-      fontFamily: this.fontFamily,
-      fontSize: "12px",
-    });
-    this.objectiveStatusBackplate
-      ?.setFillStyle(objectiveStatus.backgroundColorNumber, 0.96)
-      .setStrokeStyle(1, objectiveStatus.strokeColorNumber, 0.7);
   }
 
   private renderDocumentEventPopup(): void {
@@ -1280,7 +1339,7 @@ export class IntradayScene extends BaseDocumentScene {
       ),
       panelWidth: 760,
       panelHeight: 450,
-      accentColor: 0xd9c58b,
+      accentColor: 0x2dd4bf,
     });
     const pauseLabel = this.add
       .text(
@@ -1288,7 +1347,7 @@ export class IntradayScene extends BaseDocumentScene {
         shell.panelY + 132,
         "TIME PAUSED · SELECT ONE RESPONSE",
         {
-          color: "#8f9f7a",
+          color: "#7df3e7",
           fontFamily: this.fontFamily,
           fontSize: "13px",
         },
@@ -1340,7 +1399,7 @@ export class IntradayScene extends BaseDocumentScene {
         height / 2,
         config.panelWidth,
         config.panelHeight,
-        0x1b1f22,
+        0x0b1419,
         0.98,
       )
       .setStrokeStyle(2, config.accentColor)
@@ -1355,7 +1414,7 @@ export class IntradayScene extends BaseDocumentScene {
       .setDepth(32);
     const eyebrow = this.add
       .text(panelX + 18, panelY + 11, config.eyebrow, {
-        color: "#d9c58b",
+        color: "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "12px",
       })
@@ -1363,7 +1422,7 @@ export class IntradayScene extends BaseDocumentScene {
       .setDepth(32);
     const title = this.add
       .text(panelX + 34, panelY + 56, config.title, {
-        color: "#f3e8ca",
+        color: "#f2fbfc",
         fontFamily: this.fontFamily,
         fontSize: "25px",
         wordWrap: { width: config.panelWidth - 68 },
@@ -1372,7 +1431,7 @@ export class IntradayScene extends BaseDocumentScene {
       .setDepth(32);
     const body = this.add
       .text(panelX + 34, panelY + 96, config.body, {
-        color: "#c9c1ad",
+        color: "#c2d0d3",
         fontFamily: this.fontFamily,
         fontSize: "15px",
         lineSpacing: 5,
@@ -1408,12 +1467,12 @@ export class IntradayScene extends BaseDocumentScene {
     const card = this.add
       .rectangle(x, y, width, height, 0x111a1d, 1)
       .setOrigin(0, 0)
-      .setStrokeStyle(1, 0x6f6a5b, 0.85)
+      .setStrokeStyle(1, 0x2d4650, 0.85)
       .setDepth(32)
       .setInteractive({ useHandCursor: true });
     const indexLabel = this.add
       .text(x + 16, y + 14, `0${index + 1}`, {
-        color: "#8f9f7a",
+        color: "#7df3e7",
         fontFamily: this.fontFamily,
         fontSize: "16px",
       })
@@ -1421,7 +1480,7 @@ export class IntradayScene extends BaseDocumentScene {
       .setDepth(33);
     const primary = this.add
       .text(x + 58, y + 10, primaryLabel, {
-        color: "#f3e8ca",
+        color: "#f2fbfc",
         fontFamily: this.fontFamily,
         fontSize: "16px",
         wordWrap: { width: budgetBadge ? width - 210 : width - 82 },
@@ -1442,7 +1501,7 @@ export class IntradayScene extends BaseDocumentScene {
       : null;
     const secondary = this.add
       .text(x + 58, y + 34, secondaryLabel, {
-        color: "#8fa2a6",
+        color: "#a8c0c4",
         fontFamily: this.fontFamily,
         fontSize: "12px",
         lineSpacing: 4,
@@ -1453,11 +1512,11 @@ export class IntradayScene extends BaseDocumentScene {
 
     card.on("pointerover", () => {
       card.setFillStyle(0x2f393d, 1);
-      card.setStrokeStyle(1, 0xd9c58b, 1);
+      card.setStrokeStyle(1, 0x2dd4bf, 1);
     });
     card.on("pointerout", () => {
       card.setFillStyle(0x111a1d, 1);
-      card.setStrokeStyle(1, 0x6f6a5b, 0.85);
+      card.setStrokeStyle(1, 0x2d4650, 0.85);
     });
     card.on("pointerup", onClick);
 
@@ -1509,13 +1568,6 @@ interface ModalChoiceBudgetBadge {
   readonly backgroundColor: string;
 }
 
-interface IntradayObjectiveStatus {
-  readonly label: string;
-  readonly color: string;
-  readonly backgroundColorNumber: number;
-  readonly strokeColorNumber: number;
-}
-
 interface IntradayRiskAlert {
   readonly label: string;
   readonly valueText: string;
@@ -1524,6 +1576,8 @@ interface IntradayRiskAlert {
   readonly backgroundColor: string;
   readonly severity: number;
 }
+
+type PlaybackSpeedMultiplier = 1 | 2 | 4 | 8;
 
 function getIntradayRiskAlert(
   state: IntradayState,
@@ -1673,7 +1727,7 @@ function getSurveillanceRiskAlert(
       label: "감시 임박 E",
       valueText: `${formatNumber(surveillance)}/100`,
       bufferText: `실패선까지 ${formatNumber(failureBuffer)}`,
-      color: "#f3e8ca",
+      color: "#f2fbfc",
       backgroundColor: "#5a2024",
       severity: 3,
     };
@@ -1708,7 +1762,7 @@ function getCrashLineRiskAlert(
       label: "붕괴 임박",
       valueText: `${formatPercent(priceChangePercent)} / 선 ${formatPercent(crashLine)}`,
       bufferText: `붕괴여유 ${formatUnsignedPercent(crashBuffer)}`,
-      color: "#f3e8ca",
+      color: "#f2fbfc",
       backgroundColor: "#5a2024",
       severity: 4,
     };
@@ -1718,59 +1772,9 @@ function getCrashLineRiskAlert(
     label: "붕괴 경보",
     valueText: `${formatPercent(priceChangePercent)} / 선 ${formatPercent(crashLine)}`,
     bufferText: `붕괴여유 ${formatUnsignedPercent(crashBuffer)}`,
-    color: "#d08b72",
+    color: "#ff8a70",
     backgroundColor: "#241316",
     severity: 2,
-  };
-}
-
-function getIntradayObjectiveStatus(
-  currentPriceChangePercent: number,
-  targetBandMin: number,
-  targetBandMax: number,
-  crashLine: number,
-): IntradayObjectiveStatus {
-  const targetDistance =
-    currentPriceChangePercent < targetBandMin
-      ? targetBandMin - currentPriceChangePercent
-      : currentPriceChangePercent > targetBandMax
-        ? currentPriceChangePercent - targetBandMax
-        : 0;
-  const targetLabel =
-    targetDistance <= 0
-      ? "목표권 진입"
-      : currentPriceChangePercent < targetBandMin
-        ? `목표까지 +${formatUnsignedPercent(targetDistance)}`
-        : `목표 초과 +${formatUnsignedPercent(targetDistance)}`;
-  const crashBuffer = currentPriceChangePercent - crashLine;
-  const crashLabel =
-    crashBuffer <= 0
-      ? "붕괴선 접촉"
-      : `붕괴여유 ${formatUnsignedPercent(crashBuffer)}`;
-
-  if (crashBuffer <= 4) {
-    return {
-      label: `${targetLabel} · ${crashLabel}`,
-      color: "#f3e8ca",
-      backgroundColorNumber: 0x5a2024,
-      strokeColorNumber: 0xd08b72,
-    };
-  }
-
-  if (targetDistance <= 0) {
-    return {
-      label: `${targetLabel} · ${crashLabel}`,
-      color: "#00c087",
-      backgroundColorNumber: 0x0b1f19,
-      strokeColorNumber: 0x00c087,
-    };
-  }
-
-  return {
-    label: `${targetLabel} · ${crashLabel}`,
-    color: "#111417",
-    backgroundColorNumber: 0xd9c58b,
-    strokeColorNumber: 0x6f6a5b,
   };
 }
 
@@ -1978,91 +1982,6 @@ function getOrderBookWallResultLabel(
     case "unknown_side":
     case "unknown_level":
       return "알 수 없음";
-  }
-}
-
-function getOrderBookWallActiveSummary(
-  state: IntradayState | null | undefined,
-): string | null {
-  const activeEffects = state?.activeOrderBookWallEffects ?? [];
-  const activeCount = activeEffects.length;
-
-  if (activeCount === 0) {
-    return null;
-  }
-
-  const remainingReserve = activeEffects.reduce(
-    (total, effect) => total + getOrderBookWallRemainingReservedBudget(effect),
-    0,
-  );
-  const remainingDepth = activeEffects.reduce(
-    (total, effect) => total + getOrderBookWallRemainingDepthBoost(effect),
-    0,
-  );
-
-  return `활성 ${activeCount} / depth ${formatNumber(remainingDepth)} / 환급 ${formatNumber(remainingReserve)}B`;
-}
-
-function getOrderBookWallAvailabilitySummary(
-  state: IntradayState | null | undefined,
-): string {
-  if (!state) {
-    return "상태 확인 대기";
-  }
-
-  if (state.holdingRatio <= 0) {
-    return "상태 관망: 보유 없음";
-  }
-
-  const cooldowns = Object.values(state.orderBookWallCooldowns).filter(
-    (remainingSec) => remainingSec > 0,
-  );
-  const cooldownSummary =
-    cooldowns.length > 0
-      ? `대기 ${cooldowns.length}개 ${Math.ceil(Math.min(...cooldowns))}s`
-      : null;
-  const pauseSummary = state.isPaused ? "보류" : null;
-  const buyReserve = getOrderBookWallReserveBudget(state, "buy");
-  const sellReserve = getOrderBookWallReserveBudget(state, "sell");
-  const minReserve = Math.min(
-    getOrderBookWallValue("buy").minReserveBudget,
-    getOrderBookWallValue("sell").minReserveBudget,
-  );
-  const reserveSummary =
-    buyReserve < minReserve && sellReserve < minReserve
-      ? `예산<${formatNumber(minReserve)}B`
-      : `예약 ${formatNumber(Math.max(buyReserve, sellReserve))}B`;
-
-  return `상태: ${[pauseSummary, reserveSummary, cooldownSummary].filter(Boolean).join(" / ")}`;
-}
-
-function formatOrderBookWallEvent(
-  event: IntradayState["orderBookWallEvents"][number],
-): string {
-  const sideLabel = event.side === "buy" ? "매수벽" : "매도벽";
-  const levelLabel = formatPercent(event.priceChangePercent);
-
-  switch (event.type) {
-    case "formed":
-      return `${sideLabel} 형성 ${levelLabel} +${formatNumber(Math.abs(event.depthDelta))} depth / 예약 ${formatNumber(
-        Math.abs(event.reserveDelta),
-      )}B`;
-    case "melted":
-      return `${sideLabel} 소진 ${levelLabel} -${formatNumber(Math.abs(event.depthDelta))} depth / 환급 ${formatNumber(
-        event.remainingReservedBudget,
-      )}B`;
-    case "collapsed":
-      return `${sideLabel} 붕괴 ${levelLabel} / depth ${formatNumber(
-        event.remainingDepthBoost,
-      )} / 환급 ${formatNumber(event.remainingReservedBudget)}B / 방어선 해제`;
-    case "removed":
-      return `${sideLabel} 제거 ${levelLabel} / depth ${formatNumber(
-        event.remainingDepthBoost,
-      )} / 환급 ${formatNumber(Math.abs(event.reserveDelta))}B / 방어선 해제`;
-    case "expired":
-      return `${sideLabel} 만료 ${levelLabel} / depth ${formatNumber(
-        event.remainingDepthBoost,
-      )} / 환급 ${formatNumber(Math.abs(event.reserveDelta))}B / 방어선 해제`;
   }
 }
 
@@ -2455,6 +2374,70 @@ function calculateAverageEntryPriceChangePercent(
   );
 }
 
+function buildDayCumulativeBars(
+  runState: RunState,
+  currentDayProfit: number,
+  runLengthDays: number,
+): readonly DayCumulativeChartBar[] {
+  const historicalProfits = getDisplayDayProfitHistory(runState);
+  const completedDayCount = Math.min(
+    historicalProfits.length,
+    Math.max(0, runState.currentDay - 1),
+    runLengthDays,
+  );
+  const bars: DayCumulativeChartBar[] = [];
+  let cumulative = 0;
+
+  for (let index = 0; index < completedDayCount; index += 1) {
+    cumulative = roundPercent(cumulative + historicalProfits[index]);
+    bars.push({
+      day: index + 1,
+      value: cumulative,
+      current: false,
+    });
+  }
+
+  if (runState.currentDay <= runLengthDays) {
+    bars.push({
+      day: runState.currentDay,
+      value: roundPercent(runState.cumulativeProfit + currentDayProfit),
+      current: true,
+    });
+  }
+
+  return bars;
+}
+
+function getDisplayDayProfitHistory(runState: RunState): readonly number[] {
+  if (runState.dayProfitHistory && runState.dayProfitHistory.length > 0) {
+    return runState.dayProfitHistory;
+  }
+
+  const completedDayCount = Math.max(0, runState.currentDay - 1);
+
+  if (completedDayCount === 0 || runState.cumulativeProfit === 0) {
+    return [];
+  }
+
+  const averageProfit = roundPercent(
+    runState.cumulativeProfit / completedDayCount,
+  );
+  const profits = Array.from({ length: completedDayCount }, () => averageProfit);
+  const previousTotal = profits
+    .slice(0, -1)
+    .reduce((total, profit) => total + profit, 0);
+
+  profits[profits.length - 1] = roundPercent(
+    runState.cumulativeProfit - previousTotal,
+  );
+
+  return profits;
+}
+
+function roundPercent(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
 interface MarketBoardQuote {
   readonly referencePrice: number;
   readonly currentPrice: number;
@@ -2749,7 +2732,27 @@ function getTrendLabel(priceChangePercent: number): string {
 }
 
 const manualActionFeedbackDurationMs = 900;
-const manualActionGaugeWidth = 156;
+const intradayLeftX = 96;
+const intradayLeftWidth = 700;
+const intradayContentGap = 12;
+const intradayRightX = intradayLeftX + intradayLeftWidth + intradayContentGap;
+const intradayRightWidth = 372;
+const intradayOrderBookWidth = 150;
+const intradayOrderBookX =
+  intradayLeftX + intradayLeftWidth - intradayOrderBookWidth - 12;
+const intradayPriceChartWidth =
+  intradayOrderBookX - intradayLeftX - 6;
+const manualActionButtonStartX = intradayLeftX;
+const manualActionButtonWidth = intradayLeftWidth / 5;
+const manualActionButtonHeight = 72;
+const manualActionButtonY = 548;
+const manualActionGaugeY = 632;
+const playbackSpeedMultipliers: readonly PlaybackSpeedMultiplier[] = [
+  1,
+  2,
+  4,
+  8,
+];
 
 function getChoiceTone(choiceType: string): string {
   if (choiceType === "stable") {
@@ -2816,7 +2819,7 @@ function getDocumentChoiceBudgetBadge(
 
   return {
     label: `예산 ${formatSignedBudget(budgetDelta)}`,
-    color: isPositive ? "#dff6dc" : "#ffe5df",
+    color: isPositive ? "#c8fff4" : "#ffd7d7",
     backgroundColor: isPositive ? "#15352a" : "#3b2224",
   };
 }
@@ -2902,13 +2905,13 @@ function getContractTrackerTextColor(
 ): string {
   switch (tracker.actionFitTone) {
     case "favored":
-      return "#dff6dc";
+      return "#c8fff4";
     case "risky":
-      return "#ffe5df";
+      return "#ffd7d7";
     case "neutral":
-      return "#f3e8ca";
+      return "#f2fbfc";
     default:
-      return "#d9c58b";
+      return "#2dd4bf";
   }
 }
 
@@ -2923,7 +2926,7 @@ function getContractTrackerBackgroundColor(
     case "neutral":
       return "#20242a";
     default:
-      return "#111417";
+      return "#071015";
   }
 }
 
@@ -2935,6 +2938,21 @@ function formatDocumentDelta(label: string, value: number): string | null {
   return `${label} ${value >= 0 ? "+" : ""}${formatNumber(value)}`;
 }
 
+function getPlaybackSpeedButtonLabel(
+  multiplier: PlaybackSpeedMultiplier,
+): string {
+  return `빠른 재생\nx${multiplier}`;
+}
+
+function getNextPlaybackSpeedMultiplier(
+  multiplier: PlaybackSpeedMultiplier,
+): PlaybackSpeedMultiplier {
+  const currentIndex = playbackSpeedMultipliers.indexOf(multiplier);
+  return playbackSpeedMultipliers[
+    (currentIndex + 1) % playbackSpeedMultipliers.length
+  ];
+}
+
 function getManualActionFeedbackColor(actionId: ManualActionId): string {
   return `#${getManualActionFeedbackColorNumber(actionId).toString(16).padStart(6, "0")}`;
 }
@@ -2944,11 +2962,37 @@ function getManualActionFeedbackColorNumber(actionId: ManualActionId): number {
     case "liquidity_supply":
       return 0x9ecf83;
     case "price_push":
-      return 0xd9c58b;
+      return 0x2dd4bf;
     case "overheat_cooldown":
       return 0x7fb4c8;
     case "position_settlement":
-      return 0xd08b72;
+      return 0xff8a70;
+  }
+}
+
+function getManualActionButtonBaseColor(actionId: ManualActionId): string {
+  switch (actionId) {
+    case "liquidity_supply":
+      return "#102b27";
+    case "price_push":
+      return "#212b30";
+    case "overheat_cooldown":
+      return "#102838";
+    case "position_settlement":
+      return "#321b22";
+  }
+}
+
+function getManualActionButtonTextColor(actionId: ManualActionId): string {
+  switch (actionId) {
+    case "liquidity_supply":
+      return "#7df3e7";
+    case "price_push":
+      return "#ffd36a";
+    case "overheat_cooldown":
+      return "#8bd3ff";
+    case "position_settlement":
+      return "#ff9aaa";
   }
 }
 
@@ -2971,7 +3015,7 @@ function getManualActionUnavailableReason(
   }
 
   if (state.isPaused) {
-    return "결정 보류";
+    return "";
   }
 
   if (state.holdingRatio <= 0) {
@@ -3100,16 +3144,16 @@ function getSwarmStateLabel(model: RetailSwarmModel): string {
   return "관심";
 }
 
-function getSwarmBadgeLabel(model: RetailSwarmModel): string {
+function getSwarmRiskBadgeLabel(model: RetailSwarmModel): string {
   if (model.panicVisual) {
-    return "PANIC";
+    return "위험";
   }
 
   if (model.warningVisual) {
-    return "OVERHEAT";
+    return "주의";
   }
 
-  return "INTEREST";
+  return "안정";
 }
 
 function getSwarmHeatLabel(model: RetailSwarmModel): string {
@@ -3124,16 +3168,22 @@ function getSwarmHeatLabel(model: RetailSwarmModel): string {
   return "관찰";
 }
 
-function getSwarmRiskLine(model: RetailSwarmModel): string {
+function getSwarmRiskLevelLabel(model: RetailSwarmModel): string {
   if (model.panicVisual) {
-    return "리스크 위험: 급반전과 감시 부담이 커질 수 있음";
+    return "위험";
   }
 
   if (model.warningVisual) {
-    return "리스크 주의: 과열 반응과 변동성 확대 가능";
+    return "주의";
   }
 
-  return "리스크 안정: 참여 흐름 관찰 중";
+  return "안정";
+}
+
+function getSwarmRiskDeltaLine(model: RetailSwarmModel): string {
+  return `감시 ${formatSignedNumber(model.riskEffect.surveillanceDelta)} / 변동 ${formatSignedNumber(
+    model.riskEffect.volatilityDelta,
+  )}`;
 }
 
 function getSwarmRiskTextColor(model: RetailSwarmModel): string {
@@ -3142,22 +3192,26 @@ function getSwarmRiskTextColor(model: RetailSwarmModel): string {
   }
 
   if (model.warningVisual) {
-    return "#d9c58b";
+    return "#2dd4bf";
   }
 
-  return "#8fa2a6";
+  return "#a8c0c4";
 }
 
 function getSwarmTokenColor(model: RetailSwarmModel): number {
   if (model.state === "panic") {
-    return 0xc46b5b;
+    return 0xff6677;
   }
 
   if (model.state === "overheated") {
-    return 0xd9c58b;
+    return 0x2dd4bf;
   }
 
-  return 0x8f9f7a;
+  return 0x7df3e7;
+}
+
+function formatSignedNumber(value: number): string {
+  return `${value >= 0 ? "+" : ""}${formatNumber(value)}`;
 }
 
 interface ParticipantMoodEstimate {
@@ -3241,7 +3295,7 @@ function getParticipantMoodTextColor(
     return "#f6465d";
   }
 
-  return model.panicVisual ? "#f0a6a0" : "#d9c58b";
+  return model.panicVisual ? "#f0a6a0" : "#2dd4bf";
 }
 
 type AntSwarmMood = "sleeping" | "curious" | "euphoric" | "anxious";
@@ -3279,17 +3333,4 @@ function getAntSwarmLabel(mood: AntSwarmMood): string {
   }
 
   return "열광";
-}
-
-function getAntMascotFrameIndex(mood: AntSwarmMood): number {
-  switch (mood) {
-    case "sleeping":
-      return 0;
-    case "curious":
-      return 1;
-    case "euphoric":
-      return 2;
-    case "anxious":
-      return 3;
-  }
 }

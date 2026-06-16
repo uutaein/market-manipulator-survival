@@ -58,9 +58,9 @@ The feature is a fictional game abstraction. It must not use real market data, r
 
 | ID | Requirement |
 | --- | --- |
-| SRS-WALL-FEED-UI-001 | The Intraday scene must display the latest order-book wall feedback near the existing action/status area. |
-| SRS-WALL-FEED-UI-002 | The UI must show up to three recent wall events. |
-| SRS-WALL-FEED-UI-003 | Event text must use game abstraction terms such as `depth`, `예약`, `환급`, and `방어선`. |
+| SRS-WALL-FEED-UI-001 | The Intraday scene must not display a separate order-book wall feedback panel. |
+| SRS-WALL-FEED-UI-002 | Recent wall feedback must be represented on the affected order-book row through status text, row title, depth bar, cooldown state, or remaining-state indicator. |
+| SRS-WALL-FEED-UI-003 | Row-level feedback text must use game abstraction terms such as `depth`, `예약`, `환급`, and `방어선` when text is needed. |
 | SRS-WALL-FEED-UI-004 | The UI must not use real venue, order-routing, real ticker, or real execution terminology. |
 
 ---
@@ -69,9 +69,9 @@ The feature is a fictional game abstraction. It must not use real market data, r
 
 | ID | Acceptance Criteria |
 | --- | --- |
-| SRS-WALL-FEED-AC-001 | Starting a wall creates a recent event visible in state and UI text. |
+| SRS-WALL-FEED-AC-001 | Starting a wall creates a recent event in state and visible row-level feedback. |
 | SRS-WALL-FEED-AC-002 | Partial melt creates a `melted` event with consumed depth and remaining refund. |
 | SRS-WALL-FEED-AC-003 | Full melt creates a `collapsed` event and removes the price barrier. |
 | SRS-WALL-FEED-AC-004 | Removing a wall creates a `removed` event with the refunded amount. |
-| SRS-WALL-FEED-AC-005 | The event log is capped and newest-first display shows no more than three rows. |
+| SRS-WALL-FEED-AC-005 | The event log is capped for state storage, and no separate newest-first feedback panel is rendered. |
 | SRS-WALL-FEED-AC-006 | The implementation passes typecheck, order-book wall regression checks, full BDD, build, and browser smoke verification. |

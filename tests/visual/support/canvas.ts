@@ -28,6 +28,18 @@ export async function resetBrowserState(page: Page): Promise<void> {
   });
 }
 
+export async function openDaySettlementScene(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const game = window.__mmsGame;
+
+    if (!game) {
+      throw new Error("MMS visual test game hook is unavailable.");
+    }
+
+    game.scene.start("day-settlement");
+  });
+}
+
 export async function seedSavedRunResumeState(page: Page): Promise<void> {
   await page.addInitScript(() => {
     localStorage.clear();

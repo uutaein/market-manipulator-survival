@@ -1,6 +1,6 @@
 @ui @ux @visual @playwright @tc-ux-wall-collapse-001
 Feature: Order-book wall collapse feedback experience
-  Collapsed fictional order-book walls must leave clear recent feedback without active-row state.
+  Collapsed fictional order-book walls must leave clear row-level feedback without active-row state.
 
   Background:
     Given the browser game starts from a clean local state
@@ -11,6 +11,6 @@ Feature: Order-book wall collapse feedback experience
   Scenario: Review collapsed wall feedback
     When the Intraday order-book panel is rendered
     Then no active wall row indicator is shown
-    And the recent wall feedback shows the collapsed wall and released barrier
+    And row-level feedback shows the collapsed wall and released barrier
     And the feedback shows zero remaining depth and zero refundable reserve
     And available wall actions remain embedded in order-book rows

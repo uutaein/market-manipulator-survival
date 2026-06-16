@@ -15,7 +15,7 @@ References:
 - `SRS-WALL-AVAIL-007`: Active levels remain clickable as wall-removal controls.
 - `SRS-WALL-AC-007`: Clicking an active wall removes it and refunds remaining reserved budget.
 - `SRS-WALL-FEED-EVT-002`: Removing a wall appends a `removed` event with the refunded remaining reserve.
-- `SRS-WALL-FEED-UI-003`: Event text uses game abstraction terms such as depth, reserve, refund, and barrier.
+- `SRS-WALL-FEED-UI-003`: Row-level feedback text uses game abstraction terms such as depth, reserve, refund, and barrier when text is needed.
 - `SRS-WALL-STATE-UI-004`: The active indicator disappears when the wall is inactive, removed, expired, or collapsed.
 
 Preconditions:
@@ -31,14 +31,14 @@ Steps:
 1. Open the Main Menu.
 2. Complete the Free Mode path through Opening Approval.
 3. Prepare the active browser session with a removed buy wall event log.
-4. Wait until the order-book overlay and wall feedback are visible.
+4. Wait until the order-book overlay and row-level wall feedback are visible.
 5. Compare the page against the `order-book-wall-remove-refund.png` visual baseline.
 
 Expected Result:
 
 - No order-book row shows the active wall indicator.
-- The wall feedback area shows a recent removed wall event.
-- The removed event includes `depth 0`, the refunded reserve amount, and `방어선 해제`.
+- No separate wall feedback area is shown.
+- Row-level feedback keeps the removed level on cooldown and exposes refund state through row status/title.
 - The removed level remains on cooldown, while other row actions stay embedded in the order-book rows.
 
 Automation:

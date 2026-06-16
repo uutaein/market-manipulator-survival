@@ -45,7 +45,7 @@ type ActiveOrderBookWallEffect = {
 | SRS-WALL-MODEL-003 | Order-book wall effects must be cleared when a new Intraday Day starts. |
 | SRS-WALL-MODEL-004 | Order-book wall effects must not carry into Day Settlement, Final Settlement, or the next Day. |
 | SRS-WALL-MODEL-005 | A wall's identity must be the clicked `priceChangePercent` level, not the row's moving offset from the current price. |
-| SRS-WALL-MODEL-006 | ASK +1/+2/+3 and BID -1/-2/-3 levels must be independently actionable. |
+| SRS-WALL-MODEL-006 | ASK +1/+2/+3/+4/+5 and BID -1/-2/-3/-4/-5 levels must be independently actionable. |
 
 ---
 

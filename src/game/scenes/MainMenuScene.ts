@@ -33,7 +33,7 @@ export class MainMenuScene extends BaseDocumentScene {
     const canContinue = savedRunSummary !== null;
     const { width, height } = this.scale;
 
-    this.cameras.main.setBackgroundColor("#111417");
+    this.cameras.main.setBackgroundColor("#071015");
     this.drawMainFrame(width, height, canContinue);
 
     this.drawModeCard({
@@ -50,7 +50,7 @@ export class MainMenuScene extends BaseDocumentScene {
         "누적 정산과 같은 조건 재시작",
       ],
       buttonLabel: "자유모드 시작",
-      accent: 0xd9c58b,
+      accent: 0x2dd4bf,
       onStart: () => {
         gameSession.prepareFreeMode();
         this.scene.start(SceneKeys.RunSetup);
@@ -71,7 +71,7 @@ export class MainMenuScene extends BaseDocumentScene {
         "보상에서 비용과 위험을 차감",
       ],
       buttonLabel: "의뢰모드 시작",
-      accent: 0x8f9f7a,
+      accent: 0x7df3e7,
       onStart: () => {
         gameSession.prepareContractMode();
         this.scene.start(SceneKeys.ContractSelection);
@@ -91,12 +91,12 @@ export class MainMenuScene extends BaseDocumentScene {
     canContinue: boolean,
   ): void {
     this.add
-      .rectangle(width / 2, height / 2, width - 96, height - 96, 0x1b1f22)
-      .setStrokeStyle(2, 0x6f6a5b);
+      .rectangle(width / 2, height / 2, width - 96, height - 96, 0x0b1419)
+      .setStrokeStyle(2, 0x2d4650);
 
     this.add
       .text(96, 74, "Market Manipulator Survival", {
-        color: "#f3e8ca",
+        color: "#f2fbfc",
         fontFamily: this.fontFamily,
         fontSize: "32px",
       })
@@ -104,7 +104,7 @@ export class MainMenuScene extends BaseDocumentScene {
 
     this.add
       .text(98, 126, "FICTIONAL EXCHANGE SURVEILLANCE DESK", {
-        color: "#c9c1ad",
+        color: "#c2d0d3",
         fontFamily: this.fontFamily,
         fontSize: "16px",
       })
@@ -112,8 +112,8 @@ export class MainMenuScene extends BaseDocumentScene {
 
     this.add
       .text(1042, 92, canContinue ? "SAVED RUN READY" : "NO SAVED RUN", {
-        color: canContinue ? "#111417" : "#d9c58b",
-        backgroundColor: canContinue ? "#8f9f7a" : "#263038",
+        color: canContinue ? "#071015" : "#2dd4bf",
+        backgroundColor: canContinue ? "#7df3e7" : "#263038",
         fontFamily: this.fontFamily,
         fontSize: "13px",
         padding: { x: 10, y: 5 },
@@ -126,7 +126,7 @@ export class MainMenuScene extends BaseDocumentScene {
         height - 112,
         "LOCAL ONLY · FICTIONAL ASSETS · NO REAL MARKET DATA",
         {
-          color: "#8fa2a6",
+          color: "#a8c0c4",
           fontFamily: this.fontFamily,
           fontSize: "13px",
         },
@@ -135,7 +135,7 @@ export class MainMenuScene extends BaseDocumentScene {
 
     this.add
       .text(width - 286, height - 104, "SURVEILLANCE TERMINAL", {
-        color: "#8f9f7a",
+        color: "#7df3e7",
         fontFamily: this.fontFamily,
         fontSize: "14px",
       })
@@ -161,7 +161,7 @@ export class MainMenuScene extends BaseDocumentScene {
 
     this.add
       .text(config.x + 26, config.y + 28, config.eyebrow, {
-        color: "#8fa2a6",
+        color: "#a8c0c4",
         fontFamily: this.fontFamily,
         fontSize: "13px",
       })
@@ -169,7 +169,7 @@ export class MainMenuScene extends BaseDocumentScene {
 
     this.add
       .text(config.x + 26, config.y + 58, config.title, {
-        color: "#f3e8ca",
+        color: "#f2fbfc",
         fontFamily: this.fontFamily,
         fontSize: "34px",
       })
@@ -177,7 +177,7 @@ export class MainMenuScene extends BaseDocumentScene {
 
     this.add
       .text(config.x + 26, config.y + 111, config.summary, {
-        color: "#d9c58b",
+        color: "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "17px",
         wordWrap: { width: config.width - 52 },
@@ -190,7 +190,7 @@ export class MainMenuScene extends BaseDocumentScene {
         config.y + 166,
         config.details.map((detail) => `- ${detail}`).join("\n"),
         {
-          color: "#c9c1ad",
+          color: "#c2d0d3",
           fontFamily: this.fontFamily,
           fontSize: "15px",
           lineSpacing: 8,
@@ -212,39 +212,39 @@ export class MainMenuScene extends BaseDocumentScene {
     this.add
       .rectangle(96, 534, 1088, 66, 0x090d10, 0.9)
       .setOrigin(0, 0)
-      .setStrokeStyle(1, 0x8f9f7a);
+      .setStrokeStyle(1, 0x7df3e7);
 
     this.add
       .text(118, 546, summary.modeLabel, {
-        color: "#8f9f7a",
+        color: "#7df3e7",
         fontFamily: this.fontFamily,
         fontSize: "12px",
       })
       .setOrigin(0, 0);
     this.add
       .text(118, 566, `${summary.dayLabel} · ${summary.phaseLabel}`, {
-        color: "#f3e8ca",
+        color: "#f2fbfc",
         fontFamily: this.fontFamily,
         fontSize: "19px",
       })
       .setOrigin(0, 0);
     this.add
       .text(386, 546, summary.targetLabel, {
-        color: "#d9c58b",
+        color: "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "16px",
       })
       .setOrigin(0, 0);
     this.add
       .text(386, 570, `${summary.budgetLabel} · ${summary.riskLabel}`, {
-        color: "#c9c1ad",
+        color: "#c2d0d3",
         fontFamily: this.fontFamily,
         fontSize: "13px",
       })
       .setOrigin(0, 0);
     this.add
       .text(758, 558, summary.savedAtLabel, {
-        color: "#8fa2a6",
+        color: "#a8c0c4",
         fontFamily: this.fontFamily,
         fontSize: "13px",
       })
@@ -260,32 +260,32 @@ export class MainMenuScene extends BaseDocumentScene {
     this.add
       .rectangle(96, 534, 1088, 66, 0x090d10, 0.86)
       .setOrigin(0, 0)
-      .setStrokeStyle(1, 0x6f6a5b);
+      .setStrokeStyle(1, 0x2d4650);
 
     this.add
       .text(118, 546, "LOCAL RECORDS", {
-        color: "#8f9f7a",
+        color: "#7df3e7",
         fontFamily: this.fontFamily,
         fontSize: "12px",
       })
       .setOrigin(0, 0);
     this.add
       .text(118, 566, summary.recentTitle, {
-        color: "#f3e8ca",
+        color: "#f2fbfc",
         fontFamily: this.fontFamily,
         fontSize: "19px",
       })
       .setOrigin(0, 0);
     this.add
       .text(292, 546, summary.recentPerformanceLabel, {
-        color: "#d9c58b",
+        color: "#2dd4bf",
         fontFamily: this.fontFamily,
         fontSize: "15px",
       })
       .setOrigin(0, 0);
     this.add
       .text(292, 570, summary.recentRiskLabel, {
-        color: "#c9c1ad",
+        color: "#c2d0d3",
         fontFamily: this.fontFamily,
         fontSize: "13px",
       })
@@ -294,21 +294,21 @@ export class MainMenuScene extends BaseDocumentScene {
     if (summary.bestTitle) {
       this.add
         .text(646, 546, summary.bestTitle, {
-          color: "#8f9f7a",
+          color: "#7df3e7",
           fontFamily: this.fontFamily,
           fontSize: "12px",
         })
         .setOrigin(0, 0);
       this.add
         .text(646, 568, summary.bestPerformanceLabel ?? "", {
-          color: "#f3e8ca",
+          color: "#f2fbfc",
           fontFamily: this.fontFamily,
           fontSize: "15px",
         })
         .setOrigin(0, 0);
       this.add
         .text(846, 568, summary.bestRiskLabel ?? "", {
-          color: "#c9c1ad",
+          color: "#c2d0d3",
           fontFamily: this.fontFamily,
           fontSize: "13px",
         })
@@ -317,7 +317,7 @@ export class MainMenuScene extends BaseDocumentScene {
 
     this.add
       .text(1008, 548, summary.savedAtLabel, {
-        color: "#8fa2a6",
+        color: "#a8c0c4",
         fontFamily: this.fontFamily,
         fontSize: "13px",
       })
@@ -332,12 +332,12 @@ export class MainMenuScene extends BaseDocumentScene {
     onClick: () => void,
   ): void {
     const background = this.add
-      .rectangle(x, y, width, 46, 0xd9c58b, 1)
+      .rectangle(x, y, width, 46, 0x2dd4bf, 1)
       .setOrigin(0, 0)
       .setInteractive({ useHandCursor: true });
     const text = this.add
       .text(x + width / 2, y + 23, label, {
-        color: "#111417",
+        color: "#071015",
         fontFamily: this.fontFamily,
         fontSize: "18px",
       })
@@ -346,10 +346,10 @@ export class MainMenuScene extends BaseDocumentScene {
 
     [background, text].forEach((object) => {
       object.on("pointerover", () => {
-        background.setFillStyle(0xf3e8ca, 1);
+        background.setFillStyle(0xe6f7f8, 1);
       });
       object.on("pointerout", () => {
-        background.setFillStyle(0xd9c58b, 1);
+        background.setFillStyle(0x2dd4bf, 1);
       });
       object.on("pointerup", onClick);
     });

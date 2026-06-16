@@ -28,7 +28,7 @@ Steps:
 
 1. Open the Main Menu.
 2. Complete the Free Mode path through Opening Approval.
-3. Activate `Day 정산` from the Intraday screen.
+3. Let the Intraday timer end and transition to Day Settlement.
 4. Wait until the Day Settlement canvas is visible and non-empty.
 5. Compare the page against the `day-settlement.png` visual baseline.
 

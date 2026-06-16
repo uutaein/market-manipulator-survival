@@ -12,8 +12,8 @@ Feature: Intraday desk reposition experience
     When the Intraday screen is rendered with zero holding and no active manual action
     Then manual action buttons are visibly unavailable as watch-state controls
     And the desk reposition control is visible as the re-entry path
-    And Day Settlement remains available as the end-Day path
-    And the action status explains that the player can reposition or settle the Day
+    And timed Day Settlement remains the end-Day path
+    And the action status explains that the player can reposition
 
   Scenario: Choose a new fictional asset from the intraday reposition desk
     When the Intraday Reposition screen is rendered

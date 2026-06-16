@@ -28,7 +28,7 @@ Steps:
 1. Open the Main Menu.
 2. Complete the Free Mode path through Opening Approval.
 3. Force an Intraday state with `34B` remaining budget.
-4. Activate `Day 정산` from the Intraday screen.
+4. Let the Intraday timer end and transition to Day Settlement.
 5. Wait until the Day Settlement canvas is visible and non-empty.
 6. Compare the page against the `day-settlement-budget-preservation.png` visual baseline.
 

@@ -30,7 +30,7 @@ Steps:
 2. Activate `자유모드 시작`.
 3. Activate `Run 시작`.
 4. Complete Day 1 through Opening Approval and seed a near-close carried-position state.
-5. Activate `Day 정산`.
+5. Let the Intraday timer end and transition to Day Settlement.
 6. Activate `다음 Day`.
 7. Select `뉴스 배정: 호재`.
 8. Activate `아침 뉴스 확인`.

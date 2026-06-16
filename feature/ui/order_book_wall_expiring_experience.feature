@@ -13,5 +13,5 @@ Feature: Order-book wall expiring experience
     Then the active wall row shows an expiring visual tone
     And the active row label shows the remaining seconds with refundable reserve
     And the row title includes expiring, remaining time, remaining depth, and refundable reserve details
-    And recent wall feedback still uses abstract depth, reserve, refund, and barrier terminology
+    And row-level feedback still uses abstract depth, reserve, refund, and barrier terminology
     And inactive rows remain available without adding permanent wall buttons

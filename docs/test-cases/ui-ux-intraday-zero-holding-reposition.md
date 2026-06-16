@@ -36,8 +36,8 @@ Expected Result:
 
 - Manual action buttons are visibly unavailable and read as watch-state controls.
 - `데스크 재배치` is visible as the re-entry path.
-- `Day 정산` remains visible as the end-Day path.
-- The action status text explains that the player can use desk reposition or Day Settlement.
+- The manual `Day 정산` control is not shown; timed settlement remains the end-Day path.
+- The action status text explains that the player can use desk reposition.
 - Money/risk telemetry still shows budget, holding, position value, and current risk state.
 
 Automation:

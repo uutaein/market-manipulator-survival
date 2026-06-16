@@ -4,11 +4,15 @@ import {
   HistogramSeries,
   LineStyle,
   createChart,
+  type AutoscaleInfoProvider,
   type CandlestickData,
   type HistogramData,
   type IChartApi,
   type IPriceLine,
   type ISeriesApi,
+  type MouseEventParams,
+  type TickMarkType,
+  type Time,
   type UTCTimestamp,
 } from "lightweight-charts";
 
@@ -23,11 +27,47 @@ export interface PriceCandle {
 
 export interface PriceChartOverlayUpdate {
   readonly candles: readonly PriceCandle[];
+  readonly dayCumulativeBars: readonly DayCumulativeChartBar[];
+  readonly runLengthDays: number;
   readonly targetBandMin: number;
   readonly targetBandMax: number;
   readonly crashLine: number;
   readonly averageEntryPriceChangePercent: number | null;
 }
+
+export interface DayCumulativeChartBar {
+  readonly day: number;
+  readonly value: number;
+  readonly current: boolean;
+}
+
+type ChartCandleData = CandlestickData<UTCTimestamp>;
+type ChartHistogramData = HistogramData<UTCTimestamp>;
+type PriceChartMode = "live" | "cumulative";
+
+const priceChartTabHeightPx = 22;
+const priceChartLiveVisibleBars = 8;
+const priceChartCumulativeVisibleBars = 36;
+const priceChartRightPaddingBars = 3;
+const currentCandleJitterThresholdPercent = 0.18;
+const currentCandleJitterDurationMs = 260;
+const stableCumulativeAutoscale: AutoscaleInfoProvider = (
+  baseImplementation,
+) => {
+  const scale = baseImplementation();
+
+  if (!scale?.priceRange) {
+    return scale;
+  }
+
+  return {
+    ...scale,
+    priceRange: {
+      minValue: Math.min(scale.priceRange.minValue, -1),
+      maxValue: Math.max(scale.priceRange.maxValue, 1),
+    },
+  };
+};
 
 export interface MarketBoardRankRow {
   readonly key: string;
@@ -137,6 +177,8 @@ export function buildPriceCandles(
     buckets.set(bucketStart, [...(buckets.get(bucketStart) ?? []), point]);
   }
 
+  let previousClose: number | null = null;
+
   return [...buckets.entries()]
     .sort(([left], [right]) => left - right)
     .map(([startSec, points]) => {
@@ -144,13 +186,19 @@ export function buildPriceCandles(
         (left, right) => left.elapsedSec - right.elapsedSec,
       );
       const prices = sortedPoints.map((point) => point.priceChangePercent);
+      const open = previousClose ?? prices[0];
+      const close = prices[prices.length - 1];
+      const high = Math.max(open, ...prices);
+      const low = Math.min(open, ...prices);
+
+      previousClose = close;
 
       return {
         startSec,
-        open: prices[0],
-        high: Math.max(...prices),
-        low: Math.min(...prices),
-        close: prices[prices.length - 1],
+        open,
+        high,
+        low,
+        close,
         volume: sortedPoints.reduce(
           (total, point) => total + point.fictionalVolume,
           0,
@@ -246,32 +294,130 @@ export class IntradayTelemetryOverlay {
 
 export class IntradayPriceChartOverlay {
   private readonly container: HTMLDivElement;
+  private readonly chartHost: HTMLDivElement;
+  private readonly volumeTooltip: HTMLDivElement;
+  private readonly averageEntryMarker: HTMLDivElement;
+  private readonly averageEntryMarkerLabel: HTMLSpanElement;
+  private readonly tabButtons: readonly HTMLButtonElement[];
   private readonly chart: IChartApi;
   private readonly candleSeries: ISeriesApi<"Candlestick">;
   private readonly volumeSeries: ISeriesApi<"Histogram">;
+  private readonly cumulativeSeries: ISeriesApi<"Histogram">;
   private readonly targetMinLine: IPriceLine;
   private readonly targetMaxLine: IPriceLine;
   private readonly crashLine: IPriceLine;
   private readonly averageEntryLine: IPriceLine;
   private readonly syncLayout: () => void;
   private currentSize = { width: 0, height: 0 };
+  private displayedCandles: readonly ChartCandleData[] = [];
+  private readonly liveTickSeconds = new Map<number, number>();
+  private chartMode: PriceChartMode = "live";
+  private currentAverageEntryPriceChangePercent = 0;
+  private currentCandleJitterFrameId: number | null = null;
+  private readonly formatTickMark = (
+    time: Time,
+    tickMarkType: TickMarkType,
+    locale: string,
+  ): string =>
+    formatPriceChartTick(
+      time,
+      tickMarkType,
+      locale,
+      this.liveTickSeconds,
+    );
+  private readonly handleTabClick = (event: MouseEvent): void => {
+    const button = (event.currentTarget as HTMLButtonElement | null) ?? null;
+    const mode = button?.dataset.chartMode;
+
+    if (!isPriceChartMode(mode)) {
+      return;
+    }
+
+    event.preventDefault();
+    this.chartMode = mode;
+    this.refreshChartMode();
+  };
+  private readonly handleCrosshairMove = (
+    param: MouseEventParams<Time>,
+  ): void => {
+    if (!param.point || !isPriceCandleChartMode(this.chartMode)) {
+      this.hideVolumeTooltip();
+      return;
+    }
+
+    const chartWidth = this.chartHost.clientWidth || this.currentSize.width;
+    const chartHeight = this.chartHost.clientHeight || this.currentSize.height;
+    const volumeBandStartY = chartHeight * 0.72;
+
+    if (
+      chartWidth <= 0 ||
+      chartHeight <= 0 ||
+      param.point.x < 0 ||
+      param.point.x > chartWidth ||
+      param.point.y < volumeBandStartY ||
+      param.point.y > chartHeight
+    ) {
+      this.hideVolumeTooltip();
+      return;
+    }
+
+    const volumeData = param.seriesData.get(this.volumeSeries);
+
+    if (!isChartHistogramData(volumeData)) {
+      this.hideVolumeTooltip();
+      return;
+    }
+
+    this.volumeTooltip.textContent = `거래량 ${formatVolumeTooltipValue(
+      volumeData.value,
+    )}`;
+    this.volumeTooltip.style.left = `${Math.max(
+      46,
+      Math.min(chartWidth - 46, param.point.x),
+    )}px`;
+    this.volumeTooltip.style.top = `${Math.max(
+      18,
+      Math.min(chartHeight - 4, param.point.y - 8),
+    )}px`;
+    this.volumeTooltip.hidden = false;
+    this.volumeTooltip.classList.add("visible");
+  };
 
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly bounds: GameOverlayBounds,
   ) {
     this.container = createOverlayElement("mms-price-chart-overlay");
-    this.chart = createChart(this.container, {
+    const tabs = document.createElement("div");
+    tabs.className = "mms-price-chart-tabs";
+    this.tabButtons = priceChartModeValues.map((mode) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "mms-price-chart-tab";
+      button.dataset.chartMode = mode;
+      button.setAttribute("role", "tab");
+      button.textContent = getPriceChartModeLabel(mode);
+      button.title = getPriceChartModeTitle(mode);
+      button.addEventListener("click", this.handleTabClick);
+      tabs.append(button);
+      return button;
+    });
+    this.chartHost = document.createElement("div");
+    this.chartHost.className = "mms-price-chart-host";
+    this.container.append(tabs, this.chartHost);
+
+    this.chart = createChart(this.chartHost, {
       width: Math.round(bounds.width),
-      height: Math.round(bounds.height),
+      height: Math.round(Math.max(1, bounds.height - priceChartTabHeightPx)),
       autoSize: false,
       kineticScroll: { mouse: false, touch: false },
       handleScroll: false,
       handleScale: false,
       layout: {
         background: { type: ColorType.Solid, color: "#071015" },
-        textColor: "#9aa7aa",
-        fontFamily: "Consolas, 'Courier New', monospace",
+        textColor: "#c2d0d3",
+        fontFamily:
+          '"IBM Plex Mono", "Malgun Gothic", "Apple SD Gothic Neo", Consolas, "Courier New", monospace',
         fontSize: 10,
       },
       grid: {
@@ -291,6 +437,10 @@ export class IntradayPriceChartOverlay {
         secondsVisible: false,
         fixLeftEdge: true,
         fixRightEdge: true,
+        barSpacing: 8,
+        minBarSpacing: 6,
+        maxBarSpacing: 10,
+        tickMarkFormatter: this.formatTickMark,
       },
       localization: {
         priceFormatter: formatChartPercent,
@@ -314,97 +464,287 @@ export class IntradayPriceChartOverlay {
       lastValueVisible: false,
       priceLineVisible: false,
     });
+    this.cumulativeSeries = this.chart.addSeries(HistogramSeries, {
+      base: 0,
+      color: "rgba(45, 212, 191, 0.68)",
+      lastValueVisible: true,
+      priceLineVisible: false,
+      visible: false,
+      priceFormat: {
+        type: "custom",
+        formatter: formatChartPercent,
+      },
+      autoscaleInfoProvider: stableCumulativeAutoscale,
+    });
     this.chart.priceScale("").applyOptions({
       scaleMargins: {
         top: 0.74,
         bottom: 0,
       },
     });
+    this.volumeTooltip = document.createElement("div");
+    this.volumeTooltip.className = "mms-price-chart-volume-tooltip";
+    this.volumeTooltip.hidden = true;
+    this.chartHost.append(this.volumeTooltip);
+    this.chart.subscribeCrosshairMove(this.handleCrosshairMove);
     this.targetMinLine = this.candleSeries.createPriceLine(
       createReferenceLineOptions(
         bounds.targetMinFallback ?? 0,
-        "#8f9f7a",
+        "#7df3e7",
         "TARGET L",
       ),
     );
     this.targetMaxLine = this.candleSeries.createPriceLine(
       createReferenceLineOptions(
         bounds.targetMaxFallback ?? 0,
-        "#8f9f7a",
+        "#7df3e7",
         "TARGET H",
       ),
     );
     this.crashLine = this.candleSeries.createPriceLine(
       createReferenceLineOptions(
         bounds.crashFallback ?? -20,
-        "#c46b5b",
+        "#ff6677",
         "CRASH",
       ),
     );
     this.averageEntryLine = this.candleSeries.createPriceLine({
       price: bounds.averageEntryFallback ?? 0,
-      color: "#e0d3a2",
+      color: "#8bd3ff",
       lineWidth: 2 as const,
       lineStyle: LineStyle.Dashed,
-      lineVisible: false,
-      axisLabelVisible: false,
-      title: "AVG",
+      lineVisible: true,
+      axisLabelVisible: true,
+      title: "매수 평균가",
     });
+    this.averageEntryMarker = document.createElement("div");
+    this.averageEntryMarker.className = "mms-price-chart-average-marker";
+    this.averageEntryMarkerLabel = document.createElement("span");
+    this.averageEntryMarkerLabel.className =
+      "mms-price-chart-average-marker-label";
+    this.averageEntryMarker.append(this.averageEntryMarkerLabel);
+    this.chartHost.append(this.averageEntryMarker);
     this.syncLayout = () => this.positionAndResize();
     window.addEventListener("resize", this.syncLayout);
     this.scene.scale.on("resize", this.syncLayout);
     this.positionAndResize();
+    this.refreshChartMode();
   }
 
   update(update: PriceChartOverlayUpdate): void {
     this.positionAndResize();
-    this.candleSeries.setData(
-      update.candles.map(
-        (candle): CandlestickData<UTCTimestamp> => ({
-          time: chartTime(candle.startSec),
+    this.liveTickSeconds.clear();
+    const nextCandles = update.candles.map(
+      (candle, index): ChartCandleData => {
+        const time = chartIndexTime(index);
+        this.liveTickSeconds.set(time, candle.startSec);
+
+        return {
+          time,
           open: roundChartPercent(candle.open),
           high: roundChartPercent(candle.high),
           low: roundChartPercent(candle.low),
           close: roundChartPercent(candle.close),
-        }),
-      ),
+        };
+      },
     );
-    this.volumeSeries.setData(
-      update.candles.map(
-        (candle): HistogramData<UTCTimestamp> => ({
-          time: chartTime(candle.startSec),
-          value: candle.volume,
-          color:
-            candle.close >= candle.open
-              ? "rgba(0, 192, 135, 0.36)"
-              : "rgba(246, 70, 93, 0.42)",
+    const nextVolumes = update.candles.map(
+      (candle, index): ChartHistogramData => ({
+        time: chartIndexTime(index),
+        value: candle.volume,
+        color:
+          candle.close >= candle.open
+            ? "rgba(0, 192, 135, 0.36)"
+            : "rgba(246, 70, 93, 0.42)",
         }),
-      ),
     );
+    this.cumulativeSeries.setData([
+      ...buildDayCumulativeHistogramData(update.dayCumulativeBars),
+    ]);
+    this.applySeriesData(nextCandles, nextVolumes);
     this.targetMinLine.applyOptions({ price: update.targetBandMin });
     this.targetMaxLine.applyOptions({ price: update.targetBandMax });
     this.crashLine.applyOptions({ price: update.crashLine });
-    this.averageEntryLine.applyOptions(
-      update.averageEntryPriceChangePercent === null
-        ? { lineVisible: false, axisLabelVisible: false }
-        : {
-            price: update.averageEntryPriceChangePercent,
-            lineVisible: true,
-            axisLabelVisible: true,
-          },
-    );
-    this.chart.timeScale().fitContent();
+    this.currentAverageEntryPriceChangePercent =
+      update.averageEntryPriceChangePercent ?? 0;
+    this.averageEntryLine.applyOptions({
+      price: this.currentAverageEntryPriceChangePercent,
+      lineVisible: true,
+      axisLabelVisible: true,
+      title: "매수 평균가",
+    });
+    this.positionAverageEntryMarker();
   }
 
   setVisible(visible: boolean): void {
-    this.container.style.display = visible ? "block" : "none";
+    this.container.style.display = visible ? "grid" : "none";
   }
 
   destroy(): void {
     window.removeEventListener("resize", this.syncLayout);
     this.scene.scale.off("resize", this.syncLayout);
+    this.tabButtons.forEach((button) =>
+      button.removeEventListener("click", this.handleTabClick),
+    );
+    this.chart.unsubscribeCrosshairMove(this.handleCrosshairMove);
+    this.cancelCurrentCandleJitter(false);
     this.chart.remove();
     this.container.remove();
+  }
+
+  private applySeriesData(
+    candles: readonly ChartCandleData[],
+    volumes: readonly ChartHistogramData[],
+  ): void {
+    const previousCandles = this.displayedCandles;
+
+    this.cancelCurrentCandleJitter(false);
+    this.displayedCandles = candles;
+    this.candleSeries.setData([...candles]);
+    this.volumeSeries.setData([...volumes]);
+    this.refreshTimeScale();
+    this.animateCurrentCandleJitter(previousCandles, candles);
+  }
+
+  private refreshChartMode(): void {
+    this.cancelCurrentCandleJitter(true);
+    this.hideVolumeTooltip();
+    const isPriceCandles =
+      isPriceCandleChartMode(this.chartMode);
+
+    this.candleSeries.applyOptions({ visible: isPriceCandles });
+    this.volumeSeries.applyOptions({ visible: isPriceCandles });
+    this.cumulativeSeries.applyOptions({ visible: false });
+
+    this.tabButtons.forEach((button) => {
+      const selected = button.dataset.chartMode === this.chartMode;
+      button.classList.toggle("active", selected);
+      button.setAttribute("aria-selected", selected ? "true" : "false");
+      button.tabIndex = selected ? 0 : -1;
+    });
+    this.refreshTimeScale();
+    this.positionAverageEntryMarker();
+  }
+
+  private animateCurrentCandleJitter(
+    previousCandles: readonly ChartCandleData[],
+    candles: readonly ChartCandleData[],
+  ): void {
+    if (this.chartMode !== "live") {
+      return;
+    }
+
+    const target = candles[candles.length - 1];
+    const previous = previousCandles[previousCandles.length - 1];
+
+    if (!target || !previous || target.time !== previous.time) {
+      return;
+    }
+
+    const delta = target.close - previous.close;
+    const moveScale = Math.abs(delta);
+
+    if (moveScale < currentCandleJitterThresholdPercent) {
+      return;
+    }
+
+    const startedAt = performance.now();
+    const direction = delta >= 0 ? 1 : -1;
+    const amplitude = Math.min(
+      0.08,
+      (moveScale - currentCandleJitterThresholdPercent) * 0.26 + 0.012,
+    );
+
+    const animate = (now: number): void => {
+      const progress = Math.min(
+        1,
+        (now - startedAt) / currentCandleJitterDurationMs,
+      );
+      const envelope = Math.sin(progress * Math.PI);
+      const offset = roundChartPercent(
+        (Math.sin(progress * Math.PI * 5.7) * amplitude +
+          Math.sin(progress * Math.PI * 2.4) * amplitude * -direction * 0.32) *
+          envelope,
+      );
+      const close = roundChartPercent(target.close + offset);
+      const high = roundChartPercent(Math.max(target.high, target.close, close));
+      const low = roundChartPercent(Math.min(target.low, target.close, close));
+
+      this.candleSeries.update({
+        ...target,
+        high,
+        low,
+        close,
+      });
+
+      if (progress < 1) {
+        this.currentCandleJitterFrameId = requestAnimationFrame(animate);
+        return;
+      }
+
+      this.currentCandleJitterFrameId = null;
+      this.candleSeries.update(target);
+    };
+
+    this.currentCandleJitterFrameId = requestAnimationFrame(animate);
+  }
+
+  private cancelCurrentCandleJitter(restoreTarget: boolean): void {
+    if (this.currentCandleJitterFrameId !== null) {
+      cancelAnimationFrame(this.currentCandleJitterFrameId);
+      this.currentCandleJitterFrameId = null;
+    }
+
+    if (!restoreTarget) {
+      return;
+    }
+
+    const target = this.displayedCandles[this.displayedCandles.length - 1];
+
+    if (target) {
+      this.candleSeries.update(target);
+    }
+  }
+
+  private refreshTimeScale(): void {
+    this.chart.applyOptions({
+      timeScale: {
+        tickMarkFormatter: this.formatTickMark,
+      },
+    });
+
+    const visibleBars =
+      this.chartMode === "live"
+        ? priceChartLiveVisibleBars
+        : priceChartCumulativeVisibleBars;
+    const barSpacing = this.chartMode === "live" ? 20 : 8;
+    const minBarSpacing = this.chartMode === "live" ? 12 : 6;
+    const maxBarSpacing = this.chartMode === "live" ? 28 : 10;
+
+    this.chart.timeScale().applyOptions({
+      barSpacing,
+      minBarSpacing,
+      maxBarSpacing,
+    });
+
+    const lastIndex = this.displayedCandles.length - 1;
+
+    if (lastIndex < 0) {
+      return;
+    }
+
+    if (this.displayedCandles.length <= visibleBars) {
+      this.chart.timeScale().setVisibleLogicalRange({
+        from: -0.5,
+        to: visibleBars - 0.5,
+      });
+      return;
+    }
+
+    this.chart.timeScale().setVisibleLogicalRange({
+      from: lastIndex - visibleBars + 1,
+      to: lastIndex + priceChartRightPaddingBars,
+    });
   }
 
   private positionAndResize(): void {
@@ -413,15 +753,94 @@ export class IntradayPriceChartOverlay {
       this.container,
       this.bounds,
     );
+    const chartWidth = this.chartHost.clientWidth || size.width;
+    const chartHeight =
+      this.chartHost.clientHeight ||
+      Math.max(1, size.height - priceChartTabHeightPx);
 
     if (
-      size.width !== this.currentSize.width ||
-      size.height !== this.currentSize.height
+      chartWidth !== this.currentSize.width ||
+      chartHeight !== this.currentSize.height
     ) {
-      this.currentSize = size;
-      this.chart.resize(size.width, size.height);
+      this.currentSize = { width: chartWidth, height: chartHeight };
+      this.chart.resize(chartWidth, chartHeight);
+      this.positionAverageEntryMarker();
     }
   }
+
+  private hideVolumeTooltip(): void {
+    this.volumeTooltip.hidden = true;
+    this.volumeTooltip.classList.remove("visible");
+  }
+
+  private positionAverageEntryMarker(): void {
+    const chartHeight = this.chartHost.clientHeight || this.currentSize.height;
+    const coordinate = this.candleSeries.priceToCoordinate(
+      this.currentAverageEntryPriceChangePercent,
+    );
+    const fallbackY = chartHeight > 0 ? chartHeight * 0.5 : 0;
+    const y = Math.max(
+      2,
+      Math.min(Math.max(2, chartHeight - 2), coordinate ?? fallbackY),
+    );
+
+    this.averageEntryMarker.style.top = `${Math.round(y)}px`;
+    this.averageEntryMarkerLabel.textContent = `매수 평균가 ${formatChartPercent(
+      this.currentAverageEntryPriceChangePercent,
+    )}`;
+  }
+}
+
+const priceChartModeValues: readonly PriceChartMode[] = [
+  "live",
+  "cumulative",
+];
+
+function isPriceChartMode(value: string | undefined): value is PriceChartMode {
+  return priceChartModeValues.includes(value as PriceChartMode);
+}
+
+function isPriceCandleChartMode(mode: PriceChartMode): boolean {
+  return mode === "live" || mode === "cumulative";
+}
+
+function getPriceChartModeLabel(mode: PriceChartMode): string {
+  switch (mode) {
+    case "live":
+      return "LIVE";
+    case "cumulative":
+      return "누적";
+  }
+}
+
+function getPriceChartModeTitle(mode: PriceChartMode): string {
+  switch (mode) {
+    case "live":
+      return "실시간 캔들";
+    case "cumulative":
+      return "장중 누적 캔들";
+  }
+}
+
+function buildDayCumulativeHistogramData(
+  bars: readonly DayCumulativeChartBar[],
+): readonly ChartHistogramData[] {
+  return bars.map((bar) => {
+    const value = roundChartPercent(bar.value);
+
+    return {
+      time: dayChartTime(bar.day),
+      value,
+      color:
+        value >= 0
+          ? bar.current
+            ? "rgba(45, 212, 191, 0.74)"
+            : "rgba(0, 192, 135, 0.58)"
+          : bar.current
+            ? "rgba(196, 107, 91, 0.78)"
+            : "rgba(246, 70, 93, 0.64)",
+    };
+  });
 }
 
 export class IntradayMarketTerminalOverlay {
@@ -465,7 +884,7 @@ export class IntradayMarketTerminalOverlay {
     this.syncLayout();
   }
 
-  update(model: MarketTerminalModel): void {
+  update(model: MarketTerminalModel): MarketBoardRankRow | null {
     this.syncLayout();
     const playerRow = model.rankRows.find((row) => row.roleLabel === "ME");
     const playerRank = playerRow?.rank ?? 0;
@@ -499,6 +918,7 @@ export class IntradayMarketTerminalOverlay {
       selectedRow?.key,
     );
     this.dashboardPanel.updateDetail(selectedRow, model.currentDay);
+    return selectedRow;
   }
 
   setVisible(visible: boolean): void {
@@ -570,8 +990,8 @@ export class IntradayOrderBookOverlay {
     this.bidBody.className = "mms-orderbook-body bid";
     this.imbalance = document.createElement("div");
     this.imbalance.className = "mms-orderbook-imbalance";
-    this.askRows = createOrderBookRows(this.askBody, 3);
-    this.bidRows = createOrderBookRows(this.bidBody, 3);
+    this.askRows = createOrderBookRows(this.askBody, 5);
+    this.bidRows = createOrderBookRows(this.bidBody, 5);
     this.bindOrderBookRows(this.askRows, "sell");
     this.bindOrderBookRows(this.bidRows, "buy");
     this.container.append(
@@ -704,23 +1124,7 @@ class TerminalPanel {
         `<span class="mms-market-detail-signal mms-market-signal-news"></span>` +
         `<span class="mms-market-detail-signal mms-market-signal-flow"></span>` +
         `</div>` +
-        `<div class="mms-market-detail-charts">` +
-        `<div class="mms-market-mini-chart">` +
-        `<span class="mms-market-mini-label">LIVE</span>` +
-        `<svg viewBox="0 0 100 28" preserveAspectRatio="none">` +
-        `<line class="mms-market-zero" x1="0" y1="14" x2="100" y2="14"></line>` +
-        `<polyline class="mms-market-sparkline mms-market-live-line"></polyline>` +
-        `</svg>` +
-        `</div>` +
-        `<div class="mms-market-mini-chart">` +
-        `<span class="mms-market-mini-label">DAYS</span>` +
-        `<svg viewBox="0 0 100 28" preserveAspectRatio="none">` +
-        `<line class="mms-market-zero" x1="0" y1="14" x2="100" y2="14"></line>` +
-        `<polyline class="mms-market-sparkline mms-market-period-line"></polyline>` +
-        `</svg>` +
-        `<div class="mms-market-period-days"></div>` +
-        `</div>` +
-        `</div>`;
+        `<div class="mms-market-detail-note"></div>`;
       this.element.append(this.detail);
     }
     parent.append(this.element);
@@ -842,14 +1246,8 @@ class TerminalPanel {
     const meta = this.detail.querySelector<HTMLElement>(
       ".mms-market-detail-meta",
     );
-    const liveLine = this.detail.querySelector<SVGPolylineElement>(
-      ".mms-market-live-line",
-    );
-    const periodLine = this.detail.querySelector<SVGPolylineElement>(
-      ".mms-market-period-line",
-    );
-    const periodDays = this.detail.querySelector<HTMLElement>(
-      ".mms-market-period-days",
+    const detailNote = this.detail.querySelector<HTMLElement>(
+      ".mms-market-detail-note",
     );
     const rankSignal = this.detail.querySelector<HTMLElement>(
       ".mms-market-signal-rank",
@@ -871,10 +1269,8 @@ class TerminalPanel {
       if (meta) {
         meta.textContent = "";
       }
-      liveLine?.setAttribute("points", "");
-      periodLine?.setAttribute("points", "");
-      if (periodDays) {
-        periodDays.textContent = "";
+      if (detailNote) {
+        detailNote.textContent = "";
       }
       setMarketDetailSignal(rankSignal, "", "neutral");
       setMarketDetailSignal(moveSignal, "", "neutral");
@@ -884,8 +1280,6 @@ class TerminalPanel {
     }
 
     const day = Math.max(1, Math.min(5, currentDay));
-    const liveValues = buildMarketLiveSparkline(row);
-    const periodValues = buildMarketPeriodSparkline(row, day);
     this.detail.classList.toggle("price-up", row.priceChangePercent >= 0);
     this.detail.classList.toggle("price-down", row.priceChangePercent < 0);
 
@@ -916,90 +1310,12 @@ class TerminalPanel {
       row.priceChangePercent >= 0 ? "positive" : "negative",
     );
 
-    liveLine?.setAttribute("points", toSparklinePoints(liveValues, 100, 28));
-    periodLine?.setAttribute(
-      "points",
-      toSparklinePoints(periodValues, 100, 28),
-    );
-
-    if (periodDays) {
-      periodDays.innerHTML = Array.from({ length: 5 }, (_, index) => {
-        const dayNumber = index + 1;
-        return `<span class="${dayNumber === day ? "current" : ""}">D${dayNumber}</span>`;
-      }).join("");
+    if (detailNote) {
+      detailNote.textContent = `NOW ${formatCompactPrice(row.currentPrice)} / AVG ${formatCompactPrice(
+        row.averageEntryPrice,
+      )} / CHG ${formatPercent(row.priceChangePercent)}`;
     }
   }
-}
-
-function buildMarketLiveSparkline(row: MarketBoardRankRow): readonly number[] {
-  const seed = hashString(row.key);
-  const volatility = Math.max(0.35, Math.min(2.8, row.fictionalVolume / 1800));
-  const endValue = clampSparklineValue(row.priceChangePercent);
-
-  return Array.from({ length: 12 }, (_, index) => {
-    if (index === 11) {
-      return endValue;
-    }
-
-    const progress = index / 11;
-    const wave =
-      Math.sin(seed * 0.013 + index * 0.86) * volatility +
-      Math.cos(seed * 0.021 + index * 0.53) * 0.42;
-
-    return clampSparklineValue(endValue * progress + wave);
-  });
-}
-
-function buildMarketPeriodSparkline(
-  row: MarketBoardRankRow,
-  currentDay: number,
-): readonly number[] {
-  const seed = hashString(`${row.key}:period`);
-  const day = Math.max(1, Math.min(5, currentDay));
-  const endValue = clampSparklineValue(row.priceChangePercent);
-
-  return Array.from({ length: 5 }, (_, index) => {
-    const dayNumber = index + 1;
-    const observedProgress =
-      dayNumber <= day ? dayNumber / day : 1 + (dayNumber - day) * 0.1;
-    const texture =
-      Math.sin(seed * 0.017 + dayNumber * 1.16) * 0.75 +
-      Math.cos(seed * 0.011 + dayNumber * 0.71) * 0.35;
-
-    return clampSparklineValue(endValue * observedProgress + texture);
-  });
-}
-
-function toSparklinePoints(
-  values: readonly number[],
-  width: number,
-  height: number,
-): string {
-  if (values.length === 0) {
-    return "";
-  }
-
-  const min = Math.min(0, ...values);
-  const max = Math.max(0, ...values);
-  const range = Math.max(1, max - min);
-
-  return values
-    .map((value, index) => {
-      const x =
-        values.length === 1 ? width / 2 : (index / (values.length - 1)) * width;
-      const y = height - ((value - min) / range) * height;
-
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
-}
-
-function clampSparklineValue(value: number): number {
-  if (!Number.isFinite(value)) {
-    return 0;
-  }
-
-  return Math.max(-18, Math.min(18, value));
 }
 
 type MarketDetailSignalTone = "positive" | "negative" | "neutral";
@@ -1569,8 +1885,12 @@ function createReferenceLineOptions(
   };
 }
 
-function chartTime(startSec: number): UTCTimestamp {
-  return Math.max(1, Math.round(startSec + 1)) as UTCTimestamp;
+function chartIndexTime(index: number): UTCTimestamp {
+  return Math.max(1, Math.round(index + 1)) as UTCTimestamp;
+}
+
+function dayChartTime(day: number): UTCTimestamp {
+  return Math.max(1, Math.round(day)) as UTCTimestamp;
 }
 
 function roundChartPercent(value: number): number {
@@ -1579,6 +1899,40 @@ function roundChartPercent(value: number): number {
 
 function formatChartPercent(value: number): string {
   return `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`;
+}
+
+function formatPriceChartTick(
+  time: Time,
+  _tickMarkType: TickMarkType,
+  _locale: string,
+  liveTickSeconds: ReadonlyMap<number, number>,
+): string {
+  const timeValue = getChartTimeValue(time);
+
+  const elapsedSec = Math.max(
+    0,
+    Math.round(liveTickSeconds.get(timeValue) ?? timeValue - 1),
+  );
+  const minutes = Math.floor(elapsedSec / 60);
+  const seconds = `${elapsedSec % 60}`.padStart(2, "0");
+
+  return `${minutes}:${seconds}`;
+}
+
+function getChartTimeValue(time: Time): number {
+  return typeof time === "number" ? time : 0;
+}
+
+function isChartHistogramData(data: unknown): data is HistogramData<Time> {
+  if (!data || typeof data !== "object") {
+    return false;
+  }
+
+  return typeof (data as { readonly value?: unknown }).value === "number";
+}
+
+function formatVolumeTooltipValue(value: number): string {
+  return Math.round(value).toLocaleString("ko-KR");
 }
 
 function setCell(
@@ -1609,14 +1963,14 @@ function fitMarketLabel(value: string, maxLength: number): string {
 
 function getMarketIconColor(key: string): string {
   const palette = [
-    "#d9c58b",
-    "#8f9f7a",
+    "#2dd4bf",
+    "#7df3e7",
     "#7fb4c8",
-    "#c46b5b",
+    "#ff6677",
     "#b994d1",
-    "#d6a86f",
-    "#8fa2a6",
-    "#e0d3a2",
+    "#8bd3ff",
+    "#a8c0c4",
+    "#8bd3ff",
   ];
   return palette[hashString(key) % palette.length];
 }

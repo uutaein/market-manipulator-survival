@@ -40,7 +40,7 @@ Expected Result:
 - The cooldown manual action is visibly dimmed and labeled with remaining wait time such as `대기 9s`.
 - At least one position-reducing action remains available when holding exists and its calculated recovery is positive.
 - The manual action status line summarizes blocked reasons and the count of available actions.
-- The Market Board, price desk, money/risk telemetry, and Day Settlement control remain visible.
+- The Market Board, price desk, and money/risk telemetry remain visible without a manual Day Settlement control.
 
 Automation:
 

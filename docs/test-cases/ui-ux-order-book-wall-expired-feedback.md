@@ -13,8 +13,8 @@ References:
 
 - `SRS-WALL-AC-009`: Wall effects expire after their duration and refund remaining reserve on expiry.
 - `SRS-WALL-FEED-EVT-005`: A wall that expires with remaining reserve appends an `expired` event.
-- `SRS-WALL-FEED-UI-001`: Intraday displays latest wall feedback near the action/status area.
-- `SRS-WALL-FEED-UI-003`: Event text uses game abstraction terms such as depth, reserve, refund, and barrier.
+- `SRS-WALL-FEED-UI-001`: Intraday must not display a separate order-book wall feedback panel.
+- `SRS-WALL-FEED-UI-003`: Row-level feedback text uses game abstraction terms such as depth, reserve, refund, and barrier when text is needed.
 - `SRS-WALL-STATE-UI-004`: The active indicator disappears when the wall is inactive, removed, expired, or collapsed.
 
 Preconditions:
@@ -30,15 +30,15 @@ Steps:
 1. Open the Main Menu.
 2. Complete the Free Mode path through Opening Approval.
 3. Prepare the active browser session with an expired buy wall.
-4. Wait until the order-book overlay and wall feedback are visible.
+4. Wait until the order-book overlay and row-level wall feedback are visible.
 5. Compare the page against the `order-book-wall-expired-feedback.png` visual baseline.
 
 Expected Result:
 
 - No active wall row indicator remains after expiry.
 - The expired wall row stays in local cooldown and shows recent expiry refund state.
-- The wall feedback area shows a recent expired wall event.
-- The feedback shows zero remaining depth, refunded reserve, and released barrier state.
+- No separate wall feedback area is shown.
+- Row-level feedback shows expiry refund and released barrier state.
 - Available wall actions remain embedded in order-book rows without permanent extra buttons.
 
 Automation:
