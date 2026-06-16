@@ -1,6 +1,7 @@
 const common = {
   import: ["feature/support/**/*.ts", "feature/steps/**/*.ts"],
   paths: ["feature/**/*.feature"],
+  tags: "not @playwright",
   format: ["progress"],
   publish: false,
   exit: true

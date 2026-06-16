@@ -16,6 +16,7 @@ The `.feature` files are grouped by domain and function. They are not TC documen
 | `settlement/` | Day/Final Settlement, carryover, aftereffects |
 | `persistence/` | localStorage and restart records |
 | `safety/` | Fictional safety abstraction requirements |
+| `ui/` | Playwright-scoped UI/UX features and visual acceptance |
 | `support/` | Shared Cucumber world and accepted MVP constants |
 | `steps/` | Domain step definitions for executable Gherkin coverage |
 
@@ -26,6 +27,8 @@ npm run bdd
 ```
 
 The current step definitions execute through a Cucumber support world with domain-level behavior coverage. They validate that the accepted MVP Gherkin scenarios are executable, but they do not yet drive rendered Phaser scenes, browser layout, or real browser localStorage.
+
+UI/UX feature files tagged with `@playwright` are excluded from Cucumber and are validated through Playwright visual tests instead.
 
 ## Status
 

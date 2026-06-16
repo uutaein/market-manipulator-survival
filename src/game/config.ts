@@ -9,8 +9,10 @@ import { MorningBriefingScene } from "./scenes/MorningBriefingScene";
 import { PreOpenCardScene } from "./scenes/PreOpenCardScene";
 import { RunSetupScene } from "./scenes/RunSetupScene";
 
+const rendererType = new URLSearchParams(window.location.search).get("renderer") === "canvas" ? Phaser.CANVAS : Phaser.AUTO;
+
 export const gameConfig: Phaser.Types.Core.GameConfig = {
-  type: Phaser.AUTO,
+  type: rendererType,
   parent: "app",
   width: 1280,
   height: 720,

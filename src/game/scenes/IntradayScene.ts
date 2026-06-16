@@ -3,18 +3,30 @@ import { SceneKeys } from "./SceneKeys";
 import { assets, type AssetDefinition } from "../../domain/assets/assetCatalog";
 import {
   getAssetBaselineTradeValue,
-  getAssetNewsSensitivity
+  getAssetNewsSensitivity,
 } from "../../domain/assets/assetMarketProfiles";
-import { autoCardRewardElapsedSeconds, autoCardValues } from "../../domain/balancing/autoCardValues";
+import {
+  autoCardRewardElapsedSeconds,
+  autoCardValues,
+  type AutoCardValue,
+} from "../../domain/balancing/autoCardValues";
 import {
   documentEventRules,
   documentEventValues,
-  type DocumentEventChoiceValue
+  type DocumentEventChoiceValue,
+  type DocumentEventId,
 } from "../../domain/balancing/documentEventValues";
 import { runDefaults } from "../../domain/balancing/runDefaults";
-import { getAutoCardPeriodSec } from "../../domain/intraday/autoCards";
+import {
+  getAutoCardEffectScale,
+  getAutoCardPeriodSec,
+} from "../../domain/intraday/autoCards";
 import type { IntradayState } from "../../domain/intraday/intradayState";
-import { canUseManualAction, getManualActionBudgetDelta, manualActions } from "../../domain/intraday/manualActions";
+import {
+  canUseManualAction,
+  getManualActionBudgetDelta,
+  manualActions,
+} from "../../domain/intraday/manualActions";
 import {
   canUseOrderBookWall,
   findActiveOrderBookWallAtLevel,
@@ -23,45 +35,73 @@ import {
   getOrderBookWallReserveBudget,
   getOrderBookWallValue,
   type OrderBookWallResult,
-  type OrderBookWallSide
+  type OrderBookWallSide,
 } from "../../domain/intraday/orderBookWalls";
 import { getOrderBookWallLevelKey } from "../../domain/balancing/orderBookWallValues";
-import { calculateRetailSwarmModel, type RetailSwarmModel } from "../../domain/intraday/retailSwarm";
-import { buildOrderBookProfile, type OrderBookLevel } from "../../domain/intraday/orderBook";
+import {
+  calculateRetailSwarmModel,
+  type RetailSwarmModel,
+} from "../../domain/intraday/retailSwarm";
+import {
+  buildOrderBookProfile,
+  type OrderBookLevel,
+} from "../../domain/intraday/orderBook";
 import type { MorningNews } from "../../domain/day/morningNews";
 import type { ManualActionId } from "../../domain/balancing/manualActionValues";
 import type { MarketBoardState } from "../../domain/market/marketBoard";
-import { gameSession, type PriceHistoryPoint } from "../GameSession";
+import {
+  gameSession,
+  type ContractIntradayTrackerSummary,
+  type PriceHistoryPoint,
+} from "../GameSession";
 import {
   IntradayMarketTerminalOverlay,
   IntradayOrderBookOverlay,
   IntradayPriceChartOverlay,
+  IntradayTelemetryOverlay,
   buildPriceCandles,
   type MarketBoardRankRow,
   type MarketTerminalModel,
-  type OrderBookOverlayWallAction
+  type OrderBookOverlayWallAction,
+  type IntradayTelemetryTone,
 } from "../dom/intradayOverlays";
+
+const antMascotTextureKey = "mms-ant-mood-mascot";
+const antMascotFrameSize = 627;
 
 export class IntradayScene extends BaseDocumentScene {
   private priceChartGraphics: Phaser.GameObjects.Graphics | null = null;
   private priceChartLabel: Phaser.GameObjects.Text | null = null;
+  private objectiveStatusBackplate: Phaser.GameObjects.Rectangle | null = null;
+  private objectiveStatusText: Phaser.GameObjects.Text | null = null;
   private sessionStatusText: Phaser.GameObjects.Text | null = null;
   private pnlBadgeText: Phaser.GameObjects.Text | null = null;
+  private riskAlertText: Phaser.GameObjects.Text | null = null;
   private priceChartOverlay: IntradayPriceChartOverlay | null = null;
   private orderBookOverlay: IntradayOrderBookOverlay | null = null;
   private marketTerminalOverlay: IntradayMarketTerminalOverlay | null = null;
+  private telemetryOverlay: IntradayTelemetryOverlay | null = null;
   private moneyText: Phaser.GameObjects.Text | null = null;
   private statsText: Phaser.GameObjects.Text | null = null;
   private actionStatusText: Phaser.GameObjects.Text | null = null;
   private orderBookWallLogText: Phaser.GameObjects.Text | null = null;
   private contractText: Phaser.GameObjects.Text | null = null;
   private autoCardText: Phaser.GameObjects.Text | null = null;
-  private manualActionButtons: Partial<Record<ManualActionId, Phaser.GameObjects.Text>> = {};
-  private manualActionGaugeTracks: Partial<Record<ManualActionId, Phaser.GameObjects.Rectangle>> = {};
-  private manualActionGaugeBars: Partial<Record<ManualActionId, Phaser.GameObjects.Rectangle>> = {};
+  private manualActionButtons: Partial<
+    Record<ManualActionId, Phaser.GameObjects.Text>
+  > = {};
+  private manualActionGaugeTracks: Partial<
+    Record<ManualActionId, Phaser.GameObjects.Rectangle>
+  > = {};
+  private manualActionGaugeBars: Partial<
+    Record<ManualActionId, Phaser.GameObjects.Rectangle>
+  > = {};
   private repositionButton: Phaser.GameObjects.Text | null = null;
-  private manualActionFeedbackEndsAt: Partial<Record<ManualActionId, number>> = {};
-  private manualActionButtonModes: Partial<Record<ManualActionId, "normal" | "active">> = {};
+  private manualActionFeedbackEndsAt: Partial<Record<ManualActionId, number>> =
+    {};
+  private manualActionButtonModes: Partial<
+    Record<ManualActionId, "normal" | "active">
+  > = {};
   private previousMarketBoardRanks = new Map<string, number>();
   private previousMarketTradeValues = new Map<string, number>();
   private previousMarketTradeValueElapsedSec = 0;
@@ -71,6 +111,15 @@ export class IntradayScene extends BaseDocumentScene {
 
   constructor() {
     super(SceneKeys.Intraday);
+  }
+
+  preload(): void {
+    if (!this.textures.exists(antMascotTextureKey)) {
+      this.load.spritesheet(antMascotTextureKey, "/assets/meme-ant-moods.png", {
+        frameWidth: antMascotFrameSize,
+        frameHeight: antMascotFrameSize,
+      });
+    }
   }
 
   create(): void {
@@ -85,7 +134,7 @@ export class IntradayScene extends BaseDocumentScene {
     this.previousMarketTradeValueElapsedSec = 0;
 
     this.drawDocumentShell("장중 운용 화면", [], undefined, "LIVE SESSION");
-    this.ensurePepeMascotTexture();
+    this.drawIntradayDeskScaffold();
 
     this.sessionStatusText = this.add
       .text(96, 118, "", {
@@ -93,7 +142,7 @@ export class IntradayScene extends BaseDocumentScene {
         backgroundColor: "#d9c58b",
         fontFamily: this.fontFamily,
         fontSize: "14px",
-        padding: { x: 10, y: 5 }
+        padding: { x: 10, y: 5 },
       })
       .setOrigin(0, 0);
     this.pnlBadgeText = this.add
@@ -102,7 +151,18 @@ export class IntradayScene extends BaseDocumentScene {
         backgroundColor: "#0d171d",
         fontFamily: this.fontFamily,
         fontSize: "13px",
-        padding: { x: 10, y: 5 }
+        padding: { x: 10, y: 5 },
+      })
+      .setOrigin(0, 0);
+    this.riskAlertText = this.add
+      .text(894, 122, "", {
+        color: "#f3e8ca",
+        backgroundColor: "#5a2024",
+        fontFamily: this.fontFamily,
+        fontSize: "12px",
+        lineSpacing: 0,
+        padding: { x: 8, y: 4 },
+        wordWrap: { width: 214 },
       })
       .setOrigin(0, 0);
 
@@ -111,9 +171,21 @@ export class IntradayScene extends BaseDocumentScene {
       .text(108, 140, "", {
         color: "#f3e8ca",
         fontFamily: this.fontFamily,
-        fontSize: "13px"
+        fontSize: "13px",
       })
       .setOrigin(0, 0);
+    this.objectiveStatusBackplate = this.add
+      .rectangle(312, 137, 242, 21, 0xd9c58b, 0.96)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, 0x6f6a5b, 0.7);
+    this.objectiveStatusText = this.add
+      .text(318, 141, "", {
+        color: "#111417",
+        fontFamily: this.fontFamily,
+        fontSize: "12px",
+      })
+      .setOrigin(0, 0)
+      .setVisible(false);
     this.priceChartOverlay = new IntradayPriceChartOverlay(this, {
       x: 96,
       y: 160,
@@ -122,21 +194,30 @@ export class IntradayScene extends BaseDocumentScene {
       targetMinFallback: gameSession.ensureDay().targetBandMin,
       targetMaxFallback: gameSession.ensureDay().targetBandMax,
       crashFallback: gameSession.ensureDay().crashLine,
-      averageEntryFallback: 0
+      averageEntryFallback: 0,
     });
-    this.orderBookOverlay = new IntradayOrderBookOverlay(this, {
-      x: 452,
-      y: 160,
-      width: 122,
-      height: 150
-    }, (side, offsetPercent, priceChangePercent) =>
-      this.handleOrderBookWallAction(side, offsetPercent, priceChangePercent)
+    this.orderBookOverlay = new IntradayOrderBookOverlay(
+      this,
+      {
+        x: 452,
+        y: 160,
+        width: 122,
+        height: 150,
+      },
+      (side, offsetPercent, priceChangePercent) =>
+        this.handleOrderBookWallAction(side, offsetPercent, priceChangePercent),
     );
     this.marketTerminalOverlay = new IntradayMarketTerminalOverlay(this, {
       x: 610,
       y: 152,
       width: 560,
-      height: 354
+      height: 354,
+    });
+    this.telemetryOverlay = new IntradayTelemetryOverlay(this, {
+      x: 108,
+      y: 344,
+      width: 446,
+      height: 92,
     });
 
     this.contractText = this.add
@@ -144,10 +225,10 @@ export class IntradayScene extends BaseDocumentScene {
         color: "#d9c58b",
         backgroundColor: "#111417",
         fontFamily: this.fontFamily,
-        fontSize: "12px",
+        fontSize: "11px",
         lineSpacing: 1,
         padding: { x: 8, y: 5 },
-        wordWrap: { width: 270 }
+        wordWrap: { width: 270 },
       })
       .setOrigin(0, 0);
 
@@ -155,94 +236,126 @@ export class IntradayScene extends BaseDocumentScene {
       .text(96, 326, "", {
         color: "#f3e8ca",
         fontFamily: this.fontFamily,
-        fontSize: "13px",
-        lineSpacing: 2,
-        wordWrap: { width: 470 }
+        fontSize: "12px",
+        lineSpacing: 3,
+        wordWrap: { width: 470 },
       })
-      .setOrigin(0, 0);
+      .setOrigin(0, 0)
+      .setVisible(false);
 
     this.statsText = this.add
       .text(96, 414, "", {
         color: "#c9c1ad",
         fontFamily: this.fontFamily,
         fontSize: "12px",
-        lineSpacing: 2,
-        wordWrap: { width: 470 }
+        lineSpacing: 3,
+        wordWrap: { width: 470 },
       })
-      .setOrigin(0, 0);
+      .setOrigin(0, 0)
+      .setVisible(false);
 
     this.autoCardText = this.add
-      .text(610, 516, "", {
+      .text(616, 532, "", {
         color: "#c9c1ad",
         fontFamily: this.fontFamily,
         fontSize: "13px",
         lineSpacing: 2,
-        wordWrap: { width: 560 }
+        wordWrap: { width: 560 },
       })
       .setOrigin(0, 0);
 
     this.actionStatusText = this.add
-      .text(96, 536, "수동 액션: 대기", {
+      .text(108, 550, "수동 액션: 대기", {
         color: "#8f9f7a",
         fontFamily: this.fontFamily,
         fontSize: "15px",
-        wordWrap: { width: 500 }
+        wordWrap: { width: 500 },
       })
       .setOrigin(0, 0);
     this.orderBookWallLogText = this.add
-      .text(610, 638, "", {
+      .text(610, 626, "", {
         color: "#8fa2a6",
+        backgroundColor: "#0d171d",
         fontFamily: this.fontFamily,
         fontSize: "12px",
         lineSpacing: 1,
-        wordWrap: { width: 390 }
+        padding: { x: 8, y: 5 },
+        wordWrap: { width: 390 },
       })
       .setOrigin(0, 0);
 
     manualActions.forEach((action, index) => {
       const buttonX = 96 + index * 206;
-      const button = this.addDocumentButton(buttonX, 580, action.displayName, () => {
-        const activeEffect = gameSession.intradayState?.activeManualActionEffects.find(
-          (effect) => effect.actionId === action.id
-        );
+      const button = this.addDocumentButton(
+        buttonX,
+        590,
+        action.displayName,
+        () => {
+          const activeEffect =
+            gameSession.intradayState?.activeManualActionEffects.find(
+              (effect) => effect.actionId === action.id,
+            );
 
-        if (activeEffect) {
-          gameSession.cancelManualAction(action.id);
-          this.actionStatusText?.setText(`수동 액션: ${getManualActionDisplayLabel(action.id, gameSession.intradayState)} 중단`);
+          if (activeEffect) {
+            gameSession.cancelManualAction(action.id);
+            this.actionStatusText?.setText(
+              `수동 액션: ${getManualActionDisplayLabel(action.id, gameSession.intradayState)} 중단`,
+            );
+            this.refreshIntradayUi();
+            return;
+          }
+
+          const result = gameSession.useManualAction(action.id);
+          if (result.applied) {
+            this.startManualActionFeedback(action.id);
+          }
+          this.actionStatusText?.setText(
+            [
+              `수동 액션: ${getManualActionDisplayLabel(action.id, gameSession.intradayState)} / ${result.reason}`,
+              gameSession.lastContractActionFitResult?.message ?? null,
+            ]
+              .filter(Boolean)
+              .join("\n"),
+          );
           this.refreshIntradayUi();
-          return;
-        }
-
-        const result = gameSession.useManualAction(action.id);
-        if (result.applied) {
-          this.startManualActionFeedback(action.id);
-        }
-        this.actionStatusText?.setText(
-          [
-            `수동 액션: ${getManualActionDisplayLabel(action.id, gameSession.intradayState)} / ${result.reason}`,
-            gameSession.lastContractActionFitResult?.message ?? null
-          ]
-            .filter(Boolean)
-            .join("\n")
-        );
-        this.refreshIntradayUi();
-        this.routeIfRunFailed();
-      });
+          this.routeIfRunFailed();
+        },
+      );
       this.manualActionButtons[action.id] = button;
       this.manualActionGaugeTracks[action.id] = this.add
-        .rectangle(buttonX, 636, manualActionGaugeWidth, 5, 0x2a3033, 0.95)
+        .rectangle(buttonX, 648, manualActionGaugeWidth, 5, 0x2a3033, 0.95)
         .setOrigin(0, 0.5);
       this.manualActionGaugeBars[action.id] = this.add
-        .rectangle(buttonX, 636, 0, 5, getManualActionFeedbackColorNumber(action.id), 0.95)
+        .rectangle(
+          buttonX,
+          648,
+          0,
+          5,
+          getManualActionFeedbackColorNumber(action.id),
+          0.95,
+        )
         .setOrigin(0, 0.5);
     });
 
     this.addDocumentButton(1040, 618, "Day 정산", () => {
       this.scene.start(SceneKeys.DaySettlement);
     });
-    this.repositionButton = null;
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.destroyDomOverlays());
-    this.events.once(Phaser.Scenes.Events.DESTROY, () => this.destroyDomOverlays());
+    this.repositionButton = this.addDocumentButton(
+      848,
+      590,
+      "데스크\n재배치",
+      () => {
+        this.scene.start(SceneKeys.IntradayReposition);
+      },
+    );
+    this.repositionButton.setVisible(false);
+    this.repositionButton.disableInteractive();
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () =>
+      this.destroyDomOverlays(),
+    );
+    this.events.once(Phaser.Scenes.Events.DESTROY, () =>
+      this.destroyDomOverlays(),
+    );
     this.refreshIntradayUi();
 
     this.time.addEvent({
@@ -259,8 +372,36 @@ export class IntradayScene extends BaseDocumentScene {
         if (nextState.timeRemainingSec <= 0) {
           this.scene.start(SceneKeys.DaySettlement);
         }
-      }
+      },
     });
+  }
+
+  private drawIntradayDeskScaffold(): void {
+    this.drawScaffoldPanel(96, 128, 478, 190, "LIVE PRICE DESK");
+    this.drawScaffoldPanel(96, 318, 478, 196, "MONEY / RISK TELEMETRY");
+    this.drawScaffoldPanel(96, 524, 870, 132, "MANUAL ACTIONS");
+    this.drawScaffoldPanel(604, 128, 576, 384, "MARKET BOARD / DASHBOARD");
+    this.drawScaffoldPanel(604, 508, 576, 112, "AUTO CARDS / SYSTEM FEED");
+  }
+
+  private drawScaffoldPanel(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    label: string,
+  ): void {
+    this.add
+      .rectangle(x, y, width, height, 0x111417, 1)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, 0x263038);
+    this.add
+      .text(x + 12, y + 8, label, {
+        color: "#8f9f7a",
+        fontFamily: this.fontFamily,
+        fontSize: "11px",
+      })
+      .setOrigin(0, 0);
   }
 
   update(time: number): void {
@@ -289,35 +430,27 @@ export class IntradayScene extends BaseDocumentScene {
     this.orderBookOverlay = null;
     this.marketTerminalOverlay?.destroy();
     this.marketTerminalOverlay = null;
-  }
-
-  private ensurePepeMascotTexture(): void {
-    if (this.textures.exists(pepeMascotTextureKey)) {
-      return;
-    }
-
-    this.load.image(pepeMascotTextureKey, "/assets/meme-frog-moods.png");
-    this.load.once(Phaser.Loader.Events.COMPLETE, () => {
-      if (this.scene.isActive()) {
-        this.refreshIntradayUi();
-      }
-    });
-    this.load.start();
+    this.telemetryOverlay?.destroy();
+    this.telemetryOverlay = null;
   }
 
   private refreshDomOverlayVisibility(): void {
     const state = gameSession.intradayState;
-    const modalOpen = Boolean(state?.activeDocumentEventId || gameSession.autoCardRewardChoices.length > 0);
+    const modalOpen = Boolean(
+      state?.activeDocumentEventId ||
+      gameSession.autoCardRewardChoices.length > 0,
+    );
 
     this.priceChartOverlay?.setVisible(!modalOpen);
     this.orderBookOverlay?.setVisible(!modalOpen);
     this.marketTerminalOverlay?.setVisible(!modalOpen);
+    this.telemetryOverlay?.setVisible(!modalOpen);
   }
 
   private startManualActionFeedback(actionId: ManualActionId): void {
     this.manualActionFeedbackEndsAt = {
       ...this.manualActionFeedbackEndsAt,
-      [actionId]: this.time.now + manualActionFeedbackDurationMs
+      [actionId]: this.time.now + manualActionFeedbackDurationMs,
     };
   }
 
@@ -331,17 +464,29 @@ export class IntradayScene extends BaseDocumentScene {
         continue;
       }
 
-      const activeEffect = state?.activeManualActionEffects.find((effect) => effect.actionId === action.id);
-      const progress = activeEffect ? 1 - activeEffect.remainingSec / Math.max(1, activeEffect.totalSec) : 0;
-      const isActive = Boolean(activeEffect) || time < (this.manualActionFeedbackEndsAt[action.id] ?? 0);
-      const label = getManualActionButtonLabel(action.id, action.displayName, state);
+      const activeEffect = state?.activeManualActionEffects.find(
+        (effect) => effect.actionId === action.id,
+      );
+      const progress = activeEffect
+        ? 1 - activeEffect.remainingSec / Math.max(1, activeEffect.totalSec)
+        : 0;
+      const isActive =
+        Boolean(activeEffect) ||
+        time < (this.manualActionFeedbackEndsAt[action.id] ?? 0);
+      const label = getManualActionButtonLabel(
+        action.id,
+        action.displayName,
+        state,
+      );
       this.refreshManualActionGauge(action.id, progress, Boolean(activeEffect));
 
       if (isActive) {
         this.setManualActionButtonMode(button, action.id, "active");
         button.setInteractive({ useHandCursor: true });
         button.setText(
-          activeEffect ? `${getManualActionDisplayLabel(action.id, state)}\n진행 ${Math.round(progress * 100)}% · 중단` : label
+          activeEffect
+            ? `${getManualActionDisplayLabel(action.id, state)}\n진행 ${Math.round(progress * 100)}% · 중단`
+            : label,
         );
         button.setAlpha(0.68 + Math.sin(time * 0.026) * 0.16 + 0.16);
         continue;
@@ -349,9 +494,16 @@ export class IntradayScene extends BaseDocumentScene {
 
       this.setManualActionButtonMode(button, action.id, "normal");
       button.setText(label);
-      if (!state || !canUseManualAction(state, action.id)) {
+      const unavailableReason = getManualActionUnavailableReason(
+        state,
+        action.id,
+      );
+
+      if (unavailableReason) {
         button.disableInteractive();
-        button.setText(state?.holdingRatio === 0 ? `${getManualActionDisplayLabel(action.id, state)}\n관망` : label);
+        button.setText(
+          `${getManualActionDisplayLabel(action.id, state)}\n${unavailableReason}`,
+        );
         button.setAlpha(0.38);
         continue;
       }
@@ -359,21 +511,52 @@ export class IntradayScene extends BaseDocumentScene {
       button.setInteractive({ useHandCursor: true });
       button.setAlpha(1);
     }
+
+    const activeEffect = state?.activeManualActionEffects[0];
+    if (state && activeEffect) {
+      const progress =
+        1 - activeEffect.remainingSec / Math.max(1, activeEffect.totalSec);
+      this.actionStatusText?.setText(
+        [
+          `수동 액션: ${getManualActionDisplayLabel(activeEffect.actionId, state)} 진행 ${Math.round(
+            progress * 100,
+          )}% · 다시 누르면 중단`,
+          "이미 적용된 효과는 유지되고 남은 진행만 취소됩니다.",
+        ].join("\n"),
+      );
+      return;
+    }
+
+    const availabilitySummary = getManualActionAvailabilitySummary(state);
+
+    if (availabilitySummary) {
+      this.actionStatusText?.setText(availabilitySummary);
+    }
   }
 
   private handleOrderBookWallAction(
     side: OrderBookWallSide,
     offsetPercent: number,
-    priceChangePercent: number
+    priceChangePercent: number,
   ): void {
-    const result = gameSession.useOrderBookWall(side, offsetPercent, priceChangePercent);
+    const result = gameSession.useOrderBookWall(
+      side,
+      offsetPercent,
+      priceChangePercent,
+    );
 
-    this.actionStatusText?.setText(`호가벽: ${getOrderBookWallDisplayLabel(side)} / ${getOrderBookWallResultLabel(result.reason)}`);
+    this.actionStatusText?.setText(
+      `호가벽: ${getOrderBookWallDisplayLabel(side)} / ${getOrderBookWallResultLabel(result.reason)}`,
+    );
     this.refreshIntradayUi();
     this.routeIfRunFailed();
   }
 
-  private refreshManualActionGauge(actionId: ManualActionId, progress: number, visible: boolean): void {
+  private refreshManualActionGauge(
+    actionId: ManualActionId,
+    progress: number,
+    visible: boolean,
+  ): void {
     const track = this.manualActionGaugeTracks[actionId];
     const bar = this.manualActionGaugeBars[actionId];
 
@@ -382,13 +565,15 @@ export class IntradayScene extends BaseDocumentScene {
     }
 
     track.setAlpha(visible ? 0.95 : 0.32);
-    bar.width = visible ? manualActionGaugeWidth * Math.max(0, Math.min(1, progress)) : 0;
+    bar.width = visible
+      ? manualActionGaugeWidth * Math.max(0, Math.min(1, progress))
+      : 0;
   }
 
   private setManualActionButtonMode(
     button: Phaser.GameObjects.Text,
     actionId: ManualActionId,
-    mode: "normal" | "active"
+    mode: "normal" | "active",
   ): void {
     if (this.manualActionButtonModes[actionId] === mode) {
       return;
@@ -402,7 +587,7 @@ export class IntradayScene extends BaseDocumentScene {
         backgroundColor: getManualActionFeedbackColor(actionId),
         fontFamily: this.fontFamily,
         fontSize: "17px",
-        padding: { x: 12, y: 8 }
+        padding: { x: 12, y: 8 },
       });
       button.setShadow(0, 0, "#f3e8ca", 8, true, true);
       return;
@@ -413,7 +598,7 @@ export class IntradayScene extends BaseDocumentScene {
       backgroundColor: "#2a3033",
       fontFamily: this.fontFamily,
       fontSize: "17px",
-      padding: { x: 12, y: 8 }
+      padding: { x: 12, y: 8 },
     });
     button.setShadow(0, 0, "#000000", 0, false, false);
   }
@@ -429,48 +614,113 @@ export class IntradayScene extends BaseDocumentScene {
     if (ledger) {
       this.moneyText?.setText(
         [
-          `현재가 ${formatPrice(ledger.currentPrice)} / 시초가 ${formatPrice(ledger.openingPrice)} / 평균단가 ${formatPrice(
-            ledger.averageEntryPrice
-          )}`,
-          `보유 ${formatUnits(ledger.heldUnits)} / 매물 ${formatUnits(ledger.fictionalFloatUnits)} / 비중 ${formatNumber(
-            state.holdingRatio
+          `가격 ${formatPrice(ledger.currentPrice)} / 시초 ${formatPrice(ledger.openingPrice)} / 평균 ${formatPrice(
+            ledger.averageEntryPrice,
+          )} / 보유 ${formatNumber(
+            state.holdingRatio,
           )}%`,
-          `순자산 ${formatBudget(ledger.totalAccountValue)} / 총손익 ${formatSignedBudget(ledger.estimatedNetProfitLoss)} / Day손익 ${formatSignedBudget(
-            ledger.dayProfitLoss
+          `순자산 ${formatBudget(ledger.totalAccountValue)} / 총손익 ${formatSignedBudget(ledger.estimatedNetProfitLoss)} / Day ${formatSignedBudget(
+            ledger.dayProfitLoss,
           )}`,
-          `포지션 평가 ${formatBudget(ledger.positionMarketValue)} / 평가손익 ${formatSignedBudget(
-            ledger.unrealizedPositionProfitLoss
+          `포지션 ${formatBudget(ledger.positionMarketValue)} / 평가손익 ${formatSignedBudget(
+            ledger.unrealizedPositionProfitLoss,
+          )} / 유통 ${formatUnits(ledger.fictionalFloatUnits)}`,
+          `예산 ${formatBudget(ledger.currentBudget)} / 투입 ${formatBudget(ledger.netBudgetUsed)} / 회수 ${formatBudget(
+            ledger.recoveredBudget,
           )}`,
-          `기준 Run ${formatBudget(ledger.runStartingBudget)} / Day ${formatBudget(ledger.startingBudget)}`,
-          `자금 투입 ${formatBudget(ledger.netBudgetUsed)} / 회수 ${formatBudget(
-            ledger.recoveredBudget
-          )} / 예산 ${formatBudget(ledger.currentBudget)}`
-        ].join("\n")
+        ].join("\n"),
       );
     }
 
     this.sessionStatusText?.setText(
       `DAY ${gameSession.ensureRun().currentDay}/5  ${gameSession.getSelectedAssetLabel()}  TIME ${state.timeRemainingSec}s  BUDGET ${formatBudget(
-        state.budget
-      )}`
+        state.budget,
+      )}`,
     );
     this.refreshProfitLossBadge(ledger);
+    this.refreshRiskAlertBadge(state, gameSession.ensureDay().crashLine);
 
+    const dayState = gameSession.ensureDay();
     this.statsText?.setText(
       [
-        `TIME ${state.timeRemainingSec}s / CHANGE ${formatPercent(state.priceChangePercent)} / TICK ${formatPercent(
-          state.priceDeltaPerTick
+        `리스크 ${getDashboardRiskStateLabel(state, dayState.crashLine)} / 차트 ${getDashboardTargetDistanceLabel(
+          state.priceChangePercent,
+          dayState.targetBandMin,
+          dayState.targetBandMax,
+          dayState.crashLine,
         )}`,
-        `PARTICIPATION ${formatNumber(state.personalParticipation)} / MADNESS ${formatNumber(
-          state.madness
-        )} / LIQUIDITY ${formatNumber(state.marketLiquidity)}`,
-        `SURVEILLANCE ${formatNumber(state.surveillance)} / VOLATILITY ${formatNumber(state.volatility)}`,
-        `PRESSURE ${formatNumber(state.marketPressure)} / DOCUMENTS ${state.documentEventHistory.length}/${documentEventRules.maxEventsPerDay}`
-      ].join("\n")
+        `흐름 ${getDashboardFlowLabel(state)} / 문서 ${state.documentEventHistory.length}/${documentEventRules.maxEventsPerDay} / 틱 ${formatPercent(
+          state.priceDeltaPerTick,
+        )}`,
+      ].join("\n"),
     );
+
+    if (ledger) {
+      const riskLabel = getDashboardRiskStateLabel(state, dayState.crashLine);
+      const chartLabel = getDashboardTargetDistanceLabel(
+        state.priceChangePercent,
+        dayState.targetBandMin,
+        dayState.targetBandMax,
+        dayState.crashLine,
+      );
+      const flowLabel = getDashboardFlowLabel(state);
+
+      this.telemetryOverlay?.update({
+        cards: [
+          {
+            label: "가격",
+            value: formatPrice(ledger.currentPrice),
+            detail: `등락 ${formatPercent(state.priceChangePercent)}`,
+            tone: getSignedTelemetryTone(state.priceChangePercent),
+          },
+          {
+            label: "보유",
+            value: `${formatNumber(state.holdingRatio)}%`,
+            detail: `평균 ${formatPrice(ledger.averageEntryPrice)}`,
+            tone: "neutral",
+          },
+          {
+            label: "손익",
+            value: formatSignedBudget(ledger.estimatedNetProfitLoss),
+            detail: `Day ${formatSignedBudget(ledger.dayProfitLoss)}`,
+            tone: getSignedTelemetryTone(ledger.estimatedNetProfitLoss),
+          },
+          {
+            label: "예산",
+            value: formatBudget(ledger.currentBudget),
+            detail: `투입 ${formatBudget(ledger.netBudgetUsed)}`,
+            tone: ledger.currentBudget <= 0 ? "warning" : "neutral",
+          },
+        ],
+        statuses: [
+          {
+            label: "RISK",
+            value: riskLabel,
+            tone: getRiskTelemetryTone(state, dayState.crashLine),
+          },
+          {
+            label: "CHART",
+            value: chartLabel,
+            tone: getChartTelemetryTone(
+              state.priceChangePercent,
+              dayState.targetBandMin,
+              dayState.targetBandMax,
+              dayState.crashLine,
+            ),
+          },
+          {
+            label: "FLOW",
+            value: flowLabel,
+            tone: getFlowTelemetryTone(state),
+          },
+        ],
+      });
+    }
   }
 
-  private refreshProfitLossBadge(ledger: ReturnType<typeof gameSession.getIntradayMoneyLedger>): void {
+  private refreshProfitLossBadge(
+    ledger: ReturnType<typeof gameSession.getIntradayMoneyLedger>,
+  ): void {
     if (!ledger || !this.pnlBadgeText) {
       return;
     }
@@ -478,13 +728,38 @@ export class IntradayScene extends BaseDocumentScene {
     const pnl = ledger.estimatedNetProfitLoss;
     const isProfit = pnl >= 0;
 
-    this.pnlBadgeText.setText(`총손익 ${formatSignedBudget(pnl)}   순자산 ${formatBudget(ledger.totalAccountValue)}`);
+    this.pnlBadgeText.setText(
+      `총손익 ${formatSignedBudget(pnl)}   순자산 ${formatBudget(ledger.totalAccountValue)}`,
+    );
     this.pnlBadgeText.setStyle({
       color: isProfit ? "#00c087" : "#f6465d",
       backgroundColor: isProfit ? "#0b1f19" : "#241316",
       fontFamily: this.fontFamily,
       fontSize: "13px",
-      padding: { x: 10, y: 5 }
+      padding: { x: 10, y: 5 },
+    });
+  }
+
+  private refreshRiskAlertBadge(state: IntradayState, crashLine: number): void {
+    const alert = getIntradayRiskAlert(state, crashLine);
+
+    if (!alert) {
+      this.riskAlertText?.setVisible(false);
+      return;
+    }
+
+    this.riskAlertText?.setVisible(true);
+    this.riskAlertText?.setText(
+      `${alert.label} ${alert.valueText}\n${alert.bufferText}`,
+    );
+    this.riskAlertText?.setStyle({
+      color: alert.color,
+      backgroundColor: alert.backgroundColor,
+      fontFamily: this.fontFamily,
+      fontSize: "12px",
+      lineSpacing: 0,
+      padding: { x: 8, y: 4 },
+      wordWrap: { width: 214 },
     });
   }
 
@@ -498,7 +773,12 @@ export class IntradayScene extends BaseDocumentScene {
 
     if (available) {
       this.repositionButton.setInteractive({ useHandCursor: true });
-      this.repositionButton.setAlpha(0.82 + Math.sin(this.time.now * 0.01) * 0.18);
+      this.repositionButton.setAlpha(
+        0.82 + Math.sin(this.time.now * 0.01) * 0.18,
+      );
+      this.actionStatusText?.setText(
+        "수동 액션: 보유 0% · 데스크 재배치 또는 Day 정산",
+      );
       return;
     }
 
@@ -509,8 +789,12 @@ export class IntradayScene extends BaseDocumentScene {
   private renderMarketTerminal(): void {
     const playerState = gameSession.intradayState;
     const playerPriceChangePercent = playerState?.priceChangePercent ?? 0;
-    const playerVolume = gameSession.priceHistory[gameSession.priceHistory.length - 1]?.fictionalVolume ?? 0;
-    const elapsedSec = playerState ? runDefaults.intradayDurationSec - playerState.timeRemainingSec : 0;
+    const playerVolume =
+      gameSession.priceHistory[gameSession.priceHistory.length - 1]
+        ?.fictionalVolume ?? 0;
+    const elapsedSec = playerState
+      ? runDefaults.intradayDurationSec - playerState.timeRemainingSec
+      : 0;
 
     if (elapsedSec < this.previousMarketTradeValueElapsedSec) {
       this.previousMarketTradeValues = new Map();
@@ -518,7 +802,9 @@ export class IntradayScene extends BaseDocumentScene {
     }
 
     const playerTradeValueImpulse =
-      playerState && gameSession.marketBoardState ? gameSession.consumeMarketDashboardTradeValueImpulse() : 0;
+      playerState && gameSession.marketBoardState
+        ? gameSession.consumeMarketDashboardTradeValueImpulse()
+        : 0;
     const model = buildMarketTerminalModel(
       gameSession.marketBoardState,
       playerPriceChangePercent,
@@ -526,14 +812,15 @@ export class IntradayScene extends BaseDocumentScene {
       {
         currentPrice: playerState?.currentPrice ?? 10000,
         referencePrice: playerState?.openingPrice ?? 10000,
-        averageEntryPrice: playerState?.averageEntryPrice ?? 10000
+        averageEntryPrice: playerState?.averageEntryPrice ?? 10000,
       },
       this.previousMarketBoardRanks,
       this.previousMarketTradeValues,
       elapsedSec,
       this.previousMarketTradeValueElapsedSec,
       playerTradeValueImpulse,
-      gameSession.ensureDay().morningNewsItems
+      gameSession.ensureDay().morningNewsItems,
+      gameSession.ensureRun().currentDay,
     );
     this.previousMarketBoardRanks = model.ranks;
     this.previousMarketTradeValues = model.tradeValues;
@@ -543,16 +830,31 @@ export class IntradayScene extends BaseDocumentScene {
   }
 
   private refreshOrderBookWallLogText(): void {
-    const events = gameSession.intradayState?.orderBookWallEvents ?? [];
+    const state = gameSession.intradayState;
+    const events = state?.orderBookWallEvents ?? [];
     const recentEvents = [...events].slice(-3).reverse();
 
     if (recentEvents.length === 0) {
-      this.orderBookWallLogText?.setText("호가벽 로그: -");
+      this.orderBookWallLogText?.setText(
+        ["호가벽 피드백", getOrderBookWallAvailabilitySummary(state)].join(
+          "\n",
+        ),
+      );
       this.orderBookWallLogText?.setAlpha(0.58);
       return;
     }
 
-    this.orderBookWallLogText?.setText(["호가벽 로그", ...recentEvents.map(formatOrderBookWallEvent)].join("\n"));
+    const activeSummary = getOrderBookWallActiveSummary(state);
+    const availabilitySummary = getOrderBookWallAvailabilitySummary(state);
+    this.orderBookWallLogText?.setText(
+      [
+        "호가벽 피드백",
+        activeSummary ?? availabilitySummary,
+        ...recentEvents.map(formatOrderBookWallEvent),
+      ]
+        .filter(Boolean)
+        .join("\n"),
+    );
     this.orderBookWallLogText?.setAlpha(1);
   }
 
@@ -565,32 +867,47 @@ export class IntradayScene extends BaseDocumentScene {
     }
 
     const elapsedSec = runDefaults.intradayDurationSec - state.timeRemainingSec;
-    const nextReward = autoCardRewardElapsedSeconds[gameSession.autoCardRewardIndex];
-    const recentEffects = gameSession.lastAutoCardEffects.map((effect) => effect.card.displayName).join(", ");
+    const nextReward =
+      autoCardRewardElapsedSeconds[gameSession.autoCardRewardIndex];
+    const recentEffects = gameSession.lastAutoCardEffects
+      .map((effect) => effect.card.displayName)
+      .join(", ");
 
     this.autoCardText?.setText(
       [
         `자동 카드  다음 보상 ${nextReward ? `${Math.max(0, nextReward - elapsedSec)}s` : "-"}`,
-        runState.autoCards.map((card) => {
-          const value = autoCardValues[card.cardId];
-          return `${value.displayName} Lv.${card.level}(${formatNumber(getAutoCardPeriodSec(card))}s)`;
-        }).join("  "),
+        runState.autoCards
+          .map((card) => {
+            const value = autoCardValues[card.cardId];
+            return `${value.displayName} Lv.${card.level}(${formatNumber(getAutoCardPeriodSec(card))}s)`;
+          })
+          .join("  "),
         `최근 발동: ${recentEffects || "-"}`,
-        gameSession.autoCardRewardChoices.length > 0 ? "카드 선택 대기 중" : ""
-      ].join("\n")
+        gameSession.autoCardRewardChoices.length > 0 ? "카드 선택 대기 중" : "",
+      ].join("\n"),
     );
   }
 
   private refreshContractText(): void {
-    const lines = gameSession.getContractProgressLines();
+    const tracker = gameSession.getContractIntradayTrackerSummary();
 
-    if (lines.length === 0) {
+    if (!tracker) {
       this.contractText?.setVisible(false);
       return;
     }
 
     this.contractText?.setVisible(true);
-    this.contractText?.setText(lines.slice(0, 4).join("\n"));
+    this.contractText?.setPosition(610, tracker.actionFitMessage ? 74 : 92);
+    this.contractText?.setStyle({
+      color: getContractTrackerTextColor(tracker),
+      backgroundColor: getContractTrackerBackgroundColor(tracker),
+      fontFamily: this.fontFamily,
+      fontSize: "11px",
+      lineSpacing: 1,
+      padding: { x: 8, y: 5 },
+      wordWrap: { width: 270 },
+    });
+    this.contractText?.setText(formatContractTrackerText(tracker));
   }
 
   private renderAutoCardChoices(): void {
@@ -604,34 +921,47 @@ export class IntradayScene extends BaseDocumentScene {
     const shell = this.createModalShell({
       eyebrow: "AUTO CARD REWARD",
       title: "자동 카드 선택",
-      body: "자동 카드는 직접 누르지 않아도 장중에 주기적으로 발동됩니다.\n새 카드를 얻거나 기존 카드를 Lv.3까지 강화합니다.\n선택 전까지 장중 운용은 보류됩니다.",
-      panelWidth: 650,
-      panelHeight: 420,
-      accentColor: 0xd9c58b
+      body: "선택 전까지 장중 운용은 일시 정지됩니다.\n신규 Lv.1 카드 또는 보유 카드 강화를 선택하세요. MVP 최대 레벨은 Lv.3입니다.",
+      panelWidth: 760,
+      panelHeight: 454,
+      accentColor: 0xd9c58b,
     });
-    this.autoChoiceObjects.push(...shell.objects);
+    const pauseLabel = this.add
+      .text(
+        shell.panelX + 34,
+        shell.panelY + 132,
+        "AUTO PICK PAUSED · 3 CHOICES MAX · NO EVOLUTION / NO SYNERGY",
+        {
+          color: "#8f9f7a",
+          fontFamily: this.fontFamily,
+          fontSize: "13px",
+        },
+      )
+      .setOrigin(0, 0)
+      .setDepth(32);
+    this.autoChoiceObjects.push(...shell.objects, pauseLabel);
 
     const runState = gameSession.ensureRun();
     gameSession.autoCardRewardChoices.forEach((choice, index) => {
       const value = autoCardValues[choice.cardId];
       const prefix = choice.type === "new" ? "NEW CARD" : "LEVEL UP";
-      const currentLevel = runState.autoCards.find((card) => card.cardId === choice.cardId)?.level ?? 0;
+      const currentLevel =
+        runState.autoCards.find((card) => card.cardId === choice.cardId)
+          ?.level ?? 0;
       const nextLevel = currentLevel >= 2 ? 3 : currentLevel === 1 ? 2 : 1;
       const objects = this.addAutoCardChoice(
         shell,
         index,
+        prefix,
         `${prefix}: ${value.displayName}`,
         value.description,
-        [
-          `Lv.${nextLevel}`,
-          `${formatNumber(getAutoCardPeriodSec({ cardId: choice.cardId, level: nextLevel }))}s마다 발동`,
-          getAutoCardGrowthLabel(value.growthType)
-        ].join(" · "),
+        getAutoCardChoiceMetaLabel(choice.type, value, currentLevel, nextLevel),
+        getAutoCardEffectSummary(value, nextLevel),
         () => {
           const message = gameSession.chooseAutoCardReward(index);
           this.actionStatusText?.setText(`자동 카드: ${message}`);
           this.refreshIntradayUi();
-        }
+        },
       );
 
       this.autoChoiceObjects.push(...objects);
@@ -641,45 +971,66 @@ export class IntradayScene extends BaseDocumentScene {
   private addAutoCardChoice(
     shell: ModalShell,
     index: number,
+    badgeLabel: string,
     primaryLabel: string,
     description: string,
     metaLabel: string,
-    onClick: () => void
+    effectLabel: string,
+    onClick: () => void,
   ): Phaser.GameObjects.GameObject[] {
     const x = shell.panelX + 34;
-    const y = shell.choiceStartY + index * 74;
+    const y = shell.choiceStartY + index * 92;
     const width = shell.choiceWidth;
-    const height = 64;
+    const height = 84;
     const card = this.add
-      .rectangle(x, y, width, height, 0x222a2e, 1)
+      .rectangle(x, y, width, height, 0x111a1d, 1)
       .setOrigin(0, 0)
       .setStrokeStyle(1, 0x6f6a5b, 0.85)
       .setDepth(32)
       .setInteractive({ useHandCursor: true });
+    const indexLabel = this.add
+      .text(x + 16, y + 13, `0${index + 1}`, {
+        color: "#8f9f7a",
+        fontFamily: this.fontFamily,
+        fontSize: "16px",
+      })
+      .setOrigin(0, 0)
+      .setDepth(33);
+    const badge = this.add
+      .text(x + width - 126, y + 10, badgeLabel, {
+        color: "#111417",
+        backgroundColor: "#d9c58b",
+        fontFamily: this.fontFamily,
+        fontSize: "11px",
+        padding: { x: 8, y: 4 },
+      })
+      .setOrigin(0, 0)
+      .setDepth(33);
     const primary = this.add
-      .text(x + 16, y + 8, primaryLabel, {
+      .text(x + 58, y + 9, primaryLabel, {
         color: "#f3e8ca",
         fontFamily: this.fontFamily,
         fontSize: "16px",
-        wordWrap: { width: width - 32 }
+        wordWrap: { width: width - 200 },
       })
       .setOrigin(0, 0)
       .setDepth(33);
     const body = this.add
-      .text(x + 16, y + 29, description, {
+      .text(x + 58, y + 31, description, {
         color: "#c9c1ad",
         fontFamily: this.fontFamily,
         fontSize: "12px",
-        wordWrap: { width: width - 32 }
+        wordWrap: { width: width - 82 },
       })
       .setOrigin(0, 0)
       .setDepth(33);
     const meta = this.add
-      .text(x + 16, y + 47, metaLabel, {
+      .text(x + 58, y + 50, `${metaLabel}\n${effectLabel}`, {
         color: "#8fa2a6",
         fontFamily: this.fontFamily,
         fontSize: "11px",
-        wordWrap: { width: width - 32 }
+        lineSpacing: 3,
+        wordWrap: { width: width - 82 },
       })
       .setOrigin(0, 0)
       .setDepth(33);
@@ -689,12 +1040,12 @@ export class IntradayScene extends BaseDocumentScene {
       card.setStrokeStyle(1, 0xd9c58b, 1);
     });
     card.on("pointerout", () => {
-      card.setFillStyle(0x222a2e, 1);
+      card.setFillStyle(0x111a1d, 1);
       card.setStrokeStyle(1, 0x6f6a5b, 0.85);
     });
     card.on("pointerup", onClick);
 
-    return [card, primary, body, meta];
+    return [card, indexLabel, badge, primary, body, meta];
   }
 
   private renderRetailSwarm(): void {
@@ -708,164 +1059,137 @@ export class IntradayScene extends BaseDocumentScene {
     }
 
     const model = calculateRetailSwarmModel(state);
-    const participantMood = estimateParticipantMood(state, gameSession.priceHistory);
+    const participantMood = estimateParticipantMood(
+      state,
+      gameSession.priceHistory,
+    );
     const panelX = 96;
-    const panelY = 468;
+    const panelY = 446;
     const panelWidth = 470;
-    const panelHeight = 52;
+    const panelHeight = 68;
     const panelColor = getSwarmPanelColor(model);
     const tokenColor = getSwarmTokenColor(model);
-    const mood = getPepeSwarmMood(model);
+    const mood = getAntSwarmMood(model, participantMood.profitLossPercent);
     const panel = this.add
-      .rectangle(panelX, panelY, panelWidth, panelHeight, panelColor, 0.22)
+      .rectangle(
+        panelX,
+        panelY,
+        panelWidth,
+        panelHeight,
+        panelColor,
+        model.warningVisual ? 0.38 : 0.24,
+      )
       .setOrigin(0, 0)
       .setStrokeStyle(1, tokenColor, model.warningVisual ? 0.95 : 0.55);
+    const accent = this.add
+      .rectangle(
+        panelX,
+        panelY,
+        5,
+        panelHeight,
+        tokenColor,
+        model.warningVisual ? 0.95 : 0.55,
+      )
+      .setOrigin(0, 0);
     const label = this.add
       .text(
-        panelX + 12,
-        panelY + 9,
-        `MADNESS ${formatNumber(state.madness)} / 열광도 ${formatNumber(model.participationNumber)} / ${getPepeSwarmLabel(
-          mood
-        )}`,
+        panelX + 14,
+        panelY + 8,
+        `RETAIL SWARM ${getSwarmStateLabel(model)} / 열기 ${getSwarmHeatLabel(model)}`,
         {
-          color: getParticipantMoodTextColor(participantMood.profitLossPercent, model),
+          color: getParticipantMoodTextColor(
+            participantMood.profitLossPercent,
+            model,
+          ),
           fontFamily: this.fontFamily,
-          fontSize: "13px"
-        }
+          fontSize: "12px",
+          wordWrap: { width: 306 },
+        },
       )
+      .setOrigin(0, 0);
+    const stateBadge = this.add
+      .text(panelX + 320, panelY + 8, getSwarmBadgeLabel(model), {
+        color: model.panicVisual ? "#f3e8ca" : "#111417",
+        backgroundColor: model.panicVisual
+          ? "#f6465d"
+          : model.warningVisual
+            ? "#d9c58b"
+            : "#8f9f7a",
+        fontFamily: this.fontFamily,
+        fontSize: "11px",
+        padding: { x: 8, y: 4 },
+      })
       .setOrigin(0, 0);
     const participantText = this.add
       .text(
-        panelX + 12,
+        panelX + 14,
         panelY + 29,
-        `참여자 평단 ${formatPrice(participantMood.averageEntryPrice)} / 체감 ${formatPercent(participantMood.profitLossPercent)}`,
+        `무드 ${getAntSwarmLabel(mood)} / 참여자 평단 ${formatPrice(participantMood.averageEntryPrice)} / 체감 ${formatPercent(
+          participantMood.profitLossPercent,
+        )}`,
         {
-          color: getParticipantMoodTextColor(participantMood.profitLossPercent, model),
+          color: getParticipantMoodTextColor(
+            participantMood.profitLossPercent,
+            model,
+          ),
           fontFamily: this.fontFamily,
-          fontSize: "12px"
-        }
+          fontSize: "12px",
+          wordWrap: { width: 306 },
+        },
       )
       .setOrigin(0, 0);
-
-    this.retailSwarmObjects.push(panel, label, participantText);
+    const riskText = this.add
+      .text(panelX + 14, panelY + 49, getSwarmRiskLine(model), {
+        color: getSwarmRiskTextColor(model),
+        fontFamily: this.fontFamily,
+        fontSize: "11px",
+        wordWrap: { width: 382 },
+      })
+      .setOrigin(0, 0);
 
     this.retailSwarmObjects.push(
-      ...this.drawPepeMascot(panelX + panelWidth - 58, panelY + 27, mood, participantMood.profitLossPercent)
+      panel,
+      accent,
+      label,
+      stateBadge,
+      participantText,
+      riskText,
+    );
+
+    this.retailSwarmObjects.push(
+      ...this.drawAntSwarmMascot(
+        panelX + panelWidth - 58,
+        panelY + 34,
+        mood,
+        tokenColor,
+      ),
     );
   }
 
-  private drawPepeMascot(
+  private drawAntSwarmMascot(
     x: number,
     y: number,
-    mood: PepeSwarmMood,
-    participantProfitLossPercent: number
+    mood: AntSwarmMood,
+    signalColor: number,
   ): Phaser.GameObjects.GameObject[] {
-    if (this.textures.exists(pepeMascotTextureKey)) {
-      const frameIndex = getPepeMascotFrameIndex(mood, participantProfitLossPercent);
-      const source = this.textures.get(pepeMascotTextureKey).getSourceImage() as { readonly width: number; readonly height: number };
-      const frameWidth = Math.floor(source.width / pepeMascotFrameCount);
-      const frameHeight = source.height;
-      const mascot = this.add
-        .image(x, y, pepeMascotTextureKey)
-        .setCrop(frameIndex * frameWidth, 0, frameWidth, frameHeight)
-        .setDisplaySize(78, 52)
-        .setOrigin(0.5, 0.5);
-
-      return [mascot];
-    }
-
-    const scale = 1.45;
-    const objects: Phaser.GameObjects.GameObject[] = [];
-    const skinColor = 0x91bf73;
-    const shadowColor = 0x31452b;
-    const eyeWhite = 0xf2edd6;
-    const pupil = 0x171a12;
-    const faceRadius = 9.4 * scale;
-
-    objects.push(
-      this.add.circle(x, y, faceRadius, skinColor, 0.98).setStrokeStyle(2, shadowColor, 0.95),
-      this.add.ellipse(x - 5.4 * scale, y - 4.1 * scale, 6.6 * scale, 5.4 * scale, eyeWhite, 0.98),
-      this.add.ellipse(x + 5.4 * scale, y - 4.1 * scale, 6.6 * scale, 5.4 * scale, eyeWhite, 0.98),
-      this.add.circle(x - 4.3 * scale, y - 3.5 * scale, 1.45 * scale, pupil, 0.98),
-      this.add.circle(x + 6.5 * scale, y - 3.5 * scale, 1.45 * scale, pupil, 0.98),
-      this.add.ellipse(x, y + 1.8 * scale, 12 * scale, 5.5 * scale, 0x7ba663, 0.26)
-    );
-
-    if (participantProfitLossPercent > 0.15) {
-      objects.push(
-        this.add.ellipse(x, y + 5.7 * scale, 10.8 * scale, 5 * scale, pupil, 0.82),
-        this.add.rectangle(x, y + 4.6 * scale, 7.5 * scale, 1.2 * scale, 0xf2edd6, 0.85),
-        this.add
-          .text(x - 25 * scale, y - 25 * scale, "가즈아", {
-            color: "#00c087",
-            fontFamily: this.fontFamily,
-            fontSize: "11px"
-          })
-          .setOrigin(0, 0)
-      );
-      return objects;
-    }
-
-    if (participantProfitLossPercent < -0.15) {
-      objects.push(
-        this.add.rectangle(x, y + 6.2 * scale, 10.8 * scale, 1.7 * scale, pupil, 0.75).setAngle(8),
-        this.add.ellipse(x + 11.5 * scale, y - 1 * scale, 3.2 * scale, 5.6 * scale, 0x7fb4c8, 0.82),
-        this.add
-          .text(x + 14 * scale, y - 18 * scale, "...", {
-            color: "#f6465d",
-            fontFamily: this.fontFamily,
-            fontSize: "13px"
-          })
-          .setOrigin(0, 0)
-      );
-      return objects;
-    }
-
-    objects.push(this.add.rectangle(x, y + 5.7 * scale, 10.8 * scale, 1.7 * scale, pupil, 0.75));
-
-    if (mood === "sleeping") {
-      objects.push(
-        this.add
-          .text(x + 14 * scale, y - 17 * scale, "Zzz", {
-            color: "#8fa2a6",
-            fontFamily: this.fontFamily,
-            fontSize: "12px"
-          })
-          .setOrigin(0, 0)
-      );
-      return objects;
-    }
-
-    if (mood === "curious") {
-      objects.push(
-        this.add
-          .text(x + 14 * scale, y - 18 * scale, "?", {
+    const frameIndex = getAntMascotFrameIndex(mood);
+    const backplate = this.add
+      .rectangle(x, y + 1, 88, 56, 0x071015, 0.46)
+      .setStrokeStyle(1, signalColor, 0.42);
+    const mascot = this.textures.exists(antMascotTextureKey)
+      ? this.add
+          .image(x, y + 1, antMascotTextureKey, frameIndex)
+          .setDisplaySize(91, 91)
+          .setOrigin(0.5, 0.5)
+      : this.add
+          .text(x - 24, y - 10, getAntSwarmLabel(mood), {
             color: "#d9c58b",
             fontFamily: this.fontFamily,
-            fontSize: "16px"
+            fontSize: "12px",
           })
-          .setOrigin(0, 0)
-      );
-      return objects;
-    }
+          .setOrigin(0, 0);
 
-    if (mood === "euphoric") {
-      objects.push(
-        this.add.line(x - 6 * scale, y - 9 * scale, 0, 0, -5 * scale, -8 * scale, shadowColor, 0.95),
-        this.add.line(x + 6 * scale, y - 9 * scale, 0, 0, 5 * scale, -8 * scale, shadowColor, 0.95),
-        this.add.circle(x - 11 * scale, y - 17 * scale, 1.7 * scale, 0xd9c58b, 0.96),
-        this.add.circle(x + 11 * scale, y - 17 * scale, 1.7 * scale, 0xd9c58b, 0.96),
-        this.add
-          .text(x + 14 * scale, y - 18 * scale, "!", {
-            color: "#d9c58b",
-            fontFamily: this.fontFamily,
-            fontSize: "16px"
-          })
-          .setOrigin(0, 0)
-      );
-    }
-
-    return objects;
+    return [backplate, mascot].map((object) => object.setDepth(34));
   }
 
   private renderPriceChart(): void {
@@ -879,20 +1203,24 @@ export class IntradayScene extends BaseDocumentScene {
     }
 
     const currentPrice = state.priceChangePercent;
-    const history = gameSession.priceHistory.length > 0 ? gameSession.priceHistory : [];
+    const contractTracker = gameSession.getContractIntradayTrackerSummary();
+    const contractTarget = contractTracker?.chartTargetBandPercent;
+    const history =
+      gameSession.priceHistory.length > 0 ? gameSession.priceHistory : [];
     const candles = buildPriceCandles(history);
     const orderBook = buildOrderBookProfile(state, {
       runSeed: runState.runSeed,
-      dayIndex: dayState.dayIndex
+      dayIndex: dayState.dayIndex,
     });
 
     graphics.clear();
     this.priceChartOverlay?.update({
       candles,
-      targetBandMin: dayState.targetBandMin,
-      targetBandMax: dayState.targetBandMax,
+      targetBandMin: contractTarget?.min ?? dayState.targetBandMin,
+      targetBandMax: contractTarget?.max ?? dayState.targetBandMax,
       crashLine: dayState.crashLine,
-      averageEntryPriceChangePercent: calculateAverageEntryPriceChangePercent(state)
+      averageEntryPriceChangePercent:
+        calculateAverageEntryPriceChangePercent(state),
     });
     this.orderBookOverlay?.update({
       openingPrice: state.openingPrice,
@@ -901,16 +1229,34 @@ export class IntradayScene extends BaseDocumentScene {
       levels: orderBook.levels,
       sellWallLabel: orderBook.sellWallLabel,
       buyWallLabel: orderBook.buyWallLabel,
-      wallActions: buildOrderBookWallOverlayActions(state, orderBook.levels)
+      wallActions: buildOrderBookWallOverlayActions(state, orderBook.levels),
     });
 
     const latestVolume = history[history.length - 1]?.fictionalVolume ?? 0;
     const averageEntryChange = calculateAverageEntryPriceChangePercent(state);
-    this.priceChartLabel?.setText(
-      `CHG ${formatPercent(currentPrice)}  TGT ${formatPercent(dayState.targetBandMin)}~${formatPercent(
-        dayState.targetBandMax
-      )}  AVG ${averageEntryChange === null ? "-" : formatPercent(averageEntryChange)}  VOL ${formatNumber(latestVolume)}`
+    const targetMin = contractTarget?.min ?? dayState.targetBandMin;
+    const targetMax = contractTarget?.max ?? dayState.targetBandMax;
+    const objectiveStatus = getIntradayObjectiveStatus(
+      currentPrice,
+      targetMin,
+      targetMax,
+      dayState.crashLine,
     );
+
+    this.priceChartLabel?.setText(
+      `CHG ${formatPercent(currentPrice)}  AVG ${
+        averageEntryChange === null ? "-" : formatPercent(averageEntryChange)
+      }  VOL ${formatNumber(latestVolume)}`,
+    );
+    this.objectiveStatusText?.setText(objectiveStatus.label);
+    this.objectiveStatusText?.setStyle({
+      color: objectiveStatus.color,
+      fontFamily: this.fontFamily,
+      fontSize: "12px",
+    });
+    this.objectiveStatusBackplate
+      ?.setFillStyle(objectiveStatus.backgroundColorNumber, 0.96)
+      .setStrokeStyle(1, objectiveStatus.strokeColorNumber, 0.7);
   }
 
   private renderDocumentEventPopup(): void {
@@ -927,25 +1273,43 @@ export class IntradayScene extends BaseDocumentScene {
     const shell = this.createModalShell({
       eyebrow: "DOCUMENT EVENT",
       title: event.displayName,
-      body: "거래소 문서가 도착했습니다.\n응답 전까지 장중 운용은 일시 정지됩니다.",
-      panelWidth: 650,
-      panelHeight: 390,
-      accentColor: 0xd9c58b
+      body: getDocumentEventBody(
+        state.activeDocumentEventId,
+        state,
+        gameSession.ensureDay().crashLine,
+      ),
+      panelWidth: 760,
+      panelHeight: 450,
+      accentColor: 0xd9c58b,
     });
+    const pauseLabel = this.add
+      .text(
+        shell.panelX + 34,
+        shell.panelY + 132,
+        "TIME PAUSED · SELECT ONE RESPONSE",
+        {
+          color: "#8f9f7a",
+          fontFamily: this.fontFamily,
+          fontSize: "13px",
+        },
+      )
+      .setOrigin(0, 0)
+      .setDepth(32);
 
-    this.documentEventObjects.push(...shell.objects);
+    this.documentEventObjects.push(...shell.objects, pauseLabel);
     event.choices.forEach((choice, index) => {
       const objects = this.addModalChoice(
         shell,
         index,
-        `${getChoiceTone(choice.type)}: ${choice.label}`,
+        `${getChoiceTone(choice.type)} 대응: ${choice.label}`,
         getDocumentChoiceSecondaryLabel(choice),
+        getDocumentChoiceBudgetBadge(choice),
         () => {
           const message = gameSession.chooseDocumentEventChoice(index);
           this.actionStatusText?.setText(`문서 이벤트: ${message}`);
           this.refreshIntradayUi();
           this.routeIfRunFailed();
-        }
+        },
       );
 
       this.documentEventObjects.push(...objects);
@@ -957,12 +1321,28 @@ export class IntradayScene extends BaseDocumentScene {
     const panelX = width / 2 - config.panelWidth / 2;
     const panelY = height / 2 - config.panelHeight / 2;
     const objects: Phaser.GameObjects.GameObject[] = [];
-    const backdrop = this.add.rectangle(width / 2, height / 2, width, height, 0x050709, 0.74).setDepth(28);
+    const backdrop = this.add
+      .rectangle(width / 2, height / 2, width, height, 0x050709, 0.74)
+      .setDepth(28);
     const shadow = this.add
-      .rectangle(width / 2 + 8, height / 2 + 10, config.panelWidth, config.panelHeight, 0x000000, 0.42)
+      .rectangle(
+        width / 2 + 8,
+        height / 2 + 10,
+        config.panelWidth,
+        config.panelHeight,
+        0x000000,
+        0.42,
+      )
       .setDepth(29);
     const panel = this.add
-      .rectangle(width / 2, height / 2, config.panelWidth, config.panelHeight, 0x1b1f22, 0.98)
+      .rectangle(
+        width / 2,
+        height / 2,
+        config.panelWidth,
+        config.panelHeight,
+        0x1b1f22,
+        0.98,
+      )
       .setStrokeStyle(2, config.accentColor)
       .setDepth(30);
     const strip = this.add
@@ -977,7 +1357,7 @@ export class IntradayScene extends BaseDocumentScene {
       .text(panelX + 18, panelY + 11, config.eyebrow, {
         color: "#d9c58b",
         fontFamily: this.fontFamily,
-        fontSize: "12px"
+        fontSize: "12px",
       })
       .setOrigin(0, 0)
       .setDepth(32);
@@ -986,7 +1366,7 @@ export class IntradayScene extends BaseDocumentScene {
         color: "#f3e8ca",
         fontFamily: this.fontFamily,
         fontSize: "25px",
-        wordWrap: { width: config.panelWidth - 68 }
+        wordWrap: { width: config.panelWidth - 68 },
       })
       .setOrigin(0, 0)
       .setDepth(32);
@@ -996,7 +1376,7 @@ export class IntradayScene extends BaseDocumentScene {
         fontFamily: this.fontFamily,
         fontSize: "15px",
         lineSpacing: 5,
-        wordWrap: { width: config.panelWidth - 68 }
+        wordWrap: { width: config.panelWidth - 68 },
       })
       .setOrigin(0, 0)
       .setDepth(32);
@@ -1009,7 +1389,7 @@ export class IntradayScene extends BaseDocumentScene {
       panelWidth: config.panelWidth,
       choiceStartY: panelY + 162,
       choiceWidth: config.panelWidth - 68,
-      objects
+      objects,
     };
   }
 
@@ -1018,33 +1398,55 @@ export class IntradayScene extends BaseDocumentScene {
     index: number,
     primaryLabel: string,
     secondaryLabel: string,
-    onClick: () => void
+    budgetBadge: ModalChoiceBudgetBadge | null,
+    onClick: () => void,
   ): Phaser.GameObjects.GameObject[] {
     const x = shell.panelX + 34;
-    const y = shell.choiceStartY + index * 62;
+    const y = shell.choiceStartY + index * 82;
     const width = shell.choiceWidth;
-    const height = 50;
+    const height = 70;
     const card = this.add
-      .rectangle(x, y, width, height, 0x222a2e, 1)
+      .rectangle(x, y, width, height, 0x111a1d, 1)
       .setOrigin(0, 0)
       .setStrokeStyle(1, 0x6f6a5b, 0.85)
       .setDepth(32)
       .setInteractive({ useHandCursor: true });
-    const primary = this.add
-      .text(x + 16, y + 9, primaryLabel, {
-        color: "#f3e8ca",
+    const indexLabel = this.add
+      .text(x + 16, y + 14, `0${index + 1}`, {
+        color: "#8f9f7a",
         fontFamily: this.fontFamily,
         fontSize: "16px",
-        wordWrap: { width: width - 32 }
       })
       .setOrigin(0, 0)
       .setDepth(33);
+    const primary = this.add
+      .text(x + 58, y + 10, primaryLabel, {
+        color: "#f3e8ca",
+        fontFamily: this.fontFamily,
+        fontSize: "16px",
+        wordWrap: { width: budgetBadge ? width - 210 : width - 82 },
+      })
+      .setOrigin(0, 0)
+      .setDepth(33);
+    const badge = budgetBadge
+      ? this.add
+          .text(x + width - 128, y + 10, budgetBadge.label, {
+            color: budgetBadge.color,
+            backgroundColor: budgetBadge.backgroundColor,
+            fontFamily: this.fontFamily,
+            fontSize: "11px",
+            padding: { x: 8, y: 4 },
+          })
+          .setOrigin(0, 0)
+          .setDepth(33)
+      : null;
     const secondary = this.add
-      .text(x + 16, y + 30, secondaryLabel, {
+      .text(x + 58, y + 34, secondaryLabel, {
         color: "#8fa2a6",
         fontFamily: this.fontFamily,
         fontSize: "12px",
-        wordWrap: { width: width - 32 }
+        lineSpacing: 4,
+        wordWrap: { width: width - 82 },
       })
       .setOrigin(0, 0)
       .setDepth(33);
@@ -1054,12 +1456,23 @@ export class IntradayScene extends BaseDocumentScene {
       card.setStrokeStyle(1, 0xd9c58b, 1);
     });
     card.on("pointerout", () => {
-      card.setFillStyle(0x222a2e, 1);
+      card.setFillStyle(0x111a1d, 1);
       card.setStrokeStyle(1, 0x6f6a5b, 0.85);
     });
     card.on("pointerup", onClick);
 
-    return [card, primary, secondary];
+    const objects: Phaser.GameObjects.GameObject[] = [
+      card,
+      indexLabel,
+      primary,
+      secondary,
+    ];
+
+    if (badge) {
+      objects.splice(3, 0, badge);
+    }
+
+    return objects;
   }
 
   private routeIfRunFailed(): boolean {
@@ -1090,9 +1503,280 @@ interface ModalShell {
   readonly objects: readonly Phaser.GameObjects.GameObject[];
 }
 
+interface ModalChoiceBudgetBadge {
+  readonly label: string;
+  readonly color: string;
+  readonly backgroundColor: string;
+}
+
+interface IntradayObjectiveStatus {
+  readonly label: string;
+  readonly color: string;
+  readonly backgroundColorNumber: number;
+  readonly strokeColorNumber: number;
+}
+
+interface IntradayRiskAlert {
+  readonly label: string;
+  readonly valueText: string;
+  readonly bufferText: string;
+  readonly color: string;
+  readonly backgroundColor: string;
+  readonly severity: number;
+}
+
+function getIntradayRiskAlert(
+  state: IntradayState,
+  crashLine: number,
+): IntradayRiskAlert | null {
+  const alerts = [
+    getSurveillanceRiskAlert(state.surveillance),
+    getCrashLineRiskAlert(state.priceChangePercent, crashLine),
+  ].filter((alert): alert is IntradayRiskAlert => Boolean(alert));
+
+  if (alerts.length === 0) {
+    return null;
+  }
+
+  return [...alerts].sort((left, right) => right.severity - left.severity)[0];
+}
+
+function getDashboardRiskStateLabel(
+  state: IntradayState,
+  crashLine: number,
+): string {
+  const alert = getIntradayRiskAlert(state, crashLine);
+
+  if (alert) {
+    return alert.label;
+  }
+
+  if (state.surveillance >= 55) {
+    return "주의 관찰";
+  }
+
+  return "안정 관찰";
+}
+
+function getDashboardFlowLabel(state: IntradayState): string {
+  if (state.retailSwarmState === "panic") {
+    return "군집 이탈 주의";
+  }
+
+  if (state.retailSwarmState === "overheated") {
+    return "군집 과열";
+  }
+
+  if (state.marketPressure > 18) {
+    return "상방 압력";
+  }
+
+  if (state.marketPressure < -18) {
+    return "하방 압력";
+  }
+
+  return "균형 흐름";
+}
+
+function getSignedTelemetryTone(value: number): IntradayTelemetryTone {
+  if (value > 0) {
+    return "positive";
+  }
+
+  if (value < 0) {
+    return "negative";
+  }
+
+  return "neutral";
+}
+
+function getRiskTelemetryTone(
+  state: IntradayState,
+  crashLine: number,
+): IntradayTelemetryTone {
+  const alert = getIntradayRiskAlert(state, crashLine);
+
+  if (alert && alert.severity >= 2) {
+    return "negative";
+  }
+
+  if (alert || state.surveillance >= 55) {
+    return "warning";
+  }
+
+  return "neutral";
+}
+
+function getChartTelemetryTone(
+  priceChangePercent: number,
+  targetBandMin: number,
+  targetBandMax: number,
+  crashLine: number,
+): IntradayTelemetryTone {
+  if (priceChangePercent - crashLine <= 3) {
+    return "negative";
+  }
+
+  if (
+    priceChangePercent >= targetBandMin &&
+    priceChangePercent <= targetBandMax
+  ) {
+    return "positive";
+  }
+
+  return "neutral";
+}
+
+function getFlowTelemetryTone(state: IntradayState): IntradayTelemetryTone {
+  if (state.retailSwarmState === "panic") {
+    return "negative";
+  }
+
+  if (state.retailSwarmState === "overheated") {
+    return "warning";
+  }
+
+  return "neutral";
+}
+
+function getDashboardTargetDistanceLabel(
+  priceChangePercent: number,
+  targetBandMin: number,
+  targetBandMax: number,
+  crashLine: number,
+): string {
+  if (
+    priceChangePercent >= targetBandMin &&
+    priceChangePercent <= targetBandMax
+  ) {
+    return "목표권";
+  }
+
+  if (priceChangePercent - crashLine <= 3) {
+    return "붕괴선 근접";
+  }
+
+  if (priceChangePercent < targetBandMin) {
+    return `목표까지 +${formatUnsignedPercent(targetBandMin - priceChangePercent)}`;
+  }
+
+  return `상단 초과 ${formatUnsignedPercent(priceChangePercent - targetBandMax)}`;
+}
+
+function getSurveillanceRiskAlert(
+  surveillance: number,
+): IntradayRiskAlert | null {
+  const failureBuffer = Math.max(0, 100 - surveillance);
+
+  if (surveillance >= 95) {
+    return {
+      label: "감시 임박 E",
+      valueText: `${formatNumber(surveillance)}/100`,
+      bufferText: `실패선까지 ${formatNumber(failureBuffer)}`,
+      color: "#f3e8ca",
+      backgroundColor: "#5a2024",
+      severity: 3,
+    };
+  }
+
+  if (surveillance >= 75) {
+    return {
+      label: "감시 경보 D",
+      valueText: `${formatNumber(surveillance)}/100`,
+      bufferText: `실패선까지 ${formatNumber(failureBuffer)}`,
+      color: "#f6465d",
+      backgroundColor: "#241316",
+      severity: 1,
+    };
+  }
+
+  return null;
+}
+
+function getCrashLineRiskAlert(
+  priceChangePercent: number,
+  crashLine: number,
+): IntradayRiskAlert | null {
+  const crashBuffer = priceChangePercent - crashLine;
+
+  if (crashBuffer > 6) {
+    return null;
+  }
+
+  if (crashBuffer <= 2) {
+    return {
+      label: "붕괴 임박",
+      valueText: `${formatPercent(priceChangePercent)} / 선 ${formatPercent(crashLine)}`,
+      bufferText: `붕괴여유 ${formatUnsignedPercent(crashBuffer)}`,
+      color: "#f3e8ca",
+      backgroundColor: "#5a2024",
+      severity: 4,
+    };
+  }
+
+  return {
+    label: "붕괴 경보",
+    valueText: `${formatPercent(priceChangePercent)} / 선 ${formatPercent(crashLine)}`,
+    bufferText: `붕괴여유 ${formatUnsignedPercent(crashBuffer)}`,
+    color: "#d08b72",
+    backgroundColor: "#241316",
+    severity: 2,
+  };
+}
+
+function getIntradayObjectiveStatus(
+  currentPriceChangePercent: number,
+  targetBandMin: number,
+  targetBandMax: number,
+  crashLine: number,
+): IntradayObjectiveStatus {
+  const targetDistance =
+    currentPriceChangePercent < targetBandMin
+      ? targetBandMin - currentPriceChangePercent
+      : currentPriceChangePercent > targetBandMax
+        ? currentPriceChangePercent - targetBandMax
+        : 0;
+  const targetLabel =
+    targetDistance <= 0
+      ? "목표권 진입"
+      : currentPriceChangePercent < targetBandMin
+        ? `목표까지 +${formatUnsignedPercent(targetDistance)}`
+        : `목표 초과 +${formatUnsignedPercent(targetDistance)}`;
+  const crashBuffer = currentPriceChangePercent - crashLine;
+  const crashLabel =
+    crashBuffer <= 0
+      ? "붕괴선 접촉"
+      : `붕괴여유 ${formatUnsignedPercent(crashBuffer)}`;
+
+  if (crashBuffer <= 4) {
+    return {
+      label: `${targetLabel} · ${crashLabel}`,
+      color: "#f3e8ca",
+      backgroundColorNumber: 0x5a2024,
+      strokeColorNumber: 0xd08b72,
+    };
+  }
+
+  if (targetDistance <= 0) {
+    return {
+      label: `${targetLabel} · ${crashLabel}`,
+      color: "#00c087",
+      backgroundColorNumber: 0x0b1f19,
+      strokeColorNumber: 0x00c087,
+    };
+  }
+
+  return {
+    label: `${targetLabel} · ${crashLabel}`,
+    color: "#111417",
+    backgroundColorNumber: 0xd9c58b,
+    strokeColorNumber: 0x6f6a5b,
+  };
+}
+
 function buildOrderBookWallOverlayActions(
   state: IntradayState,
-  levels: readonly OrderBookLevel[]
+  levels: readonly OrderBookLevel[],
 ): readonly OrderBookOverlayWallAction[] {
   return levels
     .filter((level) => level.offsetPercent !== 0)
@@ -1101,8 +1785,8 @@ function buildOrderBookWallOverlayActions(
         state,
         level.offsetPercent > 0 ? "sell" : "buy",
         level.offsetPercent,
-        level.priceChangePercent
-      )
+        level.priceChangePercent,
+      ),
     );
 }
 
@@ -1110,26 +1794,67 @@ function buildOrderBookWallOverlayAction(
   state: IntradayState,
   side: OrderBookWallSide,
   offsetPercent: number,
-  priceChangePercent: number
+  priceChangePercent: number,
 ): OrderBookOverlayWallAction {
   const action = getOrderBookWallValue(side);
-  const activeEffect = findActiveOrderBookWallAtLevel(state, side, priceChangePercent);
-  const cooldownRemainingSec = state.orderBookWallCooldowns[getOrderBookWallLevelKey(side, priceChangePercent)] ?? 0;
+  const activeEffect = findActiveOrderBookWallAtLevel(
+    state,
+    side,
+    priceChangePercent,
+  );
+  const remainingDepthRatio = getOrderBookWallRemainingDepthRatio(activeEffect);
+  const remainingTimeTone = activeEffect
+    ? getOrderBookWallTimingTone(activeEffect.remainingSec)
+    : undefined;
   const active = Boolean(activeEffect);
+  const recentWallEvent = active
+    ? undefined
+    : findLatestOrderBookWallEventAtLevel(state, side, priceChangePercent);
+  const recentExpiredEvent =
+    recentWallEvent?.type === "expired" ? recentWallEvent : undefined;
+  const cooldownRemainingSec =
+    state.orderBookWallCooldowns[
+      getOrderBookWallLevelKey(side, priceChangePercent)
+    ] ?? 0;
 
   return {
     side,
     offsetPercent,
     priceChangePercent,
     label: action.displayName,
-    statusLabel: getOrderBookWallStatusLabel(state, side, activeEffect, cooldownRemainingSec),
-    disabled: !active && !canUseOrderBookWall(state, side, offsetPercent, priceChangePercent),
+    statusLabel: getOrderBookWallStatusLabel(
+      state,
+      side,
+      activeEffect,
+      remainingDepthRatio,
+      remainingTimeTone,
+      recentExpiredEvent,
+      cooldownRemainingSec,
+    ),
+    disabled:
+      !active &&
+      !canUseOrderBookWall(state, side, offsetPercent, priceChangePercent),
     active,
     cooldownRemainingSec,
-    remainingDepthBoost: activeEffect ? getOrderBookWallRemainingDepthBoost(activeEffect) : undefined,
+    remainingDepthTone:
+      active && remainingDepthRatio !== null
+        ? getOrderBookWallDepthTone(remainingDepthRatio)
+        : undefined,
+    remainingTimeTone,
+    remainingActiveSec: activeEffect?.remainingSec,
+    totalActiveSec: activeEffect?.totalSec,
+    recentOutcomeTone: recentExpiredEvent ? "expired" : undefined,
+    recentOutcomeReserveBudget: recentExpiredEvent
+      ? Math.abs(recentExpiredEvent.reserveDelta)
+      : undefined,
+    remainingDepthBoost: activeEffect
+      ? getOrderBookWallRemainingDepthBoost(activeEffect)
+      : undefined,
     initialDepthBoost: activeEffect?.depthBoost,
-    remainingReservedBudget: activeEffect ? getOrderBookWallRemainingReservedBudget(activeEffect) : undefined,
-    initialReservedBudget: activeEffect?.reservedBudget
+    remainingReservedBudget: activeEffect
+      ? getOrderBookWallRemainingReservedBudget(activeEffect)
+      : undefined,
+    initialReservedBudget: activeEffect?.reservedBudget,
   };
 }
 
@@ -1137,12 +1862,34 @@ function getOrderBookWallStatusLabel(
   state: IntradayState,
   side: OrderBookWallSide,
   activeEffect: IntradayState["activeOrderBookWallEffects"][number] | undefined,
-  cooldownRemainingSec: number
+  remainingDepthRatio: number | null,
+  remainingTimeTone: "normal" | "expiring" | undefined,
+  recentExpiredEvent: IntradayState["orderBookWallEvents"][number] | undefined,
+  cooldownRemainingSec: number,
 ): string {
   const action = getOrderBookWallValue(side);
 
   if (activeEffect && activeEffect.remainingSec > 0) {
-    return `벽 빼기 +${formatNumber(getOrderBookWallRemainingReservedBudget(activeEffect))}B`;
+    const remainingReserve = formatNumber(
+      getOrderBookWallRemainingReservedBudget(activeEffect),
+    );
+
+    if (remainingTimeTone === "expiring") {
+      return `만료 ${Math.ceil(activeEffect.remainingSec)}s +${remainingReserve}B`;
+    }
+
+    if (
+      remainingDepthRatio !== null &&
+      getOrderBookWallDepthTone(remainingDepthRatio) === "low"
+    ) {
+      return `잔량 ${Math.round(remainingDepthRatio * 100)}% +${remainingReserve}B`;
+    }
+
+    return `해제 +${remainingReserve}B`;
+  }
+
+  if (cooldownRemainingSec > 0 && recentExpiredEvent) {
+    return `만료 환급 ${formatNumber(Math.abs(recentExpiredEvent.reserveDelta))}B`;
   }
 
   if (cooldownRemainingSec > 0) {
@@ -1163,14 +1910,58 @@ function getOrderBookWallStatusLabel(
     return "예산 부족";
   }
 
-  return `${action.displayName} ${formatNumber(reserveBudget)}B`;
+  return `${side === "buy" ? "매수벽" : "매도벽"} ${formatNumber(reserveBudget)}B`;
+}
+
+function getOrderBookWallRemainingDepthRatio(
+  activeEffect: IntradayState["activeOrderBookWallEffects"][number] | undefined,
+): number | null {
+  if (!activeEffect || activeEffect.depthBoost <= 0) {
+    return null;
+  }
+
+  return Math.max(
+    0,
+    Math.min(
+      1,
+      getOrderBookWallRemainingDepthBoost(activeEffect) /
+        activeEffect.depthBoost,
+    ),
+  );
+}
+
+function getOrderBookWallDepthTone(
+  remainingDepthRatio: number,
+): "normal" | "low" {
+  return remainingDepthRatio <= 0.35 ? "low" : "normal";
+}
+
+function getOrderBookWallTimingTone(
+  remainingSec: number,
+): "normal" | "expiring" {
+  return remainingSec <= 3 ? "expiring" : "normal";
+}
+
+function findLatestOrderBookWallEventAtLevel(
+  state: IntradayState,
+  side: OrderBookWallSide,
+  priceChangePercent: number,
+): IntradayState["orderBookWallEvents"][number] | undefined {
+  return [...state.orderBookWallEvents]
+    .reverse()
+    .find(
+      (event) =>
+        event.side === side && event.priceChangePercent === priceChangePercent,
+    );
 }
 
 function getOrderBookWallDisplayLabel(side: OrderBookWallSide): string {
   return getOrderBookWallValue(side).displayName;
 }
 
-function getOrderBookWallResultLabel(reason: OrderBookWallResult["reason"]): string {
+function getOrderBookWallResultLabel(
+  reason: OrderBookWallResult["reason"],
+): string {
   switch (reason) {
     case "applied":
       return "실행";
@@ -1190,25 +1981,88 @@ function getOrderBookWallResultLabel(reason: OrderBookWallResult["reason"]): str
   }
 }
 
-function formatOrderBookWallEvent(event: IntradayState["orderBookWallEvents"][number]): string {
+function getOrderBookWallActiveSummary(
+  state: IntradayState | null | undefined,
+): string | null {
+  const activeEffects = state?.activeOrderBookWallEffects ?? [];
+  const activeCount = activeEffects.length;
+
+  if (activeCount === 0) {
+    return null;
+  }
+
+  const remainingReserve = activeEffects.reduce(
+    (total, effect) => total + getOrderBookWallRemainingReservedBudget(effect),
+    0,
+  );
+  const remainingDepth = activeEffects.reduce(
+    (total, effect) => total + getOrderBookWallRemainingDepthBoost(effect),
+    0,
+  );
+
+  return `활성 ${activeCount} / depth ${formatNumber(remainingDepth)} / 환급 ${formatNumber(remainingReserve)}B`;
+}
+
+function getOrderBookWallAvailabilitySummary(
+  state: IntradayState | null | undefined,
+): string {
+  if (!state) {
+    return "상태 확인 대기";
+  }
+
+  if (state.holdingRatio <= 0) {
+    return "상태 관망: 보유 없음";
+  }
+
+  const cooldowns = Object.values(state.orderBookWallCooldowns).filter(
+    (remainingSec) => remainingSec > 0,
+  );
+  const cooldownSummary =
+    cooldowns.length > 0
+      ? `대기 ${cooldowns.length}개 ${Math.ceil(Math.min(...cooldowns))}s`
+      : null;
+  const pauseSummary = state.isPaused ? "보류" : null;
+  const buyReserve = getOrderBookWallReserveBudget(state, "buy");
+  const sellReserve = getOrderBookWallReserveBudget(state, "sell");
+  const minReserve = Math.min(
+    getOrderBookWallValue("buy").minReserveBudget,
+    getOrderBookWallValue("sell").minReserveBudget,
+  );
+  const reserveSummary =
+    buyReserve < minReserve && sellReserve < minReserve
+      ? `예산<${formatNumber(minReserve)}B`
+      : `예약 ${formatNumber(Math.max(buyReserve, sellReserve))}B`;
+
+  return `상태: ${[pauseSummary, reserveSummary, cooldownSummary].filter(Boolean).join(" / ")}`;
+}
+
+function formatOrderBookWallEvent(
+  event: IntradayState["orderBookWallEvents"][number],
+): string {
   const sideLabel = event.side === "buy" ? "매수벽" : "매도벽";
   const levelLabel = formatPercent(event.priceChangePercent);
 
   switch (event.type) {
     case "formed":
       return `${sideLabel} 형성 ${levelLabel} +${formatNumber(Math.abs(event.depthDelta))} depth / 예약 ${formatNumber(
-        Math.abs(event.reserveDelta)
+        Math.abs(event.reserveDelta),
       )}B`;
     case "melted":
       return `${sideLabel} 소진 ${levelLabel} -${formatNumber(Math.abs(event.depthDelta))} depth / 환급 ${formatNumber(
-        event.remainingReservedBudget
+        event.remainingReservedBudget,
       )}B`;
     case "collapsed":
-      return `${sideLabel} 붕괴 ${levelLabel} / 방어선 해제`;
+      return `${sideLabel} 붕괴 ${levelLabel} / depth ${formatNumber(
+        event.remainingDepthBoost,
+      )} / 환급 ${formatNumber(event.remainingReservedBudget)}B / 방어선 해제`;
     case "removed":
-      return `${sideLabel} 제거 ${levelLabel} / 환급 ${formatNumber(Math.abs(event.reserveDelta))}B`;
+      return `${sideLabel} 제거 ${levelLabel} / depth ${formatNumber(
+        event.remainingDepthBoost,
+      )} / 환급 ${formatNumber(Math.abs(event.reserveDelta))}B / 방어선 해제`;
     case "expired":
-      return `${sideLabel} 만료 ${levelLabel} / 환급 ${formatNumber(Math.abs(event.reserveDelta))}B`;
+      return `${sideLabel} 만료 ${levelLabel} / depth ${formatNumber(
+        event.remainingDepthBoost,
+      )} / 환급 ${formatNumber(Math.abs(event.reserveDelta))}B / 방어선 해제`;
   }
 }
 
@@ -1219,24 +2073,44 @@ function buildMarketTerminalModel(
   playerQuote: MarketBoardQuote = {
     currentPrice: 10000,
     referencePrice: 10000,
-    averageEntryPrice: 10000
+    averageEntryPrice: 10000,
   },
   previousRanks: ReadonlyMap<string, number> = new Map(),
   previousTradeValues: ReadonlyMap<string, number> = new Map(),
   elapsedSec = 0,
   previousTradeValueElapsedSec = 0,
   playerTradeValueImpulse = 0,
-  morningNewsItems: readonly MorningNews[] = []
+  morningNewsItems: readonly MorningNews[] = [],
+  currentDay = 1,
 ): MarketTerminalModel {
   if (!marketBoardState) {
-    return { peerRows: [], sectorRows: [], dashboardRows: [], rankRows: [], ranks: new Map(), tradeValues: new Map() };
+    return {
+      peerRows: [],
+      sectorRows: [],
+      dashboardRows: [],
+      rankRows: [],
+      ranks: new Map(),
+      tradeValues: new Map(),
+      currentDay,
+    };
   }
 
-  const boardBaseRows = marketBoardState.entries
-    .map((entry, index): MarketBoardRankRow =>
-      createMarketBoardEntryRow(entry, playerPriceChangePercent, playerVolume, playerQuote, index, previousRanks)
-    );
-  const visibleAssetRows = new Map(boardBaseRows.filter((row) => row.key.startsWith("asset:")).map((row) => [row.key, row]));
+  const boardBaseRows = marketBoardState.entries.map(
+    (entry, index): MarketBoardRankRow =>
+      createMarketBoardEntryRow(
+        entry,
+        playerPriceChangePercent,
+        playerVolume,
+        playerQuote,
+        index,
+        previousRanks,
+      ),
+  );
+  const visibleAssetRows = new Map(
+    boardBaseRows
+      .filter((row) => row.key.startsWith("asset:"))
+      .map((row) => [row.key, row]),
+  );
   const assetRankBaseRows = assets.map((asset, index) => {
     const key = `asset:${asset.id}`;
     return (
@@ -1249,7 +2123,7 @@ function buildMarketTerminalModel(
         playerQuote,
         index,
         previousRanks,
-        morningNewsItems
+        morningNewsItems,
       )
     );
   });
@@ -1259,28 +2133,44 @@ function buildMarketTerminalModel(
     elapsedSec,
     previousTradeValueElapsedSec,
     `asset:${marketBoardState.playerAssetId}`,
-    playerTradeValueImpulse
+    playerTradeValueImpulse,
   );
-  const accumulatedByKey = new Map(accumulatedRows.map((row) => [row.key, row]));
-  const boardRows = boardBaseRows.map((row) => accumulatedByKey.get(row.key) ?? row);
-  const assetRankRows = assetRankBaseRows.map((row) => accumulatedByKey.get(row.key) ?? row);
+  const accumulatedByKey = new Map(
+    accumulatedRows.map((row) => [row.key, row]),
+  );
+  const boardRows = boardBaseRows.map(
+    (row) => accumulatedByKey.get(row.key) ?? row,
+  );
+  const assetRankRows = assetRankBaseRows.map(
+    (row) => accumulatedByKey.get(row.key) ?? row,
+  );
 
   const rankedAssetRows = applyMarketRanks(assetRankRows, previousRanks);
   const ranks = new Map(rankedAssetRows.map((row) => [row.key, row.rank]));
-  const tradeValues = new Map(accumulatedRows.map((row) => [row.key, row.fictionalTradeValue]));
+  const tradeValues = new Map(
+    accumulatedRows.map((row) => [row.key, row.fictionalTradeValue]),
+  );
   const rankByKey = new Map(rankedAssetRows.map((row) => [row.key, row]));
-  const playerRankIndex = Math.max(0, rankedAssetRows.findIndex((row) => row.roleLabel === "ME"));
-  const dashboardStart = clampRankWindowStart(playerRankIndex, rankedAssetRows.length, 7);
+  const playerRankIndex = Math.max(
+    0,
+    rankedAssetRows.findIndex((row) => row.roleLabel === "ME"),
+  );
+  const dashboardStart = clampRankWindowStart(
+    playerRankIndex,
+    rankedAssetRows.length,
+    4,
+  );
 
   return {
     peerRows: boardRows
       .filter((row) => row.roleLabel === "PEER")
       .map((row) => rankByKey.get(row.key) ?? row),
     sectorRows: boardRows.filter((row) => row.roleLabel === "AVG"),
-    dashboardRows: rankedAssetRows.slice(dashboardStart, dashboardStart + 7),
+    dashboardRows: rankedAssetRows.slice(dashboardStart, dashboardStart + 4),
     rankRows: rankedAssetRows,
     ranks,
-    tradeValues
+    tradeValues,
+    currentDay,
   };
 }
 
@@ -1290,28 +2180,44 @@ function createMarketBoardEntryRow(
   playerVolume: number,
   playerQuote: MarketBoardQuote,
   index: number,
-  previousRanks: ReadonlyMap<string, number>
+  previousRanks: ReadonlyMap<string, number>,
 ): MarketBoardRankRow {
-  const priceChangePercent = entry.calculationMode === "detailed" ? playerPriceChangePercent : entry.priceChangePercent;
+  const priceChangePercent =
+    entry.calculationMode === "detailed"
+      ? playerPriceChangePercent
+      : entry.priceChangePercent;
   const quote =
     entry.calculationMode === "detailed"
       ? playerQuote
       : {
           referencePrice: entry.referencePrice,
           currentPrice: entry.currentPrice,
-          averageEntryPrice: entry.averageEntryPrice
+          averageEntryPrice: entry.averageEntryPrice,
         };
   const fictionalVolume =
     entry.calculationMode === "detailed"
       ? Math.max(playerVolume, 1)
-      : calculateBoardEntryVolume(entry.priceChangePercent, entry.newsBadge, entry.role, index);
+      : calculateBoardEntryVolume(
+          entry.priceChangePercent,
+          entry.newsBadge,
+          entry.role,
+          index,
+        );
   const activityTradeValue = Math.round(fictionalVolume * quote.currentPrice);
-  const baselineMultiplier = getEntryTradeValueMultiplier(priceChangePercent, entry.newsBadge, entry.newsTone);
+  const baselineMultiplier = getEntryTradeValueMultiplier(
+    priceChangePercent,
+    entry.newsBadge,
+    entry.newsTone,
+  );
   const activityWeight = entry.calculationMode === "detailed" ? 0.85 : 0.18;
   const fictionalTradeValue = Math.round(
-    entry.baselineTradeValue * baselineMultiplier + activityTradeValue * activityWeight
+    entry.baselineTradeValue * baselineMultiplier +
+      activityTradeValue * activityWeight,
   );
-  const displayVolume = Math.max(1, Math.round(fictionalTradeValue / Math.max(1, quote.currentPrice)));
+  const displayVolume = Math.max(
+    1,
+    Math.round(fictionalTradeValue / Math.max(1, quote.currentPrice)),
+  );
   const key = getMarketBoardRankKey(entry);
 
   return {
@@ -1327,15 +2233,18 @@ function createMarketBoardEntryRow(
     priceChangePercent,
     fictionalVolume: displayVolume,
     fictionalTradeValue,
-    trend: entry.calculationMode === "detailed" ? getTrendLabel(priceChangePercent) : entry.trend.toUpperCase(),
+    trend:
+      entry.calculationMode === "detailed"
+        ? getTrendLabel(priceChangePercent)
+        : entry.trend.toUpperCase(),
     newsBadge: entry.newsBadge ?? "-",
-    newsTone: entry.newsTone
+    newsTone: entry.newsTone,
   };
 }
 
 function applyMarketRanks(
   rows: readonly MarketBoardRankRow[],
-  previousRanks: ReadonlyMap<string, number>
+  previousRanks: ReadonlyMap<string, number>,
 ): readonly MarketBoardRankRow[] {
   return [...rows]
     .sort((left, right) => right.fictionalTradeValue - left.fictionalTradeValue)
@@ -1346,12 +2255,14 @@ function applyMarketRanks(
         ...row,
         rank,
         previousRank: previousRanks.get(row.key) ?? null,
-        rankMarker: rankMarker(row.key, rank, previousRanks)
+        rankMarker: rankMarker(row.key, rank, previousRanks),
       };
     });
 }
 
-function uniqueMarketRows(rows: readonly MarketBoardRankRow[]): readonly MarketBoardRankRow[] {
+function uniqueMarketRows(
+  rows: readonly MarketBoardRankRow[],
+): readonly MarketBoardRankRow[] {
   return [...new Map(rows.map((row) => [row.key, row])).values()];
 }
 
@@ -1361,7 +2272,7 @@ function accumulateMarketTradeValues(
   elapsedSec: number,
   previousElapsedSec: number,
   playerKey: string,
-  playerTradeValueImpulse: number
+  playerTradeValueImpulse: number,
 ): readonly MarketBoardRankRow[] {
   const elapsedDeltaSec =
     previousTradeValues.size === 0
@@ -1370,24 +2281,39 @@ function accumulateMarketTradeValues(
 
   return rows.map((row) => {
     const previous = previousTradeValues.get(row.key) ?? 0;
-    const increment = calculateMarketTradeValueIncrement(row.fictionalTradeValue, elapsedDeltaSec);
+    const increment = calculateMarketTradeValueIncrement(
+      row.fictionalTradeValue,
+      elapsedDeltaSec,
+    );
     const impulse = row.key === playerKey ? playerTradeValueImpulse : 0;
-    const cumulativeTradeValue = Math.max(previous, previous + increment + impulse);
+    const cumulativeTradeValue = Math.max(
+      previous,
+      previous + increment + impulse,
+    );
 
     return {
       ...row,
-      fictionalVolume: Math.max(row.fictionalVolume, Math.round(cumulativeTradeValue / Math.max(1, row.currentPrice))),
-      fictionalTradeValue: Math.round(cumulativeTradeValue)
+      fictionalVolume: Math.max(
+        row.fictionalVolume,
+        Math.round(cumulativeTradeValue / Math.max(1, row.currentPrice)),
+      ),
+      fictionalTradeValue: Math.round(cumulativeTradeValue),
     };
   });
 }
 
-function calculateMarketTradeValueIncrement(activityTradeValue: number, elapsedDeltaSec: number): number {
+function calculateMarketTradeValueIncrement(
+  activityTradeValue: number,
+  elapsedDeltaSec: number,
+): number {
   if (elapsedDeltaSec <= 0) {
     return 0;
   }
 
-  return Math.max(1, (activityTradeValue * elapsedDeltaSec) / runDefaults.intradayDurationSec);
+  return Math.max(
+    1,
+    (activityTradeValue * elapsedDeltaSec) / runDefaults.intradayDurationSec,
+  );
 }
 
 function formatNumber(value: number): string {
@@ -1396,6 +2322,101 @@ function formatNumber(value: number): string {
 
 function getAutoCardGrowthLabel(growthType: "effect" | "period"): string {
   return growthType === "period" ? "강화: 발동 주기 단축" : "강화: 효과량 증가";
+}
+
+function getAutoCardChoiceMetaLabel(
+  choiceType: "new" | "level_up",
+  card: AutoCardValue,
+  currentLevel: number,
+  nextLevel: 1 | 2 | 3,
+): string {
+  const nextPeriod = getAutoCardPeriodSec({
+    cardId: card.id,
+    level: nextLevel,
+  });
+
+  if (choiceType === "new") {
+    return [
+      `신규 Lv.${nextLevel}`,
+      `주기 ${formatNumber(nextPeriod)}s`,
+      getAutoCardGrowthLabel(card.growthType),
+    ].join(" · ");
+  }
+
+  const levelLabel = `Lv.${currentLevel} -> Lv.${nextLevel}${
+    nextLevel === 3 ? " MAX" : ""
+  }`;
+
+  if (card.growthType === "period") {
+    const currentPeriod = getAutoCardPeriodSec({
+      cardId: card.id,
+      level: Math.max(1, currentLevel) as 1 | 2 | 3,
+    });
+
+    return [
+      levelLabel,
+      `주기 ${formatNumber(currentPeriod)}s -> ${formatNumber(nextPeriod)}s`,
+      "효과 유지",
+    ].join(" · ");
+  }
+
+  const currentScale = getAutoCardEffectScale({
+    cardId: card.id,
+    level: Math.max(1, currentLevel) as 1 | 2 | 3,
+  });
+  const nextScale = getAutoCardEffectScale({
+    cardId: card.id,
+    level: nextLevel,
+  });
+
+  return [
+    levelLabel,
+    `효과 ${formatAutoCardEffectScale(currentScale)} -> ${formatAutoCardEffectScale(nextScale)}`,
+    `주기 ${formatNumber(nextPeriod)}s`,
+  ].join(" · ");
+}
+
+function getAutoCardEffectSummary(
+  card: AutoCardValue,
+  level: 1 | 2 | 3,
+): string {
+  const scale = getAutoCardEffectScale({ cardId: card.id, level });
+  const entries = [
+    card.budgetDelta * scale === 0
+      ? null
+      : `예산 ${formatSignedBudget(card.budgetDelta * scale)}`,
+    formatAutoCardDelta("압력", card.marketPressureDelta * scale),
+    formatAutoCardDelta("유동성", card.marketLiquidityDelta * scale),
+    formatAutoCardDelta("참여", card.personalParticipationDelta * scale),
+    formatAutoCardDelta("보유", card.holdingRatioDelta * scale),
+    formatAutoCardDelta("감시", card.surveillanceDelta * scale),
+    formatAutoCardDelta("변동성", card.volatilityDelta * scale),
+    formatAutoCardDelta("경쟁", card.competitionPressureDelta * scale),
+    card.newsPressureMultiplierDelta === 0
+      ? null
+      : `뉴스 압력 x${formatNumber(1 + card.newsPressureMultiplierDelta)}`,
+    card.positionSettlementImpactReductionDelta === 0
+      ? null
+      : `정리 충격 -${formatNumber(card.positionSettlementImpactReductionDelta * 100)}%`,
+  ].filter((entry): entry is string => Boolean(entry));
+
+  if (entries.length === 0) {
+    return "즉시 수치 변화 없음";
+  }
+
+  return `효과 ${entries.slice(0, 4).join(" / ")}`;
+}
+
+function formatAutoCardEffectScale(value: number): string {
+  return `x${formatNumber(value)}`;
+}
+
+function formatAutoCardDelta(label: string, value: number): string | null {
+  if (value === 0) {
+    return null;
+  }
+
+  return `${label} ${value >= 0 ? "+" : ""}${formatNumber(value)}`;
 }
 
 function formatBudget(value: number): string {
@@ -1418,12 +2439,20 @@ function formatPercent(value: number): string {
   return `${value >= 0 ? "+" : ""}${formatNumber(value)}%`;
 }
 
-function calculateAverageEntryPriceChangePercent(state: IntradayState): number | null {
+function formatUnsignedPercent(value: number): string {
+  return `${formatNumber(Math.abs(value))}%`;
+}
+
+function calculateAverageEntryPriceChangePercent(
+  state: IntradayState,
+): number | null {
   if (state.heldUnits <= 0 || state.openingPrice <= 0) {
     return null;
   }
 
-  return ((state.averageEntryPrice - state.openingPrice) / state.openingPrice) * 100;
+  return (
+    ((state.averageEntryPrice - state.openingPrice) / state.openingPrice) * 100
+  );
 }
 
 interface MarketBoardQuote {
@@ -1440,21 +2469,39 @@ function createFullMarketAssetRow(
   playerQuote: MarketBoardQuote,
   index: number,
   previousRanks: ReadonlyMap<string, number>,
-  morningNewsItems: readonly MorningNews[]
+  morningNewsItems: readonly MorningNews[],
 ): MarketBoardRankRow {
   const key = `asset:${asset.id}`;
   const seed = hashString(`${asset.id}:${index}`);
   const priceWave = ((seed % 170) - 85) / 10;
-  const priceChangePercent = asset.id === playerAssetId ? playerPriceChangePercent : priceWave;
-  const quote = asset.id === playerAssetId ? playerQuote : createSyntheticBoardQuote(asset.id, index, priceChangePercent);
+  const priceChangePercent =
+    asset.id === playerAssetId ? playerPriceChangePercent : priceWave;
+  const quote =
+    asset.id === playerAssetId
+      ? playerQuote
+      : createSyntheticBoardQuote(asset.id, index, priceChangePercent);
   const baselineTradeValue = getAssetBaselineTradeValue(asset);
   const newsBadge = getAssetNewsBadge(asset, morningNewsItems);
   const newsTone = getAssetNewsTone(asset, morningNewsItems);
-  const movementMultiplier = 1 + Math.min(0.5, Math.abs(priceChangePercent) * 0.028);
-  const newsMultiplier = getAssetNewsTradeValueMultiplier(asset, newsBadge, newsTone);
-  const playerActionTradeValue = asset.id === playerAssetId ? Math.max(0, playerVolume * quote.currentPrice * 0.85) : 0;
-  const fictionalTradeValue = Math.round(baselineTradeValue * movementMultiplier * newsMultiplier + playerActionTradeValue);
-  const fictionalVolume = Math.max(1, Math.round(fictionalTradeValue / Math.max(1, quote.currentPrice)));
+  const movementMultiplier =
+    1 + Math.min(0.5, Math.abs(priceChangePercent) * 0.028);
+  const newsMultiplier = getAssetNewsTradeValueMultiplier(
+    asset,
+    newsBadge,
+    newsTone,
+  );
+  const playerActionTradeValue =
+    asset.id === playerAssetId
+      ? Math.max(0, playerVolume * quote.currentPrice * 0.85)
+      : 0;
+  const fictionalTradeValue = Math.round(
+    baselineTradeValue * movementMultiplier * newsMultiplier +
+      playerActionTradeValue,
+  );
+  const fictionalVolume = Math.max(
+    1,
+    Math.round(fictionalTradeValue / Math.max(1, quote.currentPrice)),
+  );
 
   return {
     key,
@@ -1471,16 +2518,17 @@ function createFullMarketAssetRow(
     fictionalTradeValue,
     trend: getTrendLabel(priceChangePercent),
     newsBadge: newsBadge ?? "-",
-    newsTone
+    newsTone,
   };
 }
 
 function getEntryTradeValueMultiplier(
   priceChangePercent: number,
   newsBadge: string | null,
-  newsTone: "positive" | "negative" | null
+  newsTone: "positive" | "negative" | null,
 ): number {
-  const movementMultiplier = 1 + Math.min(0.42, Math.abs(priceChangePercent) * 0.024);
+  const movementMultiplier =
+    1 + Math.min(0.42, Math.abs(priceChangePercent) * 0.024);
   const newsMultiplier =
     newsBadge === "asset"
       ? newsTone === "positive"
@@ -1500,7 +2548,7 @@ function getEntryTradeValueMultiplier(
 function getAssetNewsTradeValueMultiplier(
   asset: AssetDefinition,
   newsBadge: string | null,
-  newsTone: "positive" | "negative" | null
+  newsTone: "positive" | "negative" | null,
 ): number {
   if (!newsBadge) {
     return 1;
@@ -1513,45 +2561,82 @@ function getAssetNewsTradeValueMultiplier(
   return 1 + base * sensitivity * toneFactor;
 }
 
-function createSyntheticBoardQuote(assetId: string, index: number, priceChangePercent: number): MarketBoardQuote {
+function createSyntheticBoardQuote(
+  assetId: string,
+  index: number,
+  priceChangePercent: number,
+): MarketBoardQuote {
   const seed = hashString(`quote:${assetId}:${index}`);
   const referencePrice = roundToTick(4200 + (seed % 15600), 10);
-  const averageEntryPrice = roundToTick(referencePrice * (0.985 + ((seed % 31) / 1000)), 10);
-  const currentPrice = roundToTick(referencePrice * (1 + priceChangePercent / 100), 10);
+  const averageEntryPrice = roundToTick(
+    referencePrice * (0.985 + (seed % 31) / 1000),
+    10,
+  );
+  const currentPrice = roundToTick(
+    referencePrice * (1 + priceChangePercent / 100),
+    10,
+  );
 
   return {
     referencePrice,
     currentPrice,
-    averageEntryPrice
+    averageEntryPrice,
   };
 }
 
-function getAssetNewsBadge(asset: AssetDefinition, morningNewsItems: readonly MorningNews[]): string | null {
-  if (morningNewsItems.some((news) => news.target.type === "asset" && news.target.assetId === asset.id)) {
+function getAssetNewsBadge(
+  asset: AssetDefinition,
+  morningNewsItems: readonly MorningNews[],
+): string | null {
+  if (
+    morningNewsItems.some(
+      (news) =>
+        news.target.type === "asset" && news.target.assetId === asset.id,
+    )
+  ) {
     return "asset";
   }
 
-  if (morningNewsItems.some((news) => news.target.type === "sector" && news.target.sectorId === asset.sectorId)) {
+  if (
+    morningNewsItems.some(
+      (news) =>
+        news.target.type === "sector" &&
+        news.target.sectorId === asset.sectorId,
+    )
+  ) {
     return "sector";
   }
 
   return null;
 }
 
-function getAssetNewsTone(asset: AssetDefinition, morningNewsItems: readonly MorningNews[]): "positive" | "negative" | null {
-  const assetNews = morningNewsItems.find((news) => news.target.type === "asset" && news.target.assetId === asset.id);
+function getAssetNewsTone(
+  asset: AssetDefinition,
+  morningNewsItems: readonly MorningNews[],
+): "positive" | "negative" | null {
+  const assetNews = morningNewsItems.find(
+    (news) => news.target.type === "asset" && news.target.assetId === asset.id,
+  );
 
   if (assetNews) {
     return getNewsToneByTemplate(assetNews.templateId);
   }
 
-  const sectorNews = morningNewsItems.find((news) => news.target.type === "sector" && news.target.sectorId === asset.sectorId);
+  const sectorNews = morningNewsItems.find(
+    (news) =>
+      news.target.type === "sector" && news.target.sectorId === asset.sectorId,
+  );
 
   return sectorNews ? getNewsToneByTemplate(sectorNews.templateId) : null;
 }
 
-function getNewsToneByTemplate(templateId: MorningNews["templateId"]): "positive" | "negative" {
-  return templateId === "sector_positive_catalyst" || templateId === "overheat_spread" ? "positive" : "negative";
+function getNewsToneByTemplate(
+  templateId: MorningNews["templateId"],
+): "positive" | "negative" {
+  return templateId === "sector_positive_catalyst" ||
+    templateId === "overheat_spread"
+    ? "positive"
+    : "negative";
 }
 
 function hashString(value: string): number {
@@ -1568,15 +2653,29 @@ function roundToTick(value: number, tick: number): number {
   return Math.max(tick, Math.round(value / tick) * tick);
 }
 
-function clampRankWindowStart(playerRankIndex: number, totalRows: number, windowSize: number): number {
+function clampRankWindowStart(
+  playerRankIndex: number,
+  totalRows: number,
+  windowSize: number,
+): number {
   if (totalRows <= windowSize) {
     return 0;
   }
 
-  return Math.max(0, Math.min(totalRows - windowSize, playerRankIndex - Math.floor(windowSize / 2)));
+  return Math.max(
+    0,
+    Math.min(
+      totalRows - windowSize,
+      playerRankIndex - Math.floor(windowSize / 2),
+    ),
+  );
 }
 
-function rankMarker(key: string, currentRank: number, previousRanks: ReadonlyMap<string, number>): string {
+function rankMarker(
+  key: string,
+  currentRank: number,
+  previousRanks: ReadonlyMap<string, number>,
+): string {
   const previousRank = previousRanks.get(key);
 
   if (!previousRank) {
@@ -1598,17 +2697,26 @@ function calculateBoardEntryVolume(
   priceChangePercent: number,
   newsBadge: string | null,
   role: string,
-  index: number
+  index: number,
 ): number {
   const roleBase = role === "sector_average" ? 420 : 280;
   const priceActivity = Math.abs(priceChangePercent) * 58;
-  const newsBoost = newsBadge === "market" ? 420 : newsBadge === "sector" ? 620 : newsBadge === "asset" ? 820 : 0;
+  const newsBoost =
+    newsBadge === "market"
+      ? 420
+      : newsBadge === "sector"
+        ? 620
+        : newsBadge === "asset"
+          ? 820
+          : 0;
   const slotVariance = (index % 4) * 31;
 
   return Math.round(roleBase + priceActivity + newsBoost + slotVariance);
 }
 
-function getMarketBoardRankKey(entry: MarketBoardState["entries"][number]): string {
+function getMarketBoardRankKey(
+  entry: MarketBoardState["entries"][number],
+): string {
   if ("assetId" in entry) {
     return `asset:${entry.assetId}`;
   }
@@ -1657,21 +2765,174 @@ function getChoiceTone(choiceType: string): string {
 
 function getChoiceToneDescription(choiceType: string): string {
   if (choiceType === "stable") {
-    return "감시/변동성 리스크를 낮추는 대신 추진력을 일부 포기합니다.";
+    return "안정형 · 리스크를 낮추고 추진력을 조절합니다.";
   }
 
   if (choiceType === "aggressive") {
-    return "단기 성과를 노리는 대신 감시/변동성 부담을 키웁니다.";
+    return "공격형 · 단기 성과 대신 감시 부담을 감수합니다.";
   }
 
-  return "즉시 비용은 낮지만 후속 리스크가 남을 수 있습니다.";
+  return "관망형 · 즉시 비용은 낮지만 후속 리스크가 남습니다.";
 }
 
-function getDocumentChoiceSecondaryLabel(choice: DocumentEventChoiceValue): string {
-  const budgetText =
-    choice.effect.budgetDelta === 0 ? null : `예산 ${formatSignedBudget(choice.effect.budgetDelta)}`;
+function getDocumentEventBody(
+  eventId: DocumentEventId,
+  state: IntradayState,
+  crashLine: number,
+): string {
+  if (eventId === "collapse_risk_notice") {
+    const crashBuffer = state.priceChangePercent - crashLine;
 
-  return [getChoiceToneDescription(choice.type), budgetText].filter(Boolean).join(" · ");
+    return [
+      `가격이 붕괴선에 접근했습니다. 현재 ${formatPercent(
+        state.priceChangePercent,
+      )} / 붕괴선 ${formatPercent(crashLine)} / 여유 ${formatUnsignedPercent(
+        crashBuffer,
+      )}`,
+      "응답 전까지 시간과 자동 효과는 정지됩니다.",
+    ].join("\n");
+  }
+
+  return "장중 조건에 의해 추상 문서 이벤트가 열렸습니다.\n응답 전까지 시간과 자동 효과는 정지됩니다.";
+}
+
+function getDocumentChoiceSecondaryLabel(
+  choice: DocumentEventChoiceValue,
+): string {
+  const effectSummary = getDocumentChoiceEffectSummary(choice);
+  return `${getChoiceToneDescription(choice.type)}\n${effectSummary}`;
+}
+
+function getDocumentChoiceBudgetBadge(
+  choice: DocumentEventChoiceValue,
+): ModalChoiceBudgetBadge | null {
+  const budgetDelta = choice.effect.budgetDelta;
+
+  if (budgetDelta === 0) {
+    return null;
+  }
+
+  const isPositive = budgetDelta > 0;
+
+  return {
+    label: `예산 ${formatSignedBudget(budgetDelta)}`,
+    color: isPositive ? "#dff6dc" : "#ffe5df",
+    backgroundColor: isPositive ? "#15352a" : "#3b2224",
+  };
+}
+
+function getDocumentChoiceEffectSummary(
+  choice: DocumentEventChoiceValue,
+): string {
+  const effect = choice.effect;
+  const entries = [
+    effect.budgetDelta === 0
+      ? null
+      : `예산 ${formatSignedBudget(effect.budgetDelta)}`,
+    formatDocumentDelta("압력", effect.marketPressureDelta),
+    formatDocumentDelta("유동성", effect.marketLiquidityDelta),
+    formatDocumentDelta("참여", effect.personalParticipationDelta),
+    formatDocumentDelta("보유", effect.holdingRatioDelta),
+    formatDocumentDelta("감시", effect.surveillanceDelta),
+    formatDocumentDelta("변동성", effect.volatilityDelta),
+    formatDocumentDelta("경쟁", effect.competitionPressureDelta),
+    formatDocumentDelta("사회비용", effect.socialCostDelta),
+  ].filter((entry): entry is string => Boolean(entry));
+
+  if (entries.length === 0) {
+    return "즉시 수치 변화 없음";
+  }
+
+  return entries.slice(0, 4).join(" / ");
+}
+
+function formatContractTrackerText(
+  tracker: ContractIntradayTrackerSummary,
+): string {
+  const objectiveLine = tracker.objectives
+    .slice(0, 2)
+    .map(
+      (objective) =>
+        `${objective.statusLabel} ${objective.label} ${objective.progressLabel}`,
+    )
+    .join(" / ");
+  const targetLabel = tracker.chartTargetBandPercent?.label ?? "대시보드 목표";
+  const actionLine =
+    tracker.actionFitMessage ?? `추천 ${tracker.recommendedTools.join(" / ")}`;
+  const deadlineLabel = tracker.deadlinePressureLabel
+    ? ` / ${tracker.deadlinePressureLabel}`
+    : "";
+  const actionFitLine = formatContractActionFitLine(tracker);
+
+  const lines = [
+    `TRACK ${tracker.displayName} / DAY ${tracker.currentDay}/${tracker.durationDays}${deadlineLabel}`,
+    objectiveLine ||
+      `목표 ${tracker.objectivesCompleted}/${tracker.objectivesTotal}`,
+    actionFitLine,
+    `목표선 ${targetLabel} · 목표 ${tracker.objectivesCompleted}/${tracker.objectivesTotal} · 보상 ${formatBudget(tracker.fixedReward)}`,
+    actionFitLine
+      ? `예상 NET ${formatSignedBudget(tracker.estimatedNetPerformance)} · 비용 ${formatBudget(
+          tracker.estimatedCostPressure,
+        )}(${tracker.costPressureLabel})`
+      : `예상 NET ${formatSignedBudget(tracker.estimatedNetPerformance)} · 비용 ${formatBudget(
+          tracker.estimatedCostPressure,
+        )}(${tracker.costPressureLabel}) · ${actionLine}`,
+  ];
+
+  return lines.filter(Boolean).join("\n");
+}
+
+function formatContractActionFitLine(
+  tracker: ContractIntradayTrackerSummary,
+): string | null {
+  if (!tracker.actionFitMessage) {
+    return null;
+  }
+
+  const compactMessage = tracker.actionFitMessage.replace(
+    /^의뢰 도구 (적합|위험|보통): /,
+    "",
+  );
+
+  return `도구판정 ${tracker.actionFitLabel ?? "[판정]"} ${compactMessage}`;
+}
+
+function getContractTrackerTextColor(
+  tracker: ContractIntradayTrackerSummary,
+): string {
+  switch (tracker.actionFitTone) {
+    case "favored":
+      return "#dff6dc";
+    case "risky":
+      return "#ffe5df";
+    case "neutral":
+      return "#f3e8ca";
+    default:
+      return "#d9c58b";
+  }
+}
+
+function getContractTrackerBackgroundColor(
+  tracker: ContractIntradayTrackerSummary,
+): string {
+  switch (tracker.actionFitTone) {
+    case "favored":
+      return "#15352a";
+    case "risky":
+      return "#3b2224";
+    case "neutral":
+      return "#20242a";
+    default:
+      return "#111417";
+  }
+}
+
+function formatDocumentDelta(label: string, value: number): string | null {
+  if (value === 0) {
+    return null;
+  }
+
+  return `${label} ${value >= 0 ? "+" : ""}${formatNumber(value)}`;
 }
 
 function getManualActionFeedbackColor(actionId: ManualActionId): string {
@@ -1694,14 +2955,80 @@ function getManualActionFeedbackColorNumber(actionId: ManualActionId): number {
 function getManualActionButtonLabel(
   actionId: ManualActionId,
   fallbackDisplayName: string,
-  state: IntradayState | null
+  state: IntradayState | null,
 ): string {
   const displayName = getManualActionDisplayLabel(actionId, state);
   const budgetDelta = state ? getManualActionBudgetDelta(state, actionId) : 0;
   return `${displayName}\n${formatManualActionBudgetDelta(budgetDelta, actionId, fallbackDisplayName)}`;
 }
 
-function getManualActionDisplayLabel(actionId: ManualActionId, state: IntradayState | null): string {
+function getManualActionUnavailableReason(
+  state: IntradayState | null | undefined,
+  actionId: ManualActionId,
+): string | null {
+  if (!state) {
+    return "상태 대기";
+  }
+
+  if (state.isPaused) {
+    return "결정 보류";
+  }
+
+  if (state.holdingRatio <= 0) {
+    return "관망";
+  }
+
+  const cooldownRemainingSec = state.manualActionCooldowns[actionId] ?? 0;
+
+  if (cooldownRemainingSec > 0) {
+    return `대기 ${Math.ceil(cooldownRemainingSec)}s`;
+  }
+
+  if (!canUseManualAction(state, actionId)) {
+    return "예산 부족";
+  }
+
+  return null;
+}
+
+function getManualActionAvailabilitySummary(
+  state: IntradayState | null | undefined,
+): string | null {
+  if (!state) {
+    return "수동 액션: 상태 대기";
+  }
+
+  const reasonCounts = manualActions.reduce<Record<string, number>>(
+    (counts, action) => {
+      const reason = getManualActionUnavailableReason(state, action.id);
+
+      if (reason) {
+        counts[reason] = (counts[reason] ?? 0) + 1;
+      }
+
+      return counts;
+    },
+    {},
+  );
+  const blockedSummaries = Object.entries(reasonCounts).map(
+    ([reason, count]) => `${reason} ${count}`,
+  );
+
+  if (blockedSummaries.length === 0) {
+    return null;
+  }
+
+  const availableCount =
+    manualActions.length -
+    Object.values(reasonCounts).reduce((total, count) => total + count, 0);
+
+  return `수동 액션: ${blockedSummaries.join(" / ")} / 사용 가능 ${availableCount}`;
+}
+
+function getManualActionDisplayLabel(
+  actionId: ManualActionId,
+  state: IntradayState | null,
+): string {
   if (actionId !== "position_settlement") {
     const action = manualActions.find((candidate) => candidate.id === actionId);
     return action?.displayName ?? actionId;
@@ -1711,10 +3038,16 @@ function getManualActionDisplayLabel(actionId: ManualActionId, state: IntradaySt
     return "포지션 정리";
   }
 
-  return state.currentPrice >= state.averageEntryPrice ? "수익실현" : "손실차단";
+  return state.currentPrice >= state.averageEntryPrice
+    ? "수익실현"
+    : "손실차단";
 }
 
-function formatManualActionBudgetDelta(delta: number, actionId: ManualActionId, fallbackDisplayName: string): string {
+function formatManualActionBudgetDelta(
+  delta: number,
+  actionId: ManualActionId,
+  fallbackDisplayName: string,
+): string {
   if (delta < 0) {
     if (actionId === "price_push") {
       return `${formatBudget(Math.abs(delta))}+ 매수`;
@@ -1728,10 +3061,15 @@ function formatManualActionBudgetDelta(delta: number, actionId: ManualActionId, 
   }
 
   if (delta > 0) {
-    return actionId === "position_settlement" ? `${formatBudget(delta)} 정리` : `${formatBudget(delta)} 회수`;
+    return actionId === "position_settlement"
+      ? `${formatBudget(delta)} 정리`
+      : `${formatBudget(delta)} 회수`;
   }
 
-  if (fallbackDisplayName === "매도봇" || fallbackDisplayName === "포지션 정리") {
+  if (
+    fallbackDisplayName === "매도봇" ||
+    fallbackDisplayName === "포지션 정리"
+  ) {
     return "보유 없음";
   }
 
@@ -1748,6 +3086,66 @@ function getSwarmPanelColor(model: RetailSwarmModel): number {
   }
 
   return 0x202b25;
+}
+
+function getSwarmStateLabel(model: RetailSwarmModel): string {
+  if (model.state === "panic") {
+    return "패닉";
+  }
+
+  if (model.state === "overheated") {
+    return "과열";
+  }
+
+  return "관심";
+}
+
+function getSwarmBadgeLabel(model: RetailSwarmModel): string {
+  if (model.panicVisual) {
+    return "PANIC";
+  }
+
+  if (model.warningVisual) {
+    return "OVERHEAT";
+  }
+
+  return "INTEREST";
+}
+
+function getSwarmHeatLabel(model: RetailSwarmModel): string {
+  if (model.panicVisual) {
+    return "위험";
+  }
+
+  if (model.warningVisual) {
+    return "주의";
+  }
+
+  return "관찰";
+}
+
+function getSwarmRiskLine(model: RetailSwarmModel): string {
+  if (model.panicVisual) {
+    return "리스크 위험: 급반전과 감시 부담이 커질 수 있음";
+  }
+
+  if (model.warningVisual) {
+    return "리스크 주의: 과열 반응과 변동성 확대 가능";
+  }
+
+  return "리스크 안정: 참여 흐름 관찰 중";
+}
+
+function getSwarmRiskTextColor(model: RetailSwarmModel): string {
+  if (model.panicVisual) {
+    return "#f0a6a0";
+  }
+
+  if (model.warningVisual) {
+    return "#d9c58b";
+  }
+
+  return "#8fa2a6";
 }
 
 function getSwarmTokenColor(model: RetailSwarmModel): number {
@@ -1769,7 +3167,7 @@ interface ParticipantMoodEstimate {
 
 function estimateParticipantMood(
   state: IntradayState,
-  history: readonly PriceHistoryPoint[]
+  history: readonly PriceHistoryPoint[],
 ): ParticipantMoodEstimate {
   const usableHistory =
     history.length > 0
@@ -1778,18 +3176,23 @@ function estimateParticipantMood(
           {
             elapsedSec: 0,
             priceChangePercent: state.priceChangePercent,
-            fictionalVolume: 1
-          }
+            fictionalVolume: 1,
+          },
         ];
-  const latestElapsedSec = usableHistory[usableHistory.length - 1]?.elapsedSec ?? 0;
+  const latestElapsedSec =
+    usableHistory[usableHistory.length - 1]?.elapsedSec ?? 0;
   const lookbackSec = 60;
-  const pointsInLookback = usableHistory.filter((point) => latestElapsedSec - point.elapsedSec <= lookbackSec);
+  const pointsInLookback = usableHistory.filter(
+    (point) => latestElapsedSec - point.elapsedSec <= lookbackSec,
+  );
   const averageVolume =
     pointsInLookback.length > 0
       ? Math.max(
           1,
-          pointsInLookback.reduce((total, point) => total + Math.max(1, point.fictionalVolume), 0) /
-            pointsInLookback.length
+          pointsInLookback.reduce(
+            (total, point) => total + Math.max(1, point.fictionalVolume),
+            0,
+          ) / pointsInLookback.length,
         )
       : 1;
   let weightedPriceTotal = 0;
@@ -1800,26 +3203,36 @@ function estimateParticipantMood(
     const ageSec = Math.max(0, latestElapsedSec - point.elapsedSec);
     const pointVolume = Math.max(1, point.fictionalVolume);
     const volumeRatio = pointVolume / averageVolume;
-    const volumeSpikeBoost = 1 + Math.min(4, Math.max(0, volumeRatio - 1)) * (0.45 + state.personalParticipation / 180);
+    const volumeSpikeBoost =
+      1 +
+      Math.min(4, Math.max(0, volumeRatio - 1)) *
+        (0.45 + state.personalParticipation / 180);
     const recencyPosition = (lookbackSec - ageSec) / lookbackSec;
     const price = state.openingPrice * (1 + point.priceChangePercent / 100);
-    const recency = 0.75 + recencyPosition * (0.65 + state.personalParticipation / 80);
+    const recency =
+      0.75 + recencyPosition * (0.65 + state.personalParticipation / 80);
     const weight = Math.pow(pointVolume, 1.04) * volumeSpikeBoost * recency;
     weightedPriceTotal += price * weight;
     weightTotal += weight;
   }
 
-  const averageEntryPrice = weightTotal > 0 ? weightedPriceTotal / weightTotal : state.currentPrice;
+  const averageEntryPrice =
+    weightTotal > 0 ? weightedPriceTotal / weightTotal : state.currentPrice;
   const profitLossPercent =
-    averageEntryPrice > 0 ? ((state.currentPrice - averageEntryPrice) / averageEntryPrice) * 100 : 0;
+    averageEntryPrice > 0
+      ? ((state.currentPrice - averageEntryPrice) / averageEntryPrice) * 100
+      : 0;
 
   return {
     averageEntryPrice: roundToTick(averageEntryPrice, 10),
-    profitLossPercent: Math.round(profitLossPercent * 10) / 10
+    profitLossPercent: Math.round(profitLossPercent * 10) / 10,
   };
 }
 
-function getParticipantMoodTextColor(profitLossPercent: number, model: RetailSwarmModel): string {
+function getParticipantMoodTextColor(
+  profitLossPercent: number,
+  model: RetailSwarmModel,
+): string {
   if (profitLossPercent > 0.15) {
     return "#00c087";
   }
@@ -1831,14 +3244,18 @@ function getParticipantMoodTextColor(profitLossPercent: number, model: RetailSwa
   return model.panicVisual ? "#f0a6a0" : "#d9c58b";
 }
 
-type PepeSwarmMood = "sleeping" | "curious" | "euphoric";
+type AntSwarmMood = "sleeping" | "curious" | "euphoric" | "anxious";
 
-const pepeMascotTextureKey = "meme-frog-moods";
-const pepeMascotFrameCount = 4;
-
-function getPepeSwarmMood(model: RetailSwarmModel): PepeSwarmMood {
+function getAntSwarmMood(
+  model: RetailSwarmModel,
+  participantProfitLossPercent: number,
+): AntSwarmMood {
   if (model.participationNumber < 25) {
     return "sleeping";
+  }
+
+  if (model.panicVisual || participantProfitLossPercent < -0.15) {
+    return "anxious";
   }
 
   if (model.participationNumber < 61) {
@@ -1848,7 +3265,7 @@ function getPepeSwarmMood(model: RetailSwarmModel): PepeSwarmMood {
   return "euphoric";
 }
 
-function getPepeSwarmLabel(mood: PepeSwarmMood): string {
+function getAntSwarmLabel(mood: AntSwarmMood): string {
   if (mood === "sleeping") {
     return "수면";
   }
@@ -1857,25 +3274,22 @@ function getPepeSwarmLabel(mood: PepeSwarmMood): string {
     return "호기심";
   }
 
+  if (mood === "anxious") {
+    return "불안";
+  }
+
   return "열광";
 }
 
-function getPepeMascotFrameIndex(mood: PepeSwarmMood, participantProfitLossPercent: number): number {
-  if (participantProfitLossPercent > 0.15) {
-    return 2;
+function getAntMascotFrameIndex(mood: AntSwarmMood): number {
+  switch (mood) {
+    case "sleeping":
+      return 0;
+    case "curious":
+      return 1;
+    case "euphoric":
+      return 2;
+    case "anxious":
+      return 3;
   }
-
-  if (participantProfitLossPercent < -0.15) {
-    return 3;
-  }
-
-  if (mood === "sleeping") {
-    return 0;
-  }
-
-  if (mood === "curious") {
-    return 1;
-  }
-
-  return 2;
 }

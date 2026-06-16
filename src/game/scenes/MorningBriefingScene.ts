@@ -1,7 +1,19 @@
 import { BaseDocumentScene } from "./BaseDocumentScene";
 import { SceneKeys } from "./SceneKeys";
-import { describeMorningNewsTarget, type MorningNews } from "../../domain/day/morningNews";
-import type { ContractMandate, ExpertReport } from "../../domain/contract";
+import {
+  describeMorningNewsTarget,
+  type MorningNews,
+} from "../../domain/day/morningNews";
+import type { DayState, PreOpenCardEffect } from "../../domain/day/daySetup";
+import type {
+  ContractMandate,
+  ContractObjective,
+  ExpertReport,
+} from "../../domain/contract";
+import {
+  getContractRecommendedManualActionLabels,
+  getContractRiskyManualActionLabels,
+} from "../../domain/contract";
 import type { RunState } from "../../domain/run/runState";
 import { gameSession } from "../GameSession";
 
@@ -23,36 +35,43 @@ export class MorningBriefingScene extends BaseDocumentScene {
     const dayState = gameSession.ensureDay();
     const briefing = gameSession.ensureMarketBriefing();
     const todayCondition = dayState.todayCondition;
-    const contractMandate = gameSession.gameMode === "contract" ? gameSession.contractMandate : null;
+    const contractMandate =
+      gameSession.gameMode === "contract" ? gameSession.contractMandate : null;
 
     this.drawDocumentShell(
       contractMandate ? "아침 뉴스 / 전문가 리포트" : "아침 뉴스 / 시장 브리핑",
       [],
-      {
-        label: "개장 승인",
-        target: SceneKeys.Intraday,
-        onClick: () => {
-          gameSession.startIntraday();
-        }
-      }
+      undefined,
+      "",
     );
 
-    this.add
-      .text(96, 136, `DAY ${dayState.dayIndex}`, {
-        color: "#c9c1ad",
-        fontFamily: this.fontFamily,
-        fontSize: "18px"
-      })
-      .setOrigin(0, 0);
+    this.drawBriefingHeader(dayState.dayIndex, Boolean(contractMandate));
 
-    this.drawNewsPanel(96, 184);
+    this.drawNewsPanel(96, 204);
     if (contractMandate) {
-      this.drawContractExpertReportPanel(790, 184, briefing.selectedSectorName, briefing.selectedAssetName, contractMandate);
+      this.drawContractBriefingPanel(
+        790,
+        204,
+        dayState.dayIndex,
+        briefing.selectedSectorName,
+        briefing.selectedAssetName,
+        contractMandate,
+      );
+      this.drawCompactConditionPanel(790, 520, todayCondition);
     } else {
-      this.drawBriefingPanel(790, 184, briefing.selectedSectorName, briefing.selectedAssetName, briefing.targetBandLabel, briefing.crashLineLabel);
+      this.drawBriefingPanel(
+        790,
+        204,
+        briefing.selectedSectorName,
+        briefing.selectedAssetName,
+        briefing.targetBandLabel,
+        briefing.crashLineLabel,
+      );
+      this.drawPreOpenEffectPanel(790, 408, dayState);
+      this.drawCompactConditionPanel(790, 520, todayCondition);
     }
-    this.drawConditionPanel(790, 404, todayCondition);
-    this.drawRiskPanel(96, 506, briefing.riskHints);
+    this.drawRiskPanel(96, 520, briefing.riskHints);
+    this.addOpeningApprovalButton();
   }
 
   private drawNewsPromptIntro(): void {
@@ -61,13 +80,19 @@ export class MorningBriefingScene extends BaseDocumentScene {
     const promptLines = [
       { text: "> NEWS FEED OPEN", color: "#d9c58b" },
       ...dayState.morningNewsItems.flatMap((news, index) => {
-        const impactColor = getPlayerImpactLabel(news, runState) ? getNewsToneColor(news) : "#f3e8ca";
+        const scopeBadge = getNewsScopeBadge(news, runState);
+        const impactColor = scopeBadge.highlight
+          ? getNewsToneColor(news)
+          : "#8f9f7a";
 
         return [
           { text: `> ${index + 1}. ${news.displayName}`, color: "#f3e8ca" },
-          { text: `> 대상: ${describeMorningNewsTarget(news.target)}${formatPromptImpact(news, runState)}`, color: impactColor }
+          {
+            text: `> 대상: ${describeMorningNewsTarget(news.target)}${formatPromptImpact(news, runState)}`,
+            color: impactColor,
+          },
         ];
-      })
+      }),
     ];
 
     this.drawDocumentShell("아침 뉴스 수신 중", []);
@@ -75,7 +100,7 @@ export class MorningBriefingScene extends BaseDocumentScene {
       .text(96, 136, `DAY ${dayState.dayIndex}`, {
         color: "#c9c1ad",
         fontFamily: this.fontFamily,
-        fontSize: "18px"
+        fontSize: "18px",
       })
       .setOrigin(0, 0);
     this.drawPanel(96, 184, 1054, 388);
@@ -88,7 +113,7 @@ export class MorningBriefingScene extends BaseDocumentScene {
           color: line.color,
           fontFamily: this.fontFamily,
           fontSize: index === 0 ? "17px" : "18px",
-          wordWrap: { width: 990 }
+          wordWrap: { width: 990 },
         })
         .setOrigin(0, 0)
         .setAlpha(0);
@@ -99,9 +124,44 @@ export class MorningBriefingScene extends BaseDocumentScene {
         alpha: 1,
         duration: 220,
         delay: index * 105,
-        ease: "Sine.easeOut"
+        ease: "Sine.easeOut",
       });
     });
+  }
+
+  private drawBriefingHeader(dayIndex: number, contractMode: boolean): void {
+    this.add
+      .rectangle(96, 126, 1088, 50, 0x090d10, 0.9)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, 0x263038);
+    this.add
+      .text(118, 139, `DAY ${dayIndex} · MORNING NEWS REVEALED`, {
+        color: "#8f9f7a",
+        fontFamily: this.fontFamily,
+        fontSize: "12px",
+      })
+      .setOrigin(0, 0);
+    this.add
+      .text(
+        380,
+        135,
+        contractMode
+          ? "전문가 리포트 확인 후 개장 승인"
+          : "뉴스 영향과 목표 조건 확인 후 개장 승인",
+        {
+          color: "#f3e8ca",
+          fontFamily: this.fontFamily,
+          fontSize: "20px",
+        },
+      )
+      .setOrigin(0, 0);
+    this.add
+      .text(956, 139, "OPENING APPROVAL REQUIRED", {
+        color: "#d9c58b",
+        fontFamily: this.fontFamily,
+        fontSize: "13px",
+      })
+      .setOrigin(0, 0);
   }
 
   private drawNewsPanel(x: number, y: number): void {
@@ -113,10 +173,12 @@ export class MorningBriefingScene extends BaseDocumentScene {
 
     dayState.morningNewsItems.forEach((news, index) => {
       const rowY = y + 54 + index * 72;
-      const impactLabel = getPlayerImpactLabel(news, runState);
-      const impactColor = impactLabel ? getNewsToneColor(news) : "#8f9f7a";
+      const scopeBadge = getNewsScopeBadge(news, runState);
+      const impactColor = scopeBadge.highlight
+        ? getNewsToneColor(news)
+        : "#8f9f7a";
 
-      if (impactLabel) {
+      if (scopeBadge.highlight) {
         this.add
           .rectangle(x + 18, rowY - 10, 606, 66, 0x000000, 0)
           .setOrigin(0, 0)
@@ -125,29 +187,53 @@ export class MorningBriefingScene extends BaseDocumentScene {
 
       this.add
         .text(x + 26, rowY, `${index + 1}. ${news.displayName}`, {
-          color: impactLabel ? "#f3e8ca" : "#c9c1ad",
+          color: scopeBadge.highlight ? "#f3e8ca" : "#c9c1ad",
           fontFamily: this.fontFamily,
-          fontSize: "19px"
+          fontSize: "19px",
         })
         .setOrigin(0, 0);
       this.add
-        .text(x + 54, rowY + 32, `대상: ${describeMorningNewsTarget(news.target)}`, {
-          color: "#8f9f7a",
-          fontFamily: this.fontFamily,
-          fontSize: "15px"
-        })
+        .text(
+          x + 54,
+          rowY + 32,
+          `대상: ${describeMorningNewsTarget(news.target)}`,
+          {
+            color: "#8f9f7a",
+            fontFamily: this.fontFamily,
+            fontSize: "15px",
+            wordWrap: { width: 420 },
+          },
+        )
         .setOrigin(0, 0);
 
-      if (impactLabel) {
-        this.add
-          .text(x + 348, rowY + 32, impactLabel, {
-            color: impactColor,
-            fontFamily: this.fontFamily,
-            fontSize: "15px"
-          })
-          .setOrigin(0, 0);
-      }
+      this.drawNewsScopeBadge(x + 492, rowY + 26, scopeBadge, impactColor);
     });
+  }
+
+  private drawNewsScopeBadge(
+    x: number,
+    y: number,
+    scopeBadge: NewsScopeBadge,
+    color: string,
+  ): void {
+    this.add
+      .rectangle(
+        x,
+        y,
+        122,
+        24,
+        scopeBadge.highlight ? colorStringToNumber(color) : 0x151b1f,
+        scopeBadge.highlight ? 0.16 : 0.92,
+      )
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, colorStringToNumber(color), 0.82);
+    this.add
+      .text(x + 10, y + 6, scopeBadge.label, {
+        color,
+        fontFamily: this.fontFamily,
+        fontSize: "11px",
+      })
+      .setOrigin(0, 0);
   }
 
   private drawBriefingPanel(
@@ -156,7 +242,7 @@ export class MorningBriefingScene extends BaseDocumentScene {
     sectorName: string,
     assetName: string,
     targetBandLabel: string,
-    crashLineLabel: string
+    crashLineLabel: string,
   ): void {
     this.drawPanel(x, y, 360, 190);
     this.addPanelTitle(x, y, "MARKET BRIEFING");
@@ -168,53 +254,88 @@ export class MorningBriefingScene extends BaseDocumentScene {
           `종목: ${assetName}`,
           `섹터: ${sectorName}`,
           `목표 밴드: ${targetBandLabel}`,
-          `붕괴선: ${crashLineLabel}`
+          `붕괴선: ${crashLineLabel}`,
         ].join("\n"),
         {
           color: "#c9c1ad",
           fontFamily: this.fontFamily,
           fontSize: "16px",
           lineSpacing: 10,
-          wordWrap: { width: 310 }
-        }
+          wordWrap: { width: 310 },
+        },
       )
       .setOrigin(0, 0);
   }
 
-  private drawContractExpertReportPanel(
+  private drawContractBriefingPanel(
     x: number,
     y: number,
+    dayIndex: number,
     sectorName: string,
     assetName: string,
-    mandate: ContractMandate
+    mandate: ContractMandate,
   ): void {
     const report = mandate.expertReport;
+    const remainingDays = Math.max(1, mandate.durationDays - dayIndex + 1);
+    const recommendedTools = getContractRecommendedManualActionLabels(mandate);
+    const riskyTools = getContractRiskyManualActionLabels(mandate);
 
-    this.drawPanel(x, y, 360, 190);
-    this.addPanelTitle(x, y, "EXPERT REPORT");
+    this.drawPanel(x, y, 360, 296);
+    this.addPanelTitle(x, y, "CONTRACT BRIEF");
     this.add
       .text(
         x + 26,
         y + 54,
         [
-          `${assetName} / ${sectorName}`,
-          `방향: ${getContractDirectionLabel(mandate.direction)} · 신뢰도 ${report.confidence}`,
-          formatExpertReportPriceLine(report),
-          `의뢰주: ${getSponsorTypeLabel(mandate.sponsorType)}`,
-          report.summary
+          `${mandate.displayName} / ${assetName}`,
+          `섹터 ${sectorName} · ${getContractDirectionLabel(mandate.direction)}`,
+          `남은 Day ${remainingDays}/${mandate.durationDays} · 보상 ${formatReward(mandate.fixedReward)}`,
+          `위험 ${mandate.riskLevel}/5 · 리포트 신뢰도 ${report.confidence}`,
+          `목표선: ${formatContractTargetLine(mandate.objectives)}`,
+          `성공 조건: ${formatContractSuccessConditions(mandate.objectives)}`,
+          `리포트: ${formatExpertReportPriceLine(report)}`,
+          report.summary,
         ].join("\n"),
         {
           color: "#c9c1ad",
           fontFamily: this.fontFamily,
-          fontSize: "14px",
-          lineSpacing: 6,
-          wordWrap: { width: 310 }
-        }
+          fontSize: "12px",
+          lineSpacing: 3,
+          wordWrap: { width: 310 },
+        },
+      )
+      .setOrigin(0, 0);
+    this.add
+      .rectangle(x + 24, y + 232, 312, 44, 0x111417, 0.96)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, 0x354149, 0.9);
+    this.add
+      .text(x + 36, y + 240, "TOOL FIT", {
+        color: "#d9c58b",
+        fontFamily: this.fontFamily,
+        fontSize: "10px",
+      })
+      .setOrigin(0, 0);
+    this.add
+      .text(
+        x + 112,
+        y + 238,
+        [
+          `추천 ${recommendedTools.join(" / ")}`,
+          `주의 ${riskyTools.join(" / ") || "없음"}`,
+        ].join("\n"),
+        {
+          color: "#c9c1ad",
+          fontFamily: this.fontFamily,
+          fontSize: "11px",
+          lineSpacing: 2,
+          wordWrap: { width: 212 },
+        },
       )
       .setOrigin(0, 0);
   }
 
-  private drawConditionPanel(
+  private drawCompactConditionPanel(
     x: number,
     y: number,
     todayCondition: {
@@ -222,40 +343,121 @@ export class MorningBriefingScene extends BaseDocumentScene {
       readonly volatilityShiftPercent: number;
       readonly liquidityShiftPercent: number;
       readonly surveillanceSensitivityShiftPercent: number;
-    }
+    },
   ): void {
-    this.drawPanel(x, y, 360, 158);
-    this.addPanelTitle(x, y, "TODAY CONDITION");
+    this.drawPanel(x, y, 360, 74);
     this.add
       .text(
-        x + 26,
-        y + 54,
+        x + 24,
+        y + 18,
         [
-          `관심 ${formatSigned(todayCondition.attentionShiftPercent)}%`,
-          `변동성 ${formatSigned(todayCondition.volatilityShiftPercent)}%`,
-          `유동성 ${formatSigned(todayCondition.liquidityShiftPercent)}%`,
-          `감시 민감도 ${formatSigned(todayCondition.surveillanceSensitivityShiftPercent)}%`
+          `TODAY: 관심 ${formatSigned(todayCondition.attentionShiftPercent)} · 변동성 ${formatSigned(todayCondition.volatilityShiftPercent)}`,
+          `유동성 ${formatSigned(todayCondition.liquidityShiftPercent)} · 감시 ${formatSigned(todayCondition.surveillanceSensitivityShiftPercent)}`,
         ].join("\n"),
         {
           color: "#c9c1ad",
           fontFamily: this.fontFamily,
-          fontSize: "16px",
-          lineSpacing: 8
-        }
+          fontSize: "13px",
+          lineSpacing: 5,
+          wordWrap: { width: 312 },
+        },
       )
       .setOrigin(0, 0);
   }
 
-  private drawRiskPanel(x: number, y: number, riskHints: readonly string[]): void {
+  private drawPreOpenEffectPanel(
+    x: number,
+    y: number,
+    dayState: DayState,
+  ): void {
+    this.drawPanel(x, y, 360, 102);
+    this.addPanelTitle(x, y, "PRE-OPEN EFFECT");
+    this.add
+      .text(x + 26, y + 46, formatPreOpenEffectSummary(dayState).join("\n"), {
+        color: "#c9c1ad",
+        fontFamily: this.fontFamily,
+        fontSize: "12px",
+        lineSpacing: 3,
+        wordWrap: { width: 308 },
+      })
+      .setOrigin(0, 0);
+  }
+
+  private drawRiskPanel(
+    x: number,
+    y: number,
+    riskHints: readonly string[],
+  ): void {
     this.drawPanel(x, y, 650, 74);
     this.add
       .text(x + 24, y + 20, `RISK: ${riskHints.join(" / ")}`, {
         color: "#d9c58b",
         fontFamily: this.fontFamily,
         fontSize: "15px",
-        wordWrap: { width: 602 }
+        wordWrap: { width: 602 },
       })
       .setOrigin(0, 0);
+  }
+
+  private addOpeningApprovalButton(): void {
+    const x = 914;
+    const y = this.scale.height - 130;
+    const width = 242;
+    const height = 76;
+    const panel = this.add
+      .rectangle(x, y, width, height, 0x090d10, 0.92)
+      .setOrigin(0, 0)
+      .setStrokeStyle(2, 0xd9c58b, 0.82);
+    const hitZone = this.add
+      .zone(x, y, width, height)
+      .setOrigin(0, 0)
+      .setInteractive({ useHandCursor: true });
+
+    this.add
+      .text(x + 18, y + 10, "OPENING STAMP", {
+        color: "#8f9f7a",
+        fontFamily: this.fontFamily,
+        fontSize: "12px",
+      })
+      .setOrigin(0, 0);
+    this.add
+      .text(x + 18, y + 32, "[ 개장 승인 ]", {
+        color: "#f3e8ca",
+        fontFamily: this.fontFamily,
+        fontSize: "20px",
+      })
+      .setOrigin(0, 0);
+    this.add
+      .text(x + 18, y + 58, "검토 완료 · 장중 운용 전환", {
+        color: "#c9c1ad",
+        fontFamily: this.fontFamily,
+        fontSize: "11px",
+      })
+      .setOrigin(0, 0);
+    this.add
+      .ellipse(x + 196, y + 39, 66, 42, 0x000000, 0)
+      .setStrokeStyle(2, 0xff5a6f, 0.88);
+    this.add
+      .text(x + 175, y + 29, "승인", {
+        color: "#ff5a6f",
+        fontFamily: this.fontFamily,
+        fontSize: "19px",
+      })
+      .setOrigin(0, 0)
+      .setAngle(-8);
+
+    hitZone.on("pointerover", () => {
+      panel.setFillStyle(0x151a18, 0.96);
+      panel.setStrokeStyle(2, 0xf3e8ca, 1);
+    });
+    hitZone.on("pointerout", () => {
+      panel.setFillStyle(0x090d10, 0.92);
+      panel.setStrokeStyle(2, 0xd9c58b, 0.82);
+    });
+    hitZone.on("pointerup", () => {
+      gameSession.startIntraday();
+      this.scene.start(SceneKeys.Intraday);
+    });
   }
 
   private drawPanel(x: number, y: number, width: number, height: number): void {
@@ -270,7 +472,7 @@ export class MorningBriefingScene extends BaseDocumentScene {
       .text(x + 24, y + 20, title, {
         color: "#d9c58b",
         fontFamily: this.fontFamily,
-        fontSize: "15px"
+        fontSize: "15px",
       })
       .setOrigin(0, 0);
   }
@@ -280,9 +482,60 @@ function formatSigned(value: number): string {
   return value >= 0 ? `+${value}` : `${value}`;
 }
 
+function formatPreOpenEffectSummary(dayState: DayState): readonly string[] {
+  const effect = dayState.preOpenCardEffect;
+
+  if (!effect) {
+    return ["선택 정보 없음", "개장 전 효과가 아직 적용되지 않았습니다."];
+  }
+
+  switch (effect.sourceCardId) {
+    case "early_positioning":
+      return [
+        `선취매 ${effect.earlyPositioningBudgetPercent ?? 0}% · 예산 ${formatSigned(effect.budgetDelta)}B`,
+        `보유 ${formatSigned(effect.holdingRatioDelta)}% · 유동성 ${formatSigned(effect.marketLiquidityDelta)}`,
+        effect.earlyPositioningRiskBand === "concentrated"
+          ? "과집중 구간 · 개장 리스크 상승"
+          : "프리미엄 진입 · 장중 전 보유 확보",
+      ];
+    case "news_assignment":
+      return [
+        `${formatNewsAssignmentLabel(effect)} · 예산 ${formatSigned(effect.budgetDelta)}B`,
+        `변동성 ${formatSigned(effect.volatilityDelta)} · 유동성 보정 ${formatSigned(effect.liquiditySupplyPressureBonus)}`,
+        effect.newsAssignmentDirection === "negative"
+          ? "악재 맥락으로 정리 명분 강화"
+          : "호재 맥락으로 상승 액션 정당성 강화",
+      ];
+    case "asset_analysis":
+      return [
+        `종목 분석 · 예산 ${formatSigned(effect.budgetDelta)}B`,
+        `수동 액션 효과 x${formatMultiplier(effect.manualActionEffectMultiplier)}`,
+        "즉시 가격 대신 장중 도구 효율 강화",
+      ];
+    case "wait_and_see":
+      return [
+        "관망 · 예산 +0B",
+        "추가 개장 전 효과 없음",
+        "예산을 보전하고 뉴스만 확인",
+      ];
+    default:
+      return ["개장 전 선택 확인", "선택 효과가 개장 승인 후 반영됩니다."];
+  }
+}
+
+function formatNewsAssignmentLabel(effect: PreOpenCardEffect): string {
+  return effect.newsAssignmentDirection === "negative"
+    ? "뉴스 배정: 악재"
+    : "뉴스 배정: 호재";
+}
+
+function formatMultiplier(value: number): string {
+  return Number.isInteger(value) ? `${value}` : value.toFixed(2);
+}
+
 function formatPromptImpact(news: MorningNews, runState: RunState): string {
-  const impactLabel = getPlayerImpactLabel(news, runState);
-  return impactLabel ? ` [${impactLabel}]` : "";
+  const scopeBadge = getNewsScopeBadge(news, runState);
+  return ` [${scopeBadge.label}]`;
 }
 
 function getNewsToneColor(news: MorningNews): string {
@@ -298,7 +551,10 @@ function getNewsToneColor(news: MorningNews): string {
 }
 
 function isPositiveNews(news: MorningNews): boolean {
-  return news.designLabel.includes("Positive") || news.templateId === "sector_positive_catalyst";
+  return (
+    news.designLabel.includes("Positive") ||
+    news.templateId === "sector_positive_catalyst"
+  );
 }
 
 function isNegativeNews(news: MorningNews): boolean {
@@ -310,20 +566,41 @@ function isNegativeNews(news: MorningNews): boolean {
   );
 }
 
-function getPlayerImpactLabel(news: MorningNews, runState: RunState): string | null {
+interface NewsScopeBadge {
+  readonly label: string;
+  readonly highlight: boolean;
+}
+
+function getNewsScopeBadge(
+  news: MorningNews,
+  runState: RunState,
+): NewsScopeBadge {
   if (news.target.type === "market") {
-    return "내 종목 영향";
+    return { label: "시장 전체", highlight: true };
   }
 
-  if (news.target.type === "sector" && news.target.sectorId === runState.selectedSectorId) {
-    return "내 섹터 영향";
+  if (
+    news.target.type === "sector" &&
+    news.target.sectorId === runState.selectedSectorId
+  ) {
+    return { label: "내 섹터 영향", highlight: true };
   }
 
-  if (news.target.type === "asset" && news.target.assetId === runState.selectedAssetId) {
-    return "내 종목 영향";
+  if (
+    news.target.type === "asset" &&
+    news.target.assetId === runState.selectedAssetId
+  ) {
+    return { label: "직접 영향", highlight: true };
   }
 
-  return null;
+  if (
+    news.target.type === "asset" &&
+    news.target.sectorId === runState.selectedSectorId
+  ) {
+    return { label: "동일 섹터 참고", highlight: false };
+  }
+
+  return { label: "시장 참고", highlight: false };
 }
 
 function colorStringToNumber(color: string): number {
@@ -331,7 +608,9 @@ function colorStringToNumber(color: string): number {
 }
 
 function formatExpertReportPriceLine(report: ExpertReport): string {
-  const priceHint = report.targetPriceHint ? `제시가 ${formatPrice(report.targetPriceHint)} 부근` : null;
+  const priceHint = report.targetPriceHint
+    ? `제시가 ${formatPrice(report.targetPriceHint)} 부근`
+    : null;
   const bandHint =
     report.lowerPrice !== undefined && report.upperPrice !== undefined
       ? `밴드 ${formatPrice(report.lowerPrice)}~${formatPrice(report.upperPrice)}`
@@ -340,31 +619,100 @@ function formatExpertReportPriceLine(report: ExpertReport): string {
   return [priceHint, bandHint].filter(Boolean).join(" / ") || "가격 제시 없음";
 }
 
+function formatContractTargetLine(
+  objectives: readonly ContractObjective[],
+): string {
+  return objectives
+    .map((objective) => getContractTargetLabel(objective))
+    .join(" + ");
+}
+
+function formatContractSuccessConditions(
+  objectives: readonly ContractObjective[],
+): string {
+  return objectives
+    .map((objective) => getContractSuccessConditionLabel(objective))
+    .join(" + ");
+}
+
+function getContractTargetLabel(objective: ContractObjective): string {
+  switch (objective.type) {
+    case "touch":
+      return `${formatPrice(objective.targetPrice)} ${objective.direction === "downward" ? "하단" : "상단"}`;
+    case "maintain":
+      return `${formatPrice(objective.lowerPrice)}~${formatPrice(objective.upperPrice)} 밴드`;
+    case "close_above":
+      return `${formatPrice(objective.targetPrice)} 이상`;
+    case "close_below":
+      return `${formatPrice(objective.targetPrice)} 이하`;
+    case "close_inside_band":
+      return `${formatPrice(objective.lowerPrice)}~${formatPrice(objective.upperPrice)} 마감 밴드`;
+    case "never_break":
+      if (objective.lowerPrice !== undefined) {
+        return `${formatPrice(objective.lowerPrice)} 방어선`;
+      }
+      return `${formatPrice(objective.upperPrice ?? 0)} 제한선`;
+    case "rank":
+      return `VALUE 순위 ${objective.maxRank}위`;
+    case "value":
+      return `VALUE ${formatValue(objective.minValue)}`;
+    case "touch_then_maintain":
+      return `${formatPrice(objective.targetPrice)} 터치 후 ${formatPrice(objective.lowerPrice)}~${formatPrice(objective.upperPrice)}`;
+  }
+}
+
+function getContractSuccessConditionLabel(
+  objective: ContractObjective,
+): string {
+  switch (objective.type) {
+    case "touch":
+      return `DAY ${objective.deadlineDay} 안에 터치`;
+    case "maintain":
+      return `${objective.requiredDays}개 Day 마감 유지`;
+    case "close_above":
+      return `DAY ${objective.day} 이상 마감`;
+    case "close_below":
+      return `DAY ${objective.day} 이하 마감`;
+    case "close_inside_band":
+      return `DAY ${objective.day} 밴드 안 마감`;
+    case "never_break":
+      return `${objective.durationDays}개 Day 이탈 없음`;
+    case "rank":
+      return `DAY ${objective.deadlineDay} 안에 순위 도달`;
+    case "value":
+      return `DAY ${objective.deadlineDay} 안에 VALUE 도달`;
+    case "touch_then_maintain":
+      return `DAY ${objective.touchDeadlineDay} 안에 터치 후 ${objective.maintainDays}개 Day 유지`;
+  }
+}
+
 function formatPrice(value: number): string {
   return value.toLocaleString("ko-KR");
 }
 
-function getContractDirectionLabel(direction: ContractMandate["direction"]): string {
+function formatValue(value: number): string {
+  if (value >= 100000000) {
+    return `${Math.round(value / 100000000)}억`;
+  }
+
+  return value.toLocaleString("ko-KR");
+}
+
+function formatReward(value: number): string {
+  return `${value.toLocaleString("ko-KR")}B`;
+}
+
+function getContractDirectionLabel(
+  direction: ContractMandate["direction"],
+): string {
   const labels: Record<ContractMandate["direction"], string> = {
     upward: "상방",
     downward: "하방",
     range: "밴드",
     defense: "방어",
     attention: "관심",
-    stealth: "은닉"
+    stealth: "은닉",
   };
 
   return labels[direction];
-}
-
-function getSponsorTypeLabel(sponsorType: ContractMandate["sponsorType"]): string {
-  const labels: Record<ContractMandate["sponsorType"], string> = {
-    long_holder: "롱 보유자",
-    short_seller: "숏 의뢰주",
-    accumulator: "매집자",
-    defender: "방어자",
-    pump_exit: "익절 출구"
-  };
-
-  return labels[sponsorType];
 }

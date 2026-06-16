@@ -8,6 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "bdd": "tsx ./node_modules/@cucumber/cucumber/bin/cucumber.js --config cucumber.mjs",
     "bdd:execution": "tsx ./node_modules/@cucumber/cucumber/bin/cucumber.js --config cucumber.mjs --profile execution",
+    "test:visual": "tsx scripts/run-visual-tests.ts",
+    "test:visual:update": "tsx scripts/run-visual-tests.ts --update-snapshots",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "verify:run": "tsx scripts/verify-run-flow.ts",
@@ -21,6 +23,7 @@
   },
   "devDependencies": {
     "@cucumber/cucumber": "^13.0.0",
+    "@playwright/test": "^1.61.0",
     "@types/node": "^25.9.3",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",

@@ -8,14 +8,14 @@ export const persistenceSchemaVersion = 1;
 export const persistenceKeys = {
   currentRun: "mms.currentRun.v1",
   recentFinal: "mms.recentFinal.v1",
-  bestRecord: "mms.bestRecord.v1"
+  bestRecord: "mms.bestRecord.v1",
 } as const;
 
 export const forbiddenPersistenceKeys = [
   "cloudAccount",
   "onlineRanking",
   "replayLog",
-  "detailedPlayLog"
+  "detailedPlayLog",
 ] as const;
 
 export interface KeyValueStorage {
@@ -33,7 +33,10 @@ export interface SavedEnvelope<T> {
 export type LoadResult<T> =
   | { readonly status: "loaded"; readonly envelope: SavedEnvelope<T> }
   | { readonly status: "missing" }
-  | { readonly status: "discarded"; readonly reason: "invalid_json" | "incompatible_schema" };
+  | {
+      readonly status: "discarded";
+      readonly reason: "invalid_json" | "incompatible_schema";
+    };
 
 export interface BestRecord {
   readonly finalGrade: FinalGrade;
@@ -53,12 +56,19 @@ export interface CurrentRunSessionSave {
 
 export type CurrentRunSaveData = RunState | CurrentRunSessionSave;
 
-export function saveCurrentRun(storage: KeyValueStorage, runState: RunState, savedAt = new Date().toISOString()): void {
+export function saveCurrentRun(
+  storage: KeyValueStorage,
+  runState: RunState,
+  savedAt = new Date().toISOString(),
+): void {
   saveEnvelope(storage, persistenceKeys.currentRun, runState, savedAt);
 }
 
 export function loadCurrentRun(storage: KeyValueStorage): LoadResult<RunState> {
-  const result = loadEnvelope<CurrentRunSaveData>(storage, persistenceKeys.currentRun);
+  const result = loadEnvelope<CurrentRunSaveData>(
+    storage,
+    persistenceKeys.currentRun,
+  );
 
   if (result.status !== "loaded") {
     return result;
@@ -68,21 +78,26 @@ export function loadCurrentRun(storage: KeyValueStorage): LoadResult<RunState> {
     status: "loaded",
     envelope: {
       ...result.envelope,
-      data: getSavedRunState(result.envelope.data)
-    }
+      data: getSavedRunState(result.envelope.data),
+    },
   };
 }
 
 export function saveCurrentRunSession(
   storage: KeyValueStorage,
   session: CurrentRunSessionSave,
-  savedAt = new Date().toISOString()
+  savedAt = new Date().toISOString(),
 ): void {
   saveEnvelope(storage, persistenceKeys.currentRun, session, savedAt);
 }
 
-export function loadCurrentRunSession(storage: KeyValueStorage): LoadResult<CurrentRunSessionSave> {
-  const result = loadEnvelope<CurrentRunSaveData>(storage, persistenceKeys.currentRun);
+export function loadCurrentRunSession(
+  storage: KeyValueStorage,
+): LoadResult<CurrentRunSessionSave> {
+  const result = loadEnvelope<CurrentRunSaveData>(
+    storage,
+    persistenceKeys.currentRun,
+  );
 
   if (result.status !== "loaded") {
     return result;
@@ -92,33 +107,39 @@ export function loadCurrentRunSession(storage: KeyValueStorage): LoadResult<Curr
     ? result.envelope.data
     : {
         runState: result.envelope.data,
-        gameMode: "free" as const
+        gameMode: "free" as const,
       };
 
   return {
     status: "loaded",
     envelope: {
       ...result.envelope,
-      data: session
-    }
+      data: session,
+    },
   };
 }
 
 export function saveFinalSettlement(
   storage: KeyValueStorage,
   finalSettlement: FinalSettlementResult,
-  savedAt = new Date().toISOString()
+  savedAt = new Date().toISOString(),
 ): { readonly bestRecordUpdated: boolean } {
   saveEnvelope(storage, persistenceKeys.recentFinal, finalSettlement, savedAt);
 
   const candidate: BestRecord = {
     finalGrade: finalSettlement.finalGrade,
     cumulativeProfit: finalSettlement.cumulativeProfit,
-    finalSurveillance: finalSettlement.finalSurveillance
+    finalSurveillance: finalSettlement.finalSurveillance,
   };
-  const currentBest = loadEnvelope<BestRecord>(storage, persistenceKeys.bestRecord);
+  const currentBest = loadEnvelope<BestRecord>(
+    storage,
+    persistenceKeys.bestRecord,
+  );
 
-  if (currentBest.status !== "loaded" || isBetterBestRecord(candidate, currentBest.envelope.data)) {
+  if (
+    currentBest.status !== "loaded" ||
+    isBetterBestRecord(candidate, currentBest.envelope.data)
+  ) {
     saveEnvelope(storage, persistenceKeys.bestRecord, candidate, savedAt);
     return { bestRecordUpdated: true };
   }
@@ -126,11 +147,28 @@ export function saveFinalSettlement(
   return { bestRecordUpdated: false };
 }
 
+export function loadRecentFinalSettlement(
+  storage: KeyValueStorage,
+): LoadResult<FinalSettlementResult> {
+  return loadEnvelope<FinalSettlementResult>(
+    storage,
+    persistenceKeys.recentFinal,
+  );
+}
+
+export function loadBestRecord(
+  storage: KeyValueStorage,
+): LoadResult<BestRecord> {
+  return loadEnvelope<BestRecord>(storage, persistenceKeys.bestRecord);
+}
+
 export function canContinueSavedRun(storage: KeyValueStorage): boolean {
   return loadCurrentRun(storage).status === "loaded";
 }
 
-export function parseSavedEnvelope<T>(raw: string | null): SavedEnvelope<T> | null {
+export function parseSavedEnvelope<T>(
+  raw: string | null,
+): SavedEnvelope<T> | null {
   if (!raw) {
     return null;
   }
@@ -138,7 +176,10 @@ export function parseSavedEnvelope<T>(raw: string | null): SavedEnvelope<T> | nu
   try {
     const parsed = JSON.parse(raw) as Partial<SavedEnvelope<T>>;
 
-    if (parsed.schemaVersion !== persistenceSchemaVersion || typeof parsed.savedAt !== "string") {
+    if (
+      parsed.schemaVersion !== persistenceSchemaVersion ||
+      typeof parsed.savedAt !== "string"
+    ) {
       return null;
     }
 
@@ -158,15 +199,20 @@ export function createMapStorage(map: Map<string, string>): KeyValueStorage {
     },
     removeItem(key: string): void {
       map.delete(key);
-    }
+    },
   };
 }
 
-function saveEnvelope<T>(storage: KeyValueStorage, key: string, data: T, savedAt: string): void {
+function saveEnvelope<T>(
+  storage: KeyValueStorage,
+  key: string,
+  data: T,
+  savedAt: string,
+): void {
   const envelope: SavedEnvelope<T> = {
     schemaVersion: persistenceSchemaVersion,
     savedAt,
-    data
+    data,
   };
 
   storage.setItem(key, JSON.stringify(envelope));
@@ -194,7 +240,7 @@ function loadEnvelope<T>(storage: KeyValueStorage, key: string): LoadResult<T> {
 
     return {
       status: "loaded",
-      envelope: parsed as SavedEnvelope<T>
+      envelope: parsed as SavedEnvelope<T>,
     };
   } catch {
     storage.removeItem(key);
@@ -202,7 +248,9 @@ function loadEnvelope<T>(storage: KeyValueStorage, key: string): LoadResult<T> {
   }
 }
 
-function isCurrentRunSessionSave(data: CurrentRunSaveData): data is CurrentRunSessionSave {
+function isCurrentRunSessionSave(
+  data: CurrentRunSaveData,
+): data is CurrentRunSessionSave {
   return typeof data === "object" && data !== null && "runState" in data;
 }
 
@@ -210,7 +258,10 @@ function getSavedRunState(data: CurrentRunSaveData): RunState {
   return isCurrentRunSessionSave(data) ? data.runState : data;
 }
 
-function isBetterBestRecord(candidate: BestRecord, current: BestRecord): boolean {
+function isBetterBestRecord(
+  candidate: BestRecord,
+  current: BestRecord,
+): boolean {
   const candidateGradeRank = finalGradeRank(candidate.finalGrade);
   const currentGradeRank = finalGradeRank(current.finalGrade);
 

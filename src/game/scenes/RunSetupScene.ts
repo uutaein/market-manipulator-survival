@@ -1,13 +1,21 @@
 import { BaseDocumentScene } from "./BaseDocumentScene";
 import { SceneKeys } from "./SceneKeys";
-import { getAssetById, getAssetsBySector, getSectorById, sectors, type AssetId, type SectorId } from "../../domain/assets/assetCatalog";
+import {
+  getAssetById,
+  getAssetsBySector,
+  getSectorById,
+  sectors,
+  type AssetId,
+  type SectorId,
+} from "../../domain/assets/assetCatalog";
 import {
   getAssetBaselineTradeValue,
   getAssetMarketProfile,
   getAssetNewsSensitivity,
   getEntryRecommendedSectorIds,
-  getSectorMarketProfile
+  getSectorMarketProfile,
 } from "../../domain/assets/assetMarketProfiles";
+import type { RunState } from "../../domain/run/runState";
 import { gameSession } from "../GameSession";
 
 type RunSetupMode = "new_run" | "next_day_asset";
@@ -34,7 +42,10 @@ export class RunSetupScene extends BaseDocumentScene {
 
     this.mode = data.mode ?? "new_run";
     this.pendingSectorId = sectorId;
-    this.pendingAssetId = requestedAsset?.sectorId === sectorId ? requestedAsset.id : sectorAssets[0].id;
+    this.pendingAssetId =
+      requestedAsset?.sectorId === sectorId
+        ? requestedAsset.id
+        : sectorAssets[0].id;
   }
 
   create(): void {
@@ -42,73 +53,127 @@ export class RunSetupScene extends BaseDocumentScene {
     const selectedAsset = getAssetById(this.pendingAssetId);
     const selectedSector = getSectorById(selectedAsset.sectorId);
     const selectedAssetProfile = getAssetMarketProfile(selectedAsset.id);
+    const entryRecommendedSectorIds = getEntryRecommendedSectorIds();
 
     this.drawDocumentShell(
       isNextDayAssetSelection ? "다음 Day / 종목 선택" : "Run 시작 / 종목 선택",
       [],
       undefined,
-      "ASSET REGISTRY"
+      "ASSET REGISTRY",
     );
 
+    this.drawSelectionSummary(
+      selectedSector.displayName,
+      selectedAsset.displayName,
+      isNextDayAssetSelection,
+    );
+    this.drawSectorChoices(entryRecommendedSectorIds);
+    this.drawAssetChoices();
+    this.drawAssetMemo(
+      selectedSector.displayName,
+      selectedAsset,
+      selectedAssetProfile,
+      isNextDayAssetSelection,
+    );
+    this.addPrimaryStartButton(isNextDayAssetSelection);
+  }
+
+  private drawSelectionSummary(
+    sectorName: string,
+    assetName: string,
+    isNextDayAssetSelection: boolean,
+  ): void {
     this.add
-      .text(96, 126, `선택: ${selectedSector.displayName} / ${selectedAsset.displayName}`, {
-        color: "#111417",
-        backgroundColor: "#d9c58b",
+      .rectangle(96, 126, 1088, 50, 0x090d10, 0.9)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, 0x263038);
+    this.add
+      .text(
+        118,
+        139,
+        isNextDayAssetSelection ? "NEXT DAY TARGET" : "RUN TARGET",
+        {
+          color: "#8f9f7a",
+          fontFamily: this.fontFamily,
+          fontSize: "12px",
+        },
+      )
+      .setOrigin(0, 0);
+    this.add
+      .text(248, 135, `${sectorName} / ${assetName}`, {
+        color: "#f3e8ca",
         fontFamily: this.fontFamily,
-        fontSize: "14px",
-        padding: { x: 10, y: 5 }
+        fontSize: "24px",
       })
       .setOrigin(0, 0);
-
     this.add
-      .text(96, 176, "SECTOR FILTER", {
-        color: "#8f9f7a",
+      .text(
+        884,
+        139,
+        isNextDayAssetSelection
+          ? "Run/Day 리스크 보존"
+          : "세부 성향은 Run 중 관찰",
+        {
+          color: "#d9c58b",
+          fontFamily: this.fontFamily,
+          fontSize: "14px",
+        },
+      )
+      .setOrigin(0, 0);
+  }
+
+  private drawSectorChoices(
+    entryRecommendedSectorIds: readonly SectorId[],
+  ): void {
+    this.add
+      .text(96, 204, "SECTOR RADAR", {
+        color: "#d9c58b",
         fontFamily: this.fontFamily,
-        fontSize: "15px"
+        fontSize: "15px",
       })
       .setOrigin(0, 0);
-
-    const entryRecommendedSectorIds = getEntryRecommendedSectorIds();
 
     sectors.forEach((sector, index) => {
       const profile = getSectorMarketProfile(sector.id);
+      const selected = this.pendingSectorId === sector.id;
       const recommended = entryRecommendedSectorIds.includes(sector.id);
-      this.addDocumentButton(
+      this.addSectorChoice(
         96,
-        208 + index * 42,
-        `${sector.displayName} · ${recommended ? "추천" : profile.recommendation}`,
+        232 + index * 38,
+        sector.displayName,
+        recommended ? "추천" : profile.recommendation,
+        selected,
         () => {
           this.scene.restart({ mode: this.mode, sectorId: sector.id });
         },
-        this.pendingSectorId === sector.id
       );
     });
 
     this.add
       .text(
         96,
-        548,
-        [
-          `추천: ${entryRecommendedSectorIds
-            .map((sectorId) => getCompactSectorName(getSectorById(sectorId).displayName))
-            .join(" / ")}`,
-          "성공 후 대형 체급 도전"
-        ].join("\n"),
+        552,
+        `추천 섹터: ${entryRecommendedSectorIds
+          .map((sectorId) =>
+            getCompactSectorName(getSectorById(sectorId).displayName),
+          )
+          .join(" / ")}`,
         {
           color: "#8fa2a6",
           fontFamily: this.fontFamily,
           fontSize: "12px",
-          lineSpacing: 4,
-          wordWrap: { width: 300 }
-        }
+          wordWrap: { width: 250 },
+        },
       )
       .setOrigin(0, 0);
+  }
 
+  private drawAssetChoices(): void {
     this.add
-      .text(382, 176, "LISTED TARGETS", {
-        color: "#8f9f7a",
+      .text(382, 204, "TARGET SHORTLIST", {
+        color: "#d9c58b",
         fontFamily: this.fontFamily,
-        fontSize: "15px"
+        fontSize: "15px",
       })
       .setOrigin(0, 0);
 
@@ -117,92 +182,230 @@ export class RunSetupScene extends BaseDocumentScene {
       const assetProfile = getAssetMarketProfile(asset.id);
       this.addAssetChoiceCard(
         382,
-        208 + index * 104,
+        232 + index * 112,
         `${asset.displayName} · ${getAssetRoleLabel(assetProfile.role)}`,
         `${asset.shortBriefing}\n기본대금 ${formatTradeValue(getAssetBaselineTradeValue(asset))}`,
         selected,
         () => {
-          this.scene.restart({ mode: this.mode, sectorId: this.pendingSectorId, assetId: asset.id });
-        }
+          this.scene.restart({
+            mode: this.mode,
+            sectorId: this.pendingSectorId,
+            assetId: asset.id,
+          });
+        },
       );
     });
+  }
 
+  private drawAssetMemo(
+    selectedSectorName: string,
+    selectedAsset: ReturnType<typeof getAssetById>,
+    selectedAssetProfile: ReturnType<typeof getAssetMarketProfile>,
+    isNextDayAssetSelection: boolean,
+  ): void {
     this.add
-      .rectangle(790, 176, 360, 318, 0x090d10, 0.96)
+      .rectangle(790, 204, 394, 300, 0x090d10, 0.96)
       .setOrigin(0, 0)
-      .setStrokeStyle(1, 0x263038);
+      .setStrokeStyle(1, 0x6f6a5b);
     this.add
-      .text(816, 204, "OBSERVATION MEMO", {
+      .text(816, 230, "OBSERVATION MEMO", {
         color: "#d9c58b",
         fontFamily: this.fontFamily,
-        fontSize: "15px"
+        fontSize: "15px",
       })
       .setOrigin(0, 0);
     this.add
-      .text(816, 238, selectedAsset.displayName, {
+      .text(816, 264, selectedAsset.displayName, {
         color: "#f3e8ca",
         fontFamily: this.fontFamily,
-        fontSize: "28px"
+        fontSize: "28px",
       })
       .setOrigin(0, 0);
     this.add
-      .text(816, 282, `섹터: ${selectedSector.displayName}`, {
+      .text(816, 308, `섹터: ${selectedSectorName}`, {
         color: "#8f9f7a",
         fontFamily: this.fontFamily,
-        fontSize: "16px"
+        fontSize: "16px",
       })
       .setOrigin(0, 0);
     this.add
       .text(
         816,
-        310,
+        340,
         [
           `체급: ${getAssetRoleLabel(selectedAssetProfile.role)} / 기본대금 ${formatTradeValue(
-            getAssetBaselineTradeValue(selectedAsset)
+            getAssetBaselineTradeValue(selectedAsset),
           )}`,
-          `뉴스 반응: ${getNewsSensitivityLabel(getAssetNewsSensitivity(selectedAsset))}`
+          `뉴스 반응: ${getNewsSensitivityLabel(getAssetNewsSensitivity(selectedAsset))}`,
         ].join("\n"),
         {
           color: "#d9c58b",
           fontFamily: this.fontFamily,
           fontSize: "14px",
           lineSpacing: 5,
-          wordWrap: { width: 300 }
-        }
+          wordWrap: { width: 300 },
+        },
       )
       .setOrigin(0, 0);
     this.add
-      .text(816, 356, selectedAsset.shortBriefing, {
-        color: "#c9c1ad",
+      .text(
+        816,
+        isNextDayAssetSelection ? 382 : 392,
+        selectedAsset.shortBriefing,
+        {
+          color: "#c9c1ad",
+          fontFamily: this.fontFamily,
+          fontSize: isNextDayAssetSelection ? "15px" : "17px",
+          lineSpacing: isNextDayAssetSelection ? 6 : 8,
+          wordWrap: { width: 300 },
+        },
+      )
+      .setOrigin(0, 0);
+
+    if (isNextDayAssetSelection) {
+      this.drawRunContinuityPanel(gameSession.ensureRun());
+      return;
+    }
+
+    this.drawDiscoveryRulePanel();
+  }
+
+  private drawDiscoveryRulePanel(): void {
+    this.add
+      .rectangle(812, 438, 346, 48, 0x151b1f, 0.92)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, 0x263038);
+    this.add
+      .text(828, 447, "DISCOVERY RULE", {
+        color: "#8f9f7a",
         fontFamily: this.fontFamily,
-        fontSize: "17px",
-        lineSpacing: 8,
-        wordWrap: { width: 300 }
+        fontSize: "11px",
       })
       .setOrigin(0, 0);
     this.add
-      .text(816, 414, "세부 성향은 비공개\nRun 중 가격 반응과 정산 메모로 확인", {
-        color: "#8fa2a6",
+      .text(
+        828,
+        464,
+        [
+          "공개: 체급·기본대금·뉴스 반응",
+          "관찰: 내부 성향·감시/예산 효율",
+        ].join("\n"),
+        {
+          color: "#d9c58b",
+          fontFamily: this.fontFamily,
+          fontSize: "12px",
+          lineSpacing: 2,
+          wordWrap: { width: 306 },
+        },
+      )
+      .setOrigin(0, 0);
+  }
+
+  private drawRunContinuityPanel(runState: RunState): void {
+    this.add
+      .rectangle(812, 432, 346, 54, 0x151b1f, 0.92)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, 0x263038);
+    this.add
+      .text(828, 442, "RUN CARRYOVER", {
+        color: "#8f9f7a",
         fontFamily: this.fontFamily,
-        fontSize: "14px",
-        lineSpacing: 7,
-        wordWrap: { width: 300 }
+        fontSize: "11px",
       })
       .setOrigin(0, 0);
+    this.add
+      .text(
+        828,
+        460,
+        [
+          `DAY ${runState.currentDay} · 예산 ${formatNumber(runState.budget)}B · 보유 0%`,
+          `누적 ${formatSignedPercent(runState.cumulativeProfit)} · 감시 ${formatNumber(
+            runState.surveillance,
+          )} · 사회비용 ${formatNumber(runState.socialCost)}`,
+        ].join("\n"),
+        {
+          color: "#d9c58b",
+          fontFamily: this.fontFamily,
+          fontSize: "12px",
+          lineSpacing: 2,
+          wordWrap: { width: 306 },
+        },
+      )
+      .setOrigin(0, 0);
+  }
 
-    this.addActionButton({
-      label: isNextDayAssetSelection ? "다음 Day 준비" : "Run 시작",
-      target: SceneKeys.PreOpenCard,
-      onClick: () => {
-        if (isNextDayAssetSelection) {
-          gameSession.selectNextDayAsset(this.pendingAssetId);
-          return;
-        }
+  private addPrimaryStartButton(isNextDayAssetSelection: boolean): void {
+    const button = this.add
+      .text(
+        790,
+        536,
+        `[ ${isNextDayAssetSelection ? "다음 Day 준비" : "Run 시작"} ]`,
+        {
+          color: "#111417",
+          backgroundColor: "#d9c58b",
+          fontFamily: this.fontFamily,
+          fontSize: "22px",
+          padding: { x: 20, y: 12 },
+        },
+      )
+      .setInteractive({ useHandCursor: true });
 
+    button.on("pointerover", () => {
+      button.setBackgroundColor("#f3e8ca");
+    });
+    button.on("pointerout", () => {
+      button.setBackgroundColor("#d9c58b");
+    });
+    button.on("pointerup", () => {
+      if (isNextDayAssetSelection) {
+        gameSession.selectNextDayAsset(this.pendingAssetId);
+      } else {
         gameSession.setSelectedAsset(this.pendingAssetId);
         gameSession.startNewRun();
         gameSession.beginDay();
       }
+
+      this.scene.start(SceneKeys.PreOpenCard);
+    });
+  }
+
+  private addSectorChoice(
+    x: number,
+    y: number,
+    label: string,
+    meta: string,
+    selected: boolean,
+    onClick: () => void,
+  ): void {
+    const background = this.add
+      .rectangle(
+        x,
+        y,
+        248,
+        30,
+        selected ? 0x273e2f : 0x151b1f,
+        selected ? 0.96 : 0.88,
+      )
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, selected ? 0xd9c58b : 0x263038);
+    const labelText = this.add
+      .text(x + 12, y + 7, label, {
+        color: selected ? "#f3e8ca" : "#c9c1ad",
+        fontFamily: this.fontFamily,
+        fontSize: "14px",
+      })
+      .setOrigin(0, 0);
+    const metaText = this.add
+      .text(x + 184, y + 7, meta, {
+        color: selected ? "#d9c58b" : "#8fa2a6",
+        fontFamily: this.fontFamily,
+        fontSize: "12px",
+      })
+      .setOrigin(0, 0);
+
+    [background, labelText, metaText].forEach((object) => {
+      object.setInteractive({ useHandCursor: true });
+      object.on("pointerup", onClick);
     });
   }
 
@@ -212,17 +415,24 @@ export class RunSetupScene extends BaseDocumentScene {
     title: string,
     body: string,
     selected: boolean,
-    onClick: () => void
+    onClick: () => void,
   ): void {
     const background = this.add
-      .rectangle(x, y, 330, 90, selected ? 0x273e2f : 0x151b1f, selected ? 0.95 : 0.9)
+      .rectangle(
+        x,
+        y,
+        330,
+        90,
+        selected ? 0x273e2f : 0x151b1f,
+        selected ? 0.95 : 0.9,
+      )
       .setOrigin(0, 0)
       .setStrokeStyle(1, selected ? 0xd9c58b : 0x263038);
     const titleText = this.add
       .text(x + 16, y + 12, title, {
         color: selected ? "#f3e8ca" : "#d9c58b",
         fontFamily: this.fontFamily,
-        fontSize: "18px"
+        fontSize: "18px",
       })
       .setOrigin(0, 0);
     const bodyText = this.add
@@ -230,7 +440,7 @@ export class RunSetupScene extends BaseDocumentScene {
         color: "#c9c1ad",
         fontFamily: this.fontFamily,
         fontSize: "13px",
-        wordWrap: { width: 292 }
+        wordWrap: { width: 292 },
       })
       .setOrigin(0, 0);
 
@@ -241,7 +451,9 @@ export class RunSetupScene extends BaseDocumentScene {
   }
 }
 
-function getAssetRoleLabel(role: ReturnType<typeof getAssetMarketProfile>["role"]): string {
+function getAssetRoleLabel(
+  role: ReturnType<typeof getAssetMarketProfile>["role"],
+): string {
   if (role === "sector_leader") {
     return "대장주";
   }
@@ -259,6 +471,17 @@ function formatTradeValue(value: number): string {
   }
 
   return `${Math.round(value / 10000).toLocaleString("ko-KR")}만`;
+}
+
+function formatNumber(value: number): string {
+  return value.toLocaleString("ko-KR", {
+    maximumFractionDigits: 1,
+  });
+}
+
+function formatSignedPercent(value: number): string {
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${formatNumber(value)}%`;
 }
 
 function getNewsSensitivityLabel(value: number): string {
